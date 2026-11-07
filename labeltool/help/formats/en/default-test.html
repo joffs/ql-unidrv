@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Default format and test print – QL Label Formats Help</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Help · Label formats, printers and status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and programs</a>
+  <a class="lang" href="../de/default-test.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Label formats</span>
+    <h1>Default format and test print</h1>
+    <p class="lead">Both apply to the printer chosen under <span class="ui">Printer</span> in the toolbar. The program
+      also asks for the loaded roll and shows which formats fit it (on USB and on the network; a shared printer when the
+      printer status service runs on the PC it is plugged into).</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="default-label-format">Default label format</h2>
+        <p>Choose a format and click <span class="ui">Set as default</span> on the right. Programs then start with this
+          paper size on this printer. It applies immediately and just for you, without <span class="ui">Save &amp;
+          apply</span>. Your default format is bold in the list.</p>
+        <figure class="frame" style="max-width:600px"><img src="../img/en/edit-panel.png" width="595" height="184" alt="Settings of &quot;Shelf label&quot;: Name, Brother media 62 mm continuous, Length 20 mm, Feed 3 mm, the button Set as default and below it: Applies immediately, just for you – no Save &amp; apply needed."></figure>
+        <p>The <span class="ui">Printer</span> menu and the right-click on a format offer the same:
+          <span class="ui">Use '…' as default label format</span>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="test-print">Test print</h2>
+        <p>Choose a format and click <span class="ui">Test print</span>. The printer prints a sample label in this format,
+          so you see its size and position.</p>
+        <p>Before that, the program asks the printer for the loaded roll. If it doesn't fit, you learn that before
+          anything prints: the printer would otherwise stop with a "wrong media" error (red LED).
+          <span class="ui">Print anyway?</span> leaves the choice to you. A printer set to Windows' "Use Printer Offline"
+          is reported beforehand too.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>F5</kbd></span><span>Test print</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="grey-formats">Grey formats</h2>
+        <p>Grey are the formats that don't fit the loaded roll, and the formats the printer's model can't print. The
+          orange line on the right says why. You can edit all of them. Formats the model can't print can't be
+          test-printed or set as default on this printer.</p>
+        <figure class="frame" style="max-width:600px"><img src="../img/en/greyed-panel.png" width="595" height="218" alt="The format Address label, 29 × 89.8 mm die-cut, length and feed grey, below in orange: Doesn't fit the roll in Brother QL-800 (Unidrv) (62 mm continuous)"></figure>
+        <p>When you change the roll, the formats for it turn black again as soon as the printer reports it.</p>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Which printer?</h3>
+      <p>The list of formats applies to all QL printers. The printer in the toolbar only decides where the test print
+        goes, which printer the default is for, and which roll is checked.</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Print labels with QL Label Maker</h3>
+      <p>QL Label Maker checks the roll the same way before every print: if a label doesn't fit, it says so before
+        sending it, so the printer doesn't get stuck in its error state (which only opening and closing the roll cover
+        clears). That's especially handy when the printer is on the network or at another PC. Word and other programs
+        print too, but without this check.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="apply.html">← Save &amp; apply</a><a href="status.html">Next: Printer status and notifications →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Help · QL Unidrv</div></footer>
+</body>
+</html>

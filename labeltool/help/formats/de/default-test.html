@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Standardformat und Testdruck – QL Label Formats Hilfe</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Hilfe · Etikettenformate, Drucker und Status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Programme</a>
+  <a class="lang" href="../en/default-test.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Etikettenformate</span>
+    <h1>Standardformat und Testdruck</h1>
+    <p class="lead">Beides gilt für den Drucker, der oben in der Leiste bei <span class="ui">Drucker</span> gewählt ist.
+      Das Programm fragt außerdem die eingelegte Rolle ab und zeigt, welche Formate dazu passen (an USB und im Netzwerk;
+      einen freigegebenen Drucker, wenn auf dem PC mit dem Drucker der Druckerstatus-Dienst läuft).</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="default-label-format">Standard-Etikettenformat</h2>
+        <p>Wählen Sie ein Format und klicken Sie rechts auf <span class="ui">Als Standard festlegen</span>. Programme
+          beginnen dann auf diesem Drucker mit diesem Papierformat. Das gilt sofort und nur für Sie, ohne
+          <span class="ui">Übernehmen</span>. In der Liste steht Ihr Standardformat fett.</p>
+        <figure class="frame" style="max-width:600px"><img src="../img/de/edit-panel.png" width="595" height="184" alt="Einstellungen von „Regalschild“: Name, Brother-Medium 62 mm Endlosband, Länge 20 mm, Vorschub 3 mm, der Knopf Als Standard festlegen und darunter: Gilt sofort, nur für Sie – ohne Übernehmen."></figure>
+        <p>Dasselbe bietet das Menü <span class="ui">Drucker</span> und der Rechtsklick auf ein Format:
+          <span class="ui">„…“ als Standard-Etikettenformat verwenden</span>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="test-print">Testdruck</h2>
+        <p>Wählen Sie ein Format und klicken Sie auf <span class="ui">Testdruck</span>. Der Drucker druckt ein
+          Musteretikett in diesem Format, so sehen Sie Größe und Lage.</p>
+        <p>Vorher fragt das Programm den Drucker nach der eingelegten Rolle. Passt sie nicht, sagt es das, bevor
+          gedruckt wird: Der Drucker würde sonst mit „falsches Medium“ anhalten (rote LED). Mit
+          <span class="ui">Trotzdem drucken?</span> entscheiden Sie selbst. Ist der Drucker in Windows auf „Drucker offline
+          verwenden“ gestellt, erfahren Sie auch das vorher.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>F5</kbd></span><span>Testdruck</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="grey-formats">Graue Formate</h2>
+        <p>Grau sind Formate, die nicht zur eingelegten Rolle passen, und Formate, die das Modell des Druckers nicht
+          drucken kann. Rechts steht in Orange, warum. Bearbeiten lassen sich alle. Formate, die das Modell nicht drucken
+          kann, lassen sich auf diesem Drucker weder testdrucken noch als Standard festlegen.</p>
+        <figure class="frame" style="max-width:600px"><img src="../img/de/greyed-panel.png" width="595" height="218" alt="Das Format Adress-Etikett, 29 × 89,8 mm Einzeletikett, Länge und Vorschub grau, darunter orange: Passt nicht zur Rolle in Brother QL-800 (Unidrv) (62 mm Endlosband)"></figure>
+        <p>Wechseln Sie die Rolle, werden die Formate dazu wieder schwarz, sobald der Drucker sie meldet.</p>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Welcher Drucker?</h3>
+      <p>Die Liste der Formate gilt für alle QL-Drucker. Der Drucker in der Leiste bestimmt nur, wohin der Testdruck
+        geschickt wird, für welchen Drucker der Standard gilt und welche Rolle geprüft wird.</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Etiketten mit dem QL Label Maker drucken</h3>
+      <p>Der QL Label Maker prüft die Rolle vor jedem Druck genauso: Passt ein Etikett nicht, sagt er das, bevor er es
+        schickt. So bleibt der Drucker nicht im Fehler stehen (dann hilft nur, die Rollenabdeckung zu öffnen und zu
+        schließen). Das ist besonders praktisch, wenn der Drucker im Netzwerk oder an einem anderen PC steht. Word und
+        andere Programme drucken auch, aber ohne diese Prüfung.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="apply.html">← Übernehmen</a><a href="status.html">Weiter: Druckerstatus und Benachrichtigungen →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

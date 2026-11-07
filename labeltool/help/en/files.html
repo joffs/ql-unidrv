@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saving and opening – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/files.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printing and files</span>
+    <h1>Saving and opening</h1>
+    <p class="lead">A label is a <code>.qllabel</code> file. Everything is in it, pictures too; you can copy it, send it
+      and open it on another PC.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="saving">Saving</h2>
+        <p><span class="path">File &gt; Save</span> saves the label, the first time wherever you choose;
+          <span class="path">File &gt; Save as...</span> makes a copy under a new name.</p>
+        <p>The file holds the label format (name, paper and length), the direction and all objects. Pictures are
+          embedded; the picture file isn't needed afterwards. The printer and the resolution are not part of the
+          file.</p>
+        <p>An asterisk in the window title shows unsaved changes, for example <span class="ui">Regal 3 *</span>. Before
+          <span class="ui">New</span>, <span class="ui">Open</span> and when closing, QL Label Maker asks:
+          <span class="ui">Save the changes to this label?</span></p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>S</kbd></span><span>save</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></span><span>save as</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="opening-and-starting-anew">Opening and starting anew</h2>
+        <p><span class="path">File &gt; Open...</span> or double-click the file in Explorer.
+          <span class="path">File &gt; New</span> starts an empty label on the chosen label format. Starting with a
+          file, a printer or a format: <a href="appendix.html">command line</a>.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>O</kbd></span><span>open</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>N</kbd></span><span>new</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="on-another-pc-or-printer">On another PC or printer</h2>
+        <p>If the label format doesn't exist there, QL Label Maker takes a format or paper with the same paper and
+          length and says so when it opens: <span class="ui">The label was made for '…', which … doesn't offer. It is
+          shown on ….</span> It is still saved for the original format.</p>
+        <p>A label with a length of its own opens on the same tape if the printer has it.</p>
+        <p>Files from a newer version of QL Label Maker open too. Objects this version doesn't know yet are left out,
+          and a message says how many.</p>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Label formats are not part of the file</h3>
+      <p>The file only names the format. QL Label Formats manages the formats themselves, shared by all programs:
+        <a href="length.html">Label formats and custom lengths</a>.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="printing.html">← Printing</a><a href="limits.html">Next: What it can't do (yet) →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

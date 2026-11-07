@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keys and command line – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/appendix.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Appendix</span>
+    <h1>Keys and command line</h1>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="keys">Keys</h2>
+        <div class="table">
+          <table>
+            <thead><tr><th>Keys</th><th>Command</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>N</kbd></td><td>New</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>O</kbd></td><td>Open...</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Save</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></td><td>Save as...</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Print</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>Undo</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>Redo</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>D</kbd></td><td>Duplicate</td></tr>
+              <tr><td><kbd>Del</kbd></td><td>Delete</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>A</kbd></td><td>Select all</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Clear the selection</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>T</kbd></td><td>Add text</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></td><td>Add a text frame</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>L</kbd></td><td>Add a line</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>B</kbd></td><td>Add a box</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>I</kbd></td><td>Add a picture</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>K</kbd></td><td>Add a barcode</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Q</kbd></td><td>Add a QR code</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>R</kbd></td><td>Rotate 90°</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>]</kbd> / <kbd>[</kbd></td><td>Bring forward / Send backward</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>]</kbd> / <kbd>[</kbd></td><td>Bring to front / Send to back</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>PgUp</kbd> / <kbd>PgDn</kbd></td><td>the same, on every keyboard; with <kbd>Shift</kbd> all the way</td></tr>
+              <tr><td><kbd>Shift</kbd> + <kbd>F10</kbd></td><td>the object's context menu</td></tr>
+              <tr><td>Arrow keys</td><td>move by 0.1 mm; with <kbd>Shift</kbd> by 1 mm</td></tr>
+              <tr><td><kbd>Alt</kbd> while dragging</td><td>no snapping</td></tr>
+              <tr><td><kbd>Shift</kbd> while turning</td><td>in 15° steps</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></td><td>Turn view</td></tr>
+              <tr><td><kbd>F1</kbd></td><td>This help, at the page for the selected object; with nothing selected, the contents</td></tr>
+              <tr><td><span class="path">Help &gt; About QL Unidrv</span></td><td>program and driver versions; <span class="ui">Copy</span> copies them for a support request</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>0</kbd></td><td>Fit</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>1</kbd></td><td>100 % (real size)</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>2</kbd> / <kbd>4</kbd></td><td>Dot for dot: 1 / 2 screen pixels per printer dot</td></tr>
+              <tr><td><kbd>Ctrl</kbd> + <kbd>Plus</kbd> / <kbd>Minus</kbd></td><td>Zoom in / Zoom out, also Ctrl + mouse wheel</td></tr>
+              <tr><td><kbd>F6</kbd></td><td>Printer status</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="command-line">Command line</h2>
+        <p>QL Label Maker is <code>QlLabelMaker.exe</code> in <code>C:\Program Files\QLUnidrv</code>. It takes a label file
+          and two options:</p>
+        <pre>QlLabelMaker.exe [file.qllabel] [--printer "printer name"] [--format "label format"]</pre>
+        <dl class="terms">
+          <dt><code>file.qllabel</code></dt><dd>opens this label</dd>
+          <dt><code>--printer</code></dt><dd>chooses the printer, by its name in Windows</dd>
+          <dt><code>--format</code></dt><dd>chooses the label format</dd>
+        </dl>
+        <p>Example:</p>
+        <pre>"C:\Program Files\QLUnidrv\QlLabelMaker.exe" --printer "Brother QL-800 (Unidrv)" --format "62mm"</pre>
+        <p><code>QlLabelFormats.exe --editor</code> with the same options starts it too.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="appearance">Appearance</h2>
+        <p>The programs are light or dark like Windows (Settings &gt; Personalisation &gt; Colours).
+          <span class="path">Tools &gt; Appearance</span> picks <span class="ui">Light</span> or
+          <span class="ui">Dark</span> for all QL programs; <span class="ui">Like Windows</span> follows Windows again.
+          The choice applies at once, also to windows already open. With High Contrast on, Windows sets the colours and
+          the menu entry is greyed. The label itself always stays white with black print, as it comes out of the printer.</p>
+      </div>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Pages"><a href="limits.html">← What it can't do (yet)</a><a href="index.html">Contents</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

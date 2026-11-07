@@ -1,0 +1,17 @@
+# Build output
+out/
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+__pycache__/
+*.pyc
+
+# Brother's original driver files (vendor/brother/): copyrighted vendor binaries (~68 MB),
+# read-only reference. Kept locally, not in git (re-download from Brother if lost).
+vendor/
+
+# Windows clutter
+Thumbs.db
+desktop.ini

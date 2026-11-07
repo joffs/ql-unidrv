@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lines and boxes – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/lines-boxes.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objects</span>
+    <h1>Lines and boxes</h1>
+    <p class="lead">Lines divide the label, boxes frame something or become a black area.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="line">Line</h2>
+        <p>The <span class="ui">Line</span> tool or <span class="path">Insert &gt; Line</span>. On the right you set the
+          <span class="ui">Line width (mm)</span>.</p>
+        <p>A selected line has a light band along it and a handle at each end.</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/en/lines-selected.png" width="280" height="180" alt="A selected slanted line with a light band and two handles at its ends"></figure>
+        <p>Drag one end to make the line longer or slant it. The angle and the length are shown next to the mouse. At 0°,
+          45°, 90°, 135° and so on it snaps once it is within 5°; a dotted guide shows it. Horizontal and vertical lines
+          also snap to the label's edges and centre.</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/en/lines-dragging.png" width="280" height="180" alt="The upper end being dragged; the line snaps at 45°, a dotted guide, next to it 45° 23.3 mm"></figure>
+        <p>To set it exactly, use <span class="ui">Angle (°)</span> on the right, from 0° (level) through 90° (upright) to
+          180°, and <span class="ui">Length (mm)</span>. When you type a value, the left end stays where it is (on an
+          upright line, the lower end).</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/en/lines-panel.png" width="273" height="142" alt="A line's settings: line width, left, top, angle 31° and length 23.3 mm"></figure>
+        <p>If a line reaches beyond the label, the part outside is marked light along the line; it isn't printed.</p>
+        <figure class="frame" style="max-width:410px"><img src="../img/en/lines-outside.png" width="390" height="180" alt="A slanted line whose right end reaches beyond the label; the part outside is light"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>L</kbd></span><span>add a line</span></div>
+        <div><span><kbd>Shift</kbd> while dragging</span><span>in 15° steps</span></div>
+        <div><span><kbd>Alt</kbd> while dragging</span><span>free, no snapping</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="box">Box</h2>
+        <p>The <span class="ui">Box</span> tool or <span class="path">Insert &gt; Box</span>. On the right you set:</p>
+        <ul>
+          <li><span class="ui">Line width (mm)</span></li>
+          <li><span class="ui">Filled</span>: a black area instead of a frame</li>
+          <li><span class="ui">Ellipse</span>: round instead of square</li>
+        </ul>
+        <p>A box turns to any angle, see <a href="rotate-arrange.html">Rotating and arranging</a>.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>add a box</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="exact-position-and-size">Exact position and size</h2>
+        <p>Every object has <span class="ui">Left (mm)</span>, <span class="ui">Top (mm)</span>,
+          <span class="ui">Width (mm)</span> and <span class="ui">Height (mm)</span> on the right. Type sizes there to a
+          tenth of a millimetre. A line has <span class="ui">Angle (°)</span> and <span class="ui">Length (mm)</span>
+          instead of width and height.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></span><span>move by 0.1 mm</span></div>
+        <div><span><kbd>Shift</kbd> + arrow</span><span>move by 1 mm</span></div>
+      </aside>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Pages"><a href="text.html">← Text and text frames</a><a href="pictures.html">Next: Pictures →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

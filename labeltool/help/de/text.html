@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Text und Textrahmen – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/text.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objekte</span>
+    <h1>Text und Textrahmen</h1>
+    <p class="lead">Ein Text ist entweder einzeilig oder ein Textrahmen mit mehreren Zeilen. Alles Weitere stellen Sie
+      rechts bei den Einstellungen ein.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="single-line">Einzeilig</h2>
+        <p>Werkzeug <span class="ui">Text</span> oder <span class="path">Einfügen &gt; Text</span>. Der Rahmen passt sich
+          immer dem Text an. Ziehen Sie an einem Anfasser, um den Text zu vergrößern oder zu verkleinern; die
+          gegenüberliegende Seite bleibt dabei stehen. Oder tippen Sie die <span class="ui">Größe (pt)</span> ein.</p>
+        <p>Die Eingabetaste bewirkt hier nichts; eingefügte Zeilenumbrüche werden zu Leerzeichen.</p>
+        <figure class="frame" style="max-width:340px"><img src="../img/de/text-panel.png" width="230" height="173" alt="Einstellungen eines einzeiligen Textes: Text, Feld einfügen, Art Einzeilig, Schriftart, Größe, Fett, Kursiv, Unterstrichen"></figure>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>T</kbd></span><span>Text einfügen</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="text-frame">Textrahmen</h2>
+        <p><span class="path">Einfügen &gt; Textrahmen</span>. Den Rahmen legen Sie mit den Anfassern fest; der Text bricht
+          an seinem Rand in seiner Schriftgröße um. Ein Wort, das länger als eine Zeile ist, wird zwischen Buchstaben
+          getrennt.</p>
+        <p>Dazu kommen die Ausrichtung der Zeilen (<span class="ui">Links</span>, <span class="ui">Zentriert</span>,
+          <span class="ui">Rechts</span>) und der <span class="ui">Zeilenabstand</span> (0,5- bis 3-fach).</p>
+        <p>Passt der Text nicht in den Rahmen, wird er am Rahmen abgeschnitten. Der Rahmen bekommt dann auf dem
+          Bildschirm einen roten Rand, und rechts steht ein roter Hinweis.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>T</kbd></span><span>Textrahmen einfügen</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="switch-between-the-two">Zwischen beiden wechseln</h2>
+        <p><span class="ui">Art</span> wechselt zwischen <span class="ui">Einzeilig</span> und
+          <span class="ui">Textrahmen</span>. Aus einem Textrahmen wird eine Zeile (Zeilenumbrüche werden zu Leerzeichen),
+          aus einer Zeile ein Rahmen um den Text.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="font">Schrift</h2>
+        <p><span class="ui">Schriftart</span>, <span class="ui">Größe (pt)</span>, <span class="ui">Fett</span>,
+          <span class="ui">Kursiv</span>, <span class="ui">Unterstrichen</span> und <span class="ui">Zeichenabstand
+          (pt)</span> von −5 bis +20 gelten für beide Arten. <span class="ui">Invertieren</span> druckt den Text weiß auf
+          schwarz: <a href="invert.html">Weiß auf Schwarz</a>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="date-and-time">Datum und Uhrzeit</h2>
+        <p><span class="ui">Feld einfügen ▾</span> unter dem Text fügt ein Feld ein, das beim Anzeigen und Drucken
+          ausgefüllt wird:</p>
+        <dl class="terms">
+          <dt><code>{date}</code></dt><dd>das heutige Datum</dd>
+          <dt><code>{date+30}</code></dt><dd>das Datum in 30 Tagen; <code>{date-1}</code> ist gestern</dd>
+          <dt><code>{time}</code></dt><dd>die Uhrzeit</dd>
+          <dt><code>{date:yyyy-MM-dd}</code></dt><dd>mit eigenem Format nach dem Doppelpunkt, z. B.
+            <code>{date+7:dd.MM.yy}</code> oder <code>{time:HH:mm}</code></dd>
+        </dl>
+        <p>Ohne Format sehen Datum und Uhrzeit aus wie in Ihren Windows-Einstellungen. <code>{{</code> und
+          <code>}}</code> drucken einzelne geschweifte Klammern. Beispiel für ein Gefrierschild:
+          „Eingefroren {date} – verbrauchen bis {date+90}“.</p>
+        <p>Felder funktionieren auch im Inhalt von Barcodes und QR-Codes.</p>
+      </div>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Seiten"><a href="length.html">← Etikettenformate und eigene Längen</a><a href="lines-boxes.html">Weiter: Linien und Rahmen →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

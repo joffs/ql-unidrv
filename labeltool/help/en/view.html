@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>View, direction and zoom – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/view.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Designing</span>
+    <h1>View, direction and zoom</h1>
+    <p class="lead">The direction decides how the content lies on the tape. The zoom only changes the size on the
+      screen, not the print.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="direction">Direction</h2>
+        <p>On the right in the settings while nothing is selected, or <span class="path">View &gt; Turn view</span>:</p>
+        <figure class="frame" style="max-width:253px"><img src="../img/en/view-direction.png" width="233" height="25" alt="Direction: Along the label"></figure>
+        <dl class="terms">
+          <dt>Along the label</dt><dd>The label's length runs from left to right. For long labels.</dd>
+          <dt>Across the tape</dt><dd>The tape's width runs from left to right. For short, wide labels such as
+            62 × 29 mm and for round labels.</dd>
+        </dl>
+        <p>A new label starts across the tape if it is no longer than it is wide, otherwise along. When you turn the
+          view, the objects stay where they are on the screen; the label prints as it is shown. The direction is saved
+          with the label, and <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes it.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></span><span>turn view</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="zoom">Zoom</h2>
+        <p>At the bottom right of the status bar:</p>
+        <figure class="frame" style="max-width:266px"><img src="../img/en/view-zoom.png" width="246" height="21" alt="Status bar: Fit, minus, slider, plus and 96 %"></figure>
+        <p><span class="ui">Fit</span> fits the label to the window and keeps it fitted when you make the window larger
+          or smaller. Minus, the slider and plus zoom from 25 % to 800 %, and so does <kbd>Ctrl</kbd> + mouse wheel
+          (around the pointer). Over the status bar the mouse wheel zooms without <kbd>Ctrl</kbd> too.</p>
+        <p>Clicking the percentage opens this menu; it is also under <span class="path">View</span>:</p>
+        <dl class="terms">
+          <dt>Fit</dt><dd>the label fits the window</dd>
+          <dt>100 % (real size)</dt><dd>the label as large as it prints</dd>
+          <dt>Dot for dot</dt><dd>1 or 2 screen pixels per printer dot. Only here does the canvas show every printer dot
+            sharp; at any other zoom it is smoothed so that dithered pictures show no stripes.</dd>
+        </dl>
+        <p>The slider snaps to 100 % and to the dot-for-dot steps.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>0</kbd></span><span>fit</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>1</kbd></span><span>100 %</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>2</kbd> / <kbd>4</kbd></span><span>dot for dot</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Plus</kbd> / <kbd>Minus</kbd></span><span>zoom in / out</span></div>
+      </aside>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>What the canvas shows</h3>
+      <p>The label at its real proportions, dot for dot as it prints. Hatched areas are where the printer can't print;
+        on continuous tape, dashed lines show where it cuts.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="rotate-arrange.html">← Rotating and arranging</a><a href="printing.html">Next: Printing →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

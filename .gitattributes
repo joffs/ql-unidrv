@@ -1,0 +1,12 @@
+# Store every file byte-for-byte: GPD/INF must stay CRLF, captures and Brother data files are
+# byte-exact test fixtures. (Windows-only project, so no line-ending normalisation.)
+* -text
+
+*.prn      binary
+*.devmode  binary
+*.spool    binary
+*.DAT      binary
+*.ORG      binary
+*.PTD      binary
+*.png      binary
+*.ico      binary

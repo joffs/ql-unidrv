@@ -1,0 +1,1712 @@
+*% Brother QL-720NW (Unidrv) - independent Unidrv driver (ARM64 and x64)
+*% Template: edit template.GPD.in, then run driver/gen/media.py to produce one GPD per model.
+*% "@@IF option@@" ... "@@END@@" blocks are kept only for models with that option (MODELS in media.py).
+*%
+*% All printer bytes are produced by the render plug-in QLUnidrv.dll:
+*% commands below only notify the plug-in through callbacks and emit nothing themselves.
+*%   Callback IDs (must match src/plugin.cpp):
+*%     1 StartDoc (QL-800; StartDoc + model: 40 + ql::Model = 41 QL-810W, 42 QL-820NWB, 43 QL-570, 44 QL-560,
+*%       45 QL-550, 46 QL-500, 47 QL-650TD, 48 QL-700, 49 QL-710W, 50 QL-720NW, 51 QL-1050, 52 QL-1060N, 53 QL-580N,
+*%       54 QL-1100, 55 QL-1110NWB, 56 QL-1115NWB, 57 QL-600),
+*%     2 StartPage, 3 EndPage, 4 EndDoc, 5 copies (param NumOfCopies), 9 no-op
+*%     10/11 auto cut on/off, 12/13 cut at end on/off, 14/15 300x300 / 300x600 dpi,
+*%     16/17 speed / quality priority, 18/19 mirror off/on, 30/31 trim trailing blank off/on,
+*%     32/33 rotate 0/180, 20/21 one colour / black and red (24 bpp, QL-800/810W/820NWB only),
+*%     199 custom size, 200+n cut every n labels,
+*%     10000 + feedDots*100 + mediaIndex  paper sizes (see gen/media.py)
+*%   User label formats are Windows forms in the custom-size range (see src/labels.h).
+
+*GPDSpecVersion: "1.0"
+*CodePage: 1252
+*Include: "StdNames.gpd"
+*GPDFileVersion: "0.18"
+*GPDFileName: "QLUnidrv720.GPD"
+*ModelName: "Brother QL-720NW (Unidrv)"
+*MasterUnits: PAIR(600, 600)
+*ResourceDLL: "UniRes.dll"
+*PrinterType: PAGE
+*MaxCopies: 999
+*EjectPageWithFF?: FALSE
+*RotateCoordinate?: FALSE
+*RotateRaster?: FALSE
+*OutputDataFormat: H_BYTE
+*OptimizeLeftBound?: FALSE
+
+*Feature: Orientation
+{
+    *rcNameID: =ORIENTATION_DISPLAY
+    *DefaultOption: PORTRAIT
+    *Option: PORTRAIT
+    {
+        *rcNameID: =PORTRAIT_DISPLAY
+    }
+    *Option: LANDSCAPE_CC90
+    {
+        *rcNameID: =LANDSCAPE_DISPLAY
+    }
+}
+
+*Feature: InputBin
+{
+    *rcNameID: =PAPER_SOURCE_DISPLAY
+    *DefaultOption: AUTO
+    *Option: AUTO
+    {
+        *Name: "DK roll"
+    }
+}
+
+*Feature: Resolution
+{
+    *rcNameID: =RESOLUTION_DISPLAY
+    *DefaultOption: R300
+    *Option: R300
+    {
+        *Name: "300 x 300 dpi"
+        *DPI: PAIR(300, 300)
+        *TextDPI: PAIR(300, 300)
+        *SpotDiameter: 100
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.3
+            *CallbackID: 14
+        }
+    }
+    *Option: R300x600
+    {
+        *Name: "300 x 600 dpi (high resolution)"
+        *DPI: PAIR(300, 600)
+        *TextDPI: PAIR(300, 600)
+        *SpotDiameter: 100
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.3
+            *CallbackID: 15
+        }
+    }
+}
+
+*Feature: PrintQuality
+{
+    *Name: "Print priority"
+    *DefaultOption: Speed
+    *Option: Speed
+    {
+        *Name: "Speed"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.4
+            *CallbackID: 16
+        }
+    }
+    *Option: Quality
+    {
+        *Name: "Quality"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.4
+            *CallbackID: 17
+        }
+    }
+}
+
+*Feature: ColorMode
+{
+    *rcNameID: =COLOR_PRINTING_MODE_DISPLAY
+    *DefaultOption: Mono
+    *Option: Mono
+    {
+        *rcNameID: =MONO_DISPLAY
+        *% DevNumOfPlanes/DevBPP 0: the plug-in spools the raster itself (ImageProcessing returns TRUE)
+        *DevNumOfPlanes: 0
+        *DevBPP: 0
+        *DrvBPP: 1
+        *IPCallbackID: 1
+        *Color? : FALSE
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.6
+            *CallbackID: 20
+        }
+    }
+
+}
+
+*Feature: Halftone
+{
+    *rcNameID: =HALFTONING_DISPLAY
+    *DefaultOption: HT_PATSIZE_AUTO
+    *Option: HT_PATSIZE_AUTO
+    {
+        *rcNameID: =HT_AUTO_SELECT_DISPLAY
+    }
+    *Option: HT_PATSIZE_SUPERCELL_M
+    {
+        *rcNameID: =HT_SUPERCELL_DISPLAY
+    }
+    *Option: HT_PATSIZE_6x6_M
+    {
+        *rcNameID: =HT_DITHER6X6_DISPLAY
+    }
+    *Option: HT_PATSIZE_8x8_M
+    {
+        *rcNameID: =HT_DITHER8X8_DISPLAY
+    }
+}
+
+*Feature: PaperSize
+{
+    *rcNameID: =PAPER_SIZE_DISPLAY
+    *DefaultOption: P259
+    *Option: P269
+    {
+        *Name: "17mm x 54mm"
+        *PageDimensions: PAIR(402, 1272)
+        *PrintableArea: PAIR(330, 1132)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13500
+        }
+    }
+    *Option: P270
+    {
+        *Name: "17mm x 87mm"
+        *PageDimensions: PAIR(402, 2052)
+        *PrintableArea: PAIR(330, 1912)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13501
+        }
+    }
+    *Option: P370
+    {
+        *Name: "23mm x 23mm"
+        *PageDimensions: PAIR(544, 544)
+        *PrintableArea: PAIR(472, 404)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13502
+        }
+    }
+    *Option: P358
+    {
+        *Name: "29mm x 42mm"
+        *PageDimensions: PAIR(684, 990)
+        *PrintableArea: PAIR(612, 850)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13503
+        }
+    }
+    *Option: P271
+    {
+        *Name: "29mm x 90mm"
+        *PageDimensions: PAIR(684, 2122)
+        *PrintableArea: PAIR(612, 1982)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13504
+        }
+    }
+    *Option: P272
+    {
+        *Name: "38mm x 90mm"
+        *PageDimensions: PAIR(898, 2122)
+        *PrintableArea: PAIR(826, 1982)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13505
+        }
+    }
+    *Option: P367
+    {
+        *Name: "39mm x 48mm"
+        *PageDimensions: PAIR(922, 1130)
+        *PrintableArea: PAIR(850, 990)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13506
+        }
+    }
+    *Option: P374
+    {
+        *Name: "52mm x 29mm"
+        *PageDimensions: PAIR(1228, 682)
+        *PrintableArea: PAIR(1156, 542)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13507
+        }
+    }
+    *Option: P383
+    {
+        *Name: "60mm x 86mm"
+        *PageDimensions: PAIR(1416, 2048)
+        *PrintableArea: PAIR(1344, 1908)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13509
+        }
+    }
+    *Option: P274
+    {
+        *Name: "62mm x 29mm"
+        *PageDimensions: PAIR(1464, 682)
+        *PrintableArea: PAIR(1392, 542)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13510
+        }
+    }
+    *Option: P275
+    {
+        *Name: "62mm x 100mm"
+        *PageDimensions: PAIR(1464, 2358)
+        *PrintableArea: PAIR(1392, 2218)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13513
+        }
+    }
+    *Option: P362
+    {
+        *Name: "12mm Dia"
+        *PageDimensions: PAIR(284, 284)
+        *PrintableArea: PAIR(188, 188)
+        *PrintableOrigin: PAIR(48, 48)
+        *CursorOrigin: PAIR(48, 48)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 12414
+        }
+    }
+    *Option: P363
+    {
+        *Name: "24mm Dia"
+        *PageDimensions: PAIR(568, 568)
+        *PrintableArea: PAIR(472, 472)
+        *PrintableOrigin: PAIR(48, 48)
+        *CursorOrigin: PAIR(48, 48)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 12415
+        }
+    }
+    *Option: P273
+    {
+        *Name: "58mm Dia"
+        *PageDimensions: PAIR(1376, 1376)
+        *PrintableArea: PAIR(1236, 1236)
+        *PrintableOrigin: PAIR(70, 70)
+        *CursorOrigin: PAIR(70, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13516
+        }
+    }
+    *Option: P257
+    {
+        *Name: "12mm"
+        *PageDimensions: PAIR(284, 3546)
+        *PrintableArea: PAIR(212, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13517
+        }
+    }
+    *Option: P258
+    {
+        *Name: "29mm"
+        *PageDimensions: PAIR(684, 3546)
+        *PrintableArea: PAIR(612, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13518
+        }
+    }
+    *Option: P264
+    {
+        *Name: "38mm"
+        *PageDimensions: PAIR(898, 3546)
+        *PrintableArea: PAIR(826, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13519
+        }
+    }
+    *Option: P262
+    {
+        *Name: "50mm"
+        *PageDimensions: PAIR(1180, 3546)
+        *PrintableArea: PAIR(1108, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13520
+        }
+    }
+    *Option: P261
+    {
+        *Name: "54mm"
+        *PageDimensions: PAIR(1272, 3546)
+        *PrintableArea: PAIR(1180, 3406)
+        *PrintableOrigin: PAIR(46, 70)
+        *CursorOrigin: PAIR(46, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13521
+        }
+    }
+    *Option: P259
+    {
+        *Name: "62mm"
+        *PageDimensions: PAIR(1464, 3546)
+        *PrintableArea: PAIR(1392, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13522
+        }
+    }
+    *Option: P277
+    {
+        *Name: "12mm x 2"
+        *PageDimensions: PAIR(496, 3546)
+        *PrintableArea: PAIR(424, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13523
+        }
+    }
+    *Option: P278
+    {
+        *Name: "29mm x 2"
+        *PageDimensions: PAIR(1296, 3546)
+        *PrintableArea: PAIR(1224, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13524
+        }
+    }
+    *Option: P296
+    {
+        *Name: "38mm x 2"
+        *PageDimensions: PAIR(1724, 3546)
+        *PrintableArea: PAIR(1652, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13525
+        }
+    }
+    *Option: P282
+    {
+        *Name: "50mm x 2"
+        *PageDimensions: PAIR(2288, 3546)
+        *PrintableArea: PAIR(2216, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13526
+        }
+    }
+    *Option: P281
+    {
+        *Name: "54mm x 2"
+        *PageDimensions: PAIR(2452, 3546)
+        *PrintableArea: PAIR(2360, 3406)
+        *PrintableOrigin: PAIR(46, 70)
+        *CursorOrigin: PAIR(46, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13527
+        }
+    }
+    *Option: P279
+    {
+        *Name: "62mm x 2"
+        *PageDimensions: PAIR(2856, 3546)
+        *PrintableArea: PAIR(2784, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13528
+        }
+    }
+    *Option: P283
+    {
+        *Name: "12mm x 3"
+        *PageDimensions: PAIR(708, 3546)
+        *PrintableArea: PAIR(636, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13529
+        }
+    }
+    *Option: P284
+    {
+        *Name: "29mm x 3"
+        *PageDimensions: PAIR(1908, 3546)
+        *PrintableArea: PAIR(1836, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13530
+        }
+    }
+    *Option: P300
+    {
+        *Name: "38mm x 3"
+        *PageDimensions: PAIR(2552, 3546)
+        *PrintableArea: PAIR(2478, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13531
+        }
+    }
+    *Option: P288
+    {
+        *Name: "50mm x 3"
+        *PageDimensions: PAIR(3396, 3546)
+        *PrintableArea: PAIR(3324, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13532
+        }
+    }
+    *Option: P287
+    {
+        *Name: "54mm x 3"
+        *PageDimensions: PAIR(3632, 3546)
+        *PrintableArea: PAIR(3540, 3406)
+        *PrintableOrigin: PAIR(46, 70)
+        *CursorOrigin: PAIR(46, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13533
+        }
+    }
+    *Option: P285
+    {
+        *Name: "62mm x 3"
+        *PageDimensions: PAIR(4248, 3546)
+        *PrintableArea: PAIR(4176, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13534
+        }
+    }
+    *Option: P289
+    {
+        *Name: "12mm x 4"
+        *PageDimensions: PAIR(920, 3546)
+        *PrintableArea: PAIR(848, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13535
+        }
+    }
+    *Option: P290
+    {
+        *Name: "29mm x 4"
+        *PageDimensions: PAIR(2520, 3546)
+        *PrintableArea: PAIR(2448, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13536
+        }
+    }
+    *Option: P304
+    {
+        *Name: "38mm x 4"
+        *PageDimensions: PAIR(3376, 3546)
+        *PrintableArea: PAIR(3304, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13537
+        }
+    }
+    *Option: P294
+    {
+        *Name: "50mm x 4"
+        *PageDimensions: PAIR(4504, 3546)
+        *PrintableArea: PAIR(4432, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13538
+        }
+    }
+    *Option: P293
+    {
+        *Name: "54mm x 4"
+        *PageDimensions: PAIR(4812, 3546)
+        *PrintableArea: PAIR(4720, 3406)
+        *PrintableOrigin: PAIR(46, 70)
+        *CursorOrigin: PAIR(46, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13539
+        }
+    }
+    *Option: P291
+    {
+        *Name: "62mm x 4"
+        *PageDimensions: PAIR(5640, 3546)
+        *PrintableArea: PAIR(5568, 3406)
+        *PrintableOrigin: PAIR(36, 70)
+        *CursorOrigin: PAIR(36, 70)
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 13540
+        }
+    }
+    *Option: CUSTOMSIZE
+    {
+        *rcNameID: =USER_DEFINED_SIZE_DISPLAY
+        *MinSize: PAIR(284, 284)
+        *MaxSize: PAIR(1466, 23622)
+        *MaxPrintableWidth: 1392
+        *MinLeftMargin: 0
+        *CenterPrintable?: TRUE
+        *TopMargin: 70
+        *BottomMargin: 70
+        *Command: CmdSelect
+        {
+            *Order: PAGE_SETUP.2
+            *CallbackID: 199
+            *Params: LIST(PhysPaperWidth, PhysPaperLength)
+        }
+    }
+}
+
+*Feature: AutoCut
+{
+    *Name: "Auto cut"
+    *DefaultOption: On
+    *Option: On
+    {
+        *Name: "On"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.10
+            *CallbackID: 10
+        }
+    }
+    *Option: Off
+    {
+        *Name: "Off"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.10
+            *CallbackID: 11
+        }
+    }
+}
+
+*Feature: CutEvery
+{
+    *Name: "Cut every ... labels"
+    *DefaultOption: N1
+    *Option: N1
+    {
+        *Name: "1"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 201
+        }
+    }
+    *Option: N2
+    {
+        *Name: "2"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 202
+        }
+    }
+    *Option: N3
+    {
+        *Name: "3"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 203
+        }
+    }
+    *Option: N4
+    {
+        *Name: "4"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 204
+        }
+    }
+    *Option: N5
+    {
+        *Name: "5"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 205
+        }
+    }
+    *Option: N6
+    {
+        *Name: "6"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 206
+        }
+    }
+    *Option: N7
+    {
+        *Name: "7"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 207
+        }
+    }
+    *Option: N8
+    {
+        *Name: "8"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 208
+        }
+    }
+    *Option: N9
+    {
+        *Name: "9"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 209
+        }
+    }
+    *Option: N10
+    {
+        *Name: "10"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 210
+        }
+    }
+    *Option: N11
+    {
+        *Name: "11"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 211
+        }
+    }
+    *Option: N12
+    {
+        *Name: "12"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 212
+        }
+    }
+    *Option: N13
+    {
+        *Name: "13"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 213
+        }
+    }
+    *Option: N14
+    {
+        *Name: "14"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 214
+        }
+    }
+    *Option: N15
+    {
+        *Name: "15"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 215
+        }
+    }
+    *Option: N16
+    {
+        *Name: "16"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 216
+        }
+    }
+    *Option: N17
+    {
+        *Name: "17"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 217
+        }
+    }
+    *Option: N18
+    {
+        *Name: "18"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 218
+        }
+    }
+    *Option: N19
+    {
+        *Name: "19"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 219
+        }
+    }
+    *Option: N20
+    {
+        *Name: "20"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 220
+        }
+    }
+    *Option: N21
+    {
+        *Name: "21"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 221
+        }
+    }
+    *Option: N22
+    {
+        *Name: "22"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 222
+        }
+    }
+    *Option: N23
+    {
+        *Name: "23"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 223
+        }
+    }
+    *Option: N24
+    {
+        *Name: "24"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 224
+        }
+    }
+    *Option: N25
+    {
+        *Name: "25"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 225
+        }
+    }
+    *Option: N26
+    {
+        *Name: "26"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 226
+        }
+    }
+    *Option: N27
+    {
+        *Name: "27"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 227
+        }
+    }
+    *Option: N28
+    {
+        *Name: "28"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 228
+        }
+    }
+    *Option: N29
+    {
+        *Name: "29"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 229
+        }
+    }
+    *Option: N30
+    {
+        *Name: "30"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 230
+        }
+    }
+    *Option: N31
+    {
+        *Name: "31"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 231
+        }
+    }
+    *Option: N32
+    {
+        *Name: "32"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 232
+        }
+    }
+    *Option: N33
+    {
+        *Name: "33"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 233
+        }
+    }
+    *Option: N34
+    {
+        *Name: "34"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 234
+        }
+    }
+    *Option: N35
+    {
+        *Name: "35"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 235
+        }
+    }
+    *Option: N36
+    {
+        *Name: "36"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 236
+        }
+    }
+    *Option: N37
+    {
+        *Name: "37"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 237
+        }
+    }
+    *Option: N38
+    {
+        *Name: "38"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 238
+        }
+    }
+    *Option: N39
+    {
+        *Name: "39"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 239
+        }
+    }
+    *Option: N40
+    {
+        *Name: "40"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 240
+        }
+    }
+    *Option: N41
+    {
+        *Name: "41"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 241
+        }
+    }
+    *Option: N42
+    {
+        *Name: "42"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 242
+        }
+    }
+    *Option: N43
+    {
+        *Name: "43"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 243
+        }
+    }
+    *Option: N44
+    {
+        *Name: "44"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 244
+        }
+    }
+    *Option: N45
+    {
+        *Name: "45"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 245
+        }
+    }
+    *Option: N46
+    {
+        *Name: "46"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 246
+        }
+    }
+    *Option: N47
+    {
+        *Name: "47"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 247
+        }
+    }
+    *Option: N48
+    {
+        *Name: "48"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 248
+        }
+    }
+    *Option: N49
+    {
+        *Name: "49"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 249
+        }
+    }
+    *Option: N50
+    {
+        *Name: "50"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 250
+        }
+    }
+    *Option: N51
+    {
+        *Name: "51"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 251
+        }
+    }
+    *Option: N52
+    {
+        *Name: "52"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 252
+        }
+    }
+    *Option: N53
+    {
+        *Name: "53"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 253
+        }
+    }
+    *Option: N54
+    {
+        *Name: "54"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 254
+        }
+    }
+    *Option: N55
+    {
+        *Name: "55"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 255
+        }
+    }
+    *Option: N56
+    {
+        *Name: "56"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 256
+        }
+    }
+    *Option: N57
+    {
+        *Name: "57"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 257
+        }
+    }
+    *Option: N58
+    {
+        *Name: "58"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 258
+        }
+    }
+    *Option: N59
+    {
+        *Name: "59"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 259
+        }
+    }
+    *Option: N60
+    {
+        *Name: "60"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 260
+        }
+    }
+    *Option: N61
+    {
+        *Name: "61"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 261
+        }
+    }
+    *Option: N62
+    {
+        *Name: "62"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 262
+        }
+    }
+    *Option: N63
+    {
+        *Name: "63"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 263
+        }
+    }
+    *Option: N64
+    {
+        *Name: "64"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 264
+        }
+    }
+    *Option: N65
+    {
+        *Name: "65"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 265
+        }
+    }
+    *Option: N66
+    {
+        *Name: "66"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 266
+        }
+    }
+    *Option: N67
+    {
+        *Name: "67"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 267
+        }
+    }
+    *Option: N68
+    {
+        *Name: "68"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 268
+        }
+    }
+    *Option: N69
+    {
+        *Name: "69"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 269
+        }
+    }
+    *Option: N70
+    {
+        *Name: "70"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 270
+        }
+    }
+    *Option: N71
+    {
+        *Name: "71"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 271
+        }
+    }
+    *Option: N72
+    {
+        *Name: "72"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 272
+        }
+    }
+    *Option: N73
+    {
+        *Name: "73"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 273
+        }
+    }
+    *Option: N74
+    {
+        *Name: "74"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 274
+        }
+    }
+    *Option: N75
+    {
+        *Name: "75"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 275
+        }
+    }
+    *Option: N76
+    {
+        *Name: "76"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 276
+        }
+    }
+    *Option: N77
+    {
+        *Name: "77"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 277
+        }
+    }
+    *Option: N78
+    {
+        *Name: "78"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 278
+        }
+    }
+    *Option: N79
+    {
+        *Name: "79"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 279
+        }
+    }
+    *Option: N80
+    {
+        *Name: "80"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 280
+        }
+    }
+    *Option: N81
+    {
+        *Name: "81"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 281
+        }
+    }
+    *Option: N82
+    {
+        *Name: "82"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 282
+        }
+    }
+    *Option: N83
+    {
+        *Name: "83"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 283
+        }
+    }
+    *Option: N84
+    {
+        *Name: "84"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 284
+        }
+    }
+    *Option: N85
+    {
+        *Name: "85"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 285
+        }
+    }
+    *Option: N86
+    {
+        *Name: "86"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 286
+        }
+    }
+    *Option: N87
+    {
+        *Name: "87"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 287
+        }
+    }
+    *Option: N88
+    {
+        *Name: "88"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 288
+        }
+    }
+    *Option: N89
+    {
+        *Name: "89"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 289
+        }
+    }
+    *Option: N90
+    {
+        *Name: "90"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 290
+        }
+    }
+    *Option: N91
+    {
+        *Name: "91"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 291
+        }
+    }
+    *Option: N92
+    {
+        *Name: "92"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 292
+        }
+    }
+    *Option: N93
+    {
+        *Name: "93"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 293
+        }
+    }
+    *Option: N94
+    {
+        *Name: "94"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 294
+        }
+    }
+    *Option: N95
+    {
+        *Name: "95"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 295
+        }
+    }
+    *Option: N96
+    {
+        *Name: "96"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 296
+        }
+    }
+    *Option: N97
+    {
+        *Name: "97"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 297
+        }
+    }
+    *Option: N98
+    {
+        *Name: "98"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 298
+        }
+    }
+    *Option: N99
+    {
+        *Name: "99"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.11
+            *CallbackID: 299
+        }
+    }
+}
+
+*Feature: CutAtEnd
+{
+    *Name: "Cut at end"
+    *DefaultOption: On
+    *Option: On
+    {
+        *Name: "On"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.12
+            *CallbackID: 12
+        }
+    }
+    *Option: Off
+    {
+        *Name: "Off"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.12
+            *CallbackID: 13
+        }
+    }
+}
+
+*Feature: MirrorPrint
+{
+    *Name: "Mirror printing"
+    *DefaultOption: Off
+    *Option: Off
+    {
+        *Name: "Off"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.13
+            *CallbackID: 18
+        }
+    }
+    *Option: On
+    {
+        *Name: "On"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.13
+            *CallbackID: 19
+        }
+    }
+}
+
+*Feature: TrimTrailingBlank
+{
+    *Name: "Cut tape after data (continuous)"
+    *DefaultOption: Off
+    *Option: Off
+    {
+        *Name: "Off"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.14
+            *CallbackID: 30
+        }
+    }
+    *Option: On
+    {
+        *Name: "On"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.14
+            *CallbackID: 31
+        }
+    }
+}
+
+*Feature: Rotate180
+{
+    *Name: "Rotate 180 degrees"
+    *DefaultOption: Off
+    *Option: Off
+    {
+        *Name: "Off"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.15
+            *CallbackID: 32
+        }
+    }
+    *Option: On
+    {
+        *Name: "On"
+        *Command: CmdSelect
+        {
+            *Order: DOC_SETUP.15
+            *CallbackID: 33
+        }
+    }
+}
+
+*Command: CmdStartDoc
+{
+    *Order: DOC_SETUP.1
+    *CallbackID: 50
+}
+*Command: CmdStartPage
+{
+    *Order: PAGE_SETUP.1
+    *CallbackID: 2
+}
+*Command: CmdCopies
+{
+    *Order: DOC_SETUP.5
+    *CallbackID: 5
+    *Params: LIST(NumOfCopies)
+}
+*Command: CmdEndPage { *CallbackID: 3 }
+*Command: CmdEndDoc { *CallbackID: 4 }
+*Command: CmdCR { *CallbackID: 9 }
+*Command: CmdLF { *CallbackID: 9 }
+*Command: CmdFF { *CallbackID: 9 }
+*Command: CmdSendBlockData { *CallbackID: 9 }

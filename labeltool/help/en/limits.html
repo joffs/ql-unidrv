@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What it can't do (yet) – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/limits.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printing and files</span>
+    <h1>What it can't do (yet)</h1>
+    <p class="lead">QL Label Maker is kept simple on purpose. This is what it can't do, or can't do yet.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="designing">Designing</h2>
+        <ul>
+          <li><strong>Black only.</strong> It doesn't print red on two-colour tape (DK-22251).</li>
+          <li><strong>One style for the whole text.</strong> Font, size, bold, italic and underline apply to all the text
+            of an object, not to single words. For one bold word, add a second text.</li>
+          <li><strong>No clipboard.</strong> Objects can't be copied and pasted into another label. Within a label:
+            <span class="ui">Duplicate</span> (<kbd>Ctrl</kbd> + <kbd>D</kbd>).</li>
+          <li><strong>Barcodes:</strong> Code 128, GS1-128, EAN-13 and QR code, no others
+            (<a href="codes.html">Barcodes and QR codes</a>).</li>
+          <li><strong>SVG pictures:</strong> text along a line, vertical text, filters, masks and links to other files
+            are missing in the print (<a href="pictures.html">Pictures</a>).</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="printing">Printing</h2>
+        <ul>
+          <li><strong>No serial printing.</strong> No running numbers and no printing from a list or table. The date and
+            time can be inserted as a field (<a href="text.html">Text and text frames</a>).</li>
+          <li><strong>One label per file.</strong> For several identical labels, use <span class="ui">Copies</span>.</li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Missing something?</h3>
+      <p>Please report wishes and bugs on the project page: <a href="https://github.com/joffs/ql-unidrv/issues">github.com/joffs/ql-unidrv/issues</a>.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="files.html">← Saving and opening</a><a href="appendix.html">Next: Keys and command line →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Druckerstatus und Benachrichtigungen – QL Label Formats Hilfe</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Hilfe · Etikettenformate, Drucker und Status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Programme</a>
+  <a class="lang" href="../en/status.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucker</span>
+    <h1>Druckerstatus und Benachrichtigungen</h1>
+    <p class="lead">Hält ein Etikettendrucker an, sagt Windows meist nicht, warum. QL Printer Status zeigt es, mit der
+      eingelegten Rolle und dem, was zu tun ist.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="the-status-window">Das Statusfenster</h2>
+        <p>Klicken Sie in der Leiste auf <span class="ui">Druckerstatus</span>, auf die Rolle in der Statusleiste oder im
+          Startmenü auf <span class="ui">QL Printer Status</span>. Für jeden QL-Drucker gibt es eine Karte: ob er bereit
+          ist, welche Rolle eingelegt ist, und bei einem Fehler, was zu tun ist. Es gibt nur ein Statusfenster: Ist es schon offen, kommt es nach vorn.</p>
+        <figure class="frame" style="max-width:400px"><img src="../img/de/status-window.png" width="388" height="164" alt="QL Printer Status: Brother QL-800 (Unidrv), Bereit, 62 mm Endlosband eingelegt, die Links Druckerdetails und Druckwarteschlange; unten Bei Druckerfehlern benachrichtigen und Schließen"></figure>
+        <p><span class="ui">Druckwarteschlange</span> öffnet die Aufträge des Druckers, zum Beispiel um einen hängenden
+          Auftrag abzubrechen.</p>
+        <p><span class="ui">Druckerdetails</span> zeigt unter der Karte Modell, Anschluss, eingelegte Rolle und
+          Treiberversion; ein zweiter Klick blendet sie wieder aus. Drucker im Netzwerk melden außerdem ihre Zähler
+          (Seiten, Schnitte, gedruckte Länge), Firmware, Speicher und Seriennummer. Drucker an USB oder von einem anderen
+          PC freigegeben haben keine Zähler.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>F6</kbd></span><span>Druckerstatus</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="notify-me-about-printer-errors">Bei Druckerfehlern benachrichtigen</h2>
+        <p>Mit diesem Häkchen im Statusfenster (oder im Menü <span class="ui">Drucker</span>) läuft ein kleiner Monitor
+          im Infobereich neben der Uhr. Hält ein QL-Drucker an, erscheint unten rechts eine Windows-Benachrichtigung mit
+          dem Grund und der Lösung, zum Beispiel Abdeckung offen, Rolle leer oder falsche Rolle. Das gilt für alle
+          QL-Drucker und jedes Programm.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/de/menu-printer.png" width="360" height="126" alt="Menü Drucker: Testdruck, Standard-Etikettenformat, Druckerstatus, Bei Druckerfehlern benachrichtigen (angehakt), Druckereinrichtung"></figure>
+        <p>Der Monitor startet mit Windows und braucht keine Administratorrechte. Ist er aus, schlägt ein Tipp über der
+          Liste vor, ihn einzuschalten (<span class="ui">Benachrichtigungen einschalten</span>,
+          <span class="ui">Nicht mehr anzeigen</span>).</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="wrong-roll">Falsche Rolle</h2>
+        <p>Passt die Rolle nicht zum Auftrag, blinkt die LED rot, und der Auftrag verschwindet ohne Meldung aus der
+          Warteschlange. Der Drucker antwortet dann nicht mehr, bis die Abdeckung geöffnet und wieder geschlossen wird.
+          So beheben Sie es:</p>
+        <ol>
+          <li>wartende Aufträge in der <span class="ui">Druckwarteschlange</span> abbrechen,</li>
+          <li>die Rollenabdeckung öffnen und schließen,</li>
+          <li>mit einem Format für die eingelegte Rolle neu drucken.</li>
+        </ol>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Drucker offline verwenden</h3>
+      <p>Steht ein Drucker in Windows auf „Drucker offline verwenden“, warten Aufträge auf diesem PC, ohne dass ein Fehler
+        erscheint. QL Label Formats zeigt das für den gewählten Drucker über der Liste an; <span class="ui">Online
+        verwenden</span> hebt es auf (Windows fragt eventuell nach Administratorrechten). Ist der Drucker nur
+        ausgeschaltet, stellt Windows ihn selbst auf offline und wieder zurück: Dann heißt es einfach „nicht verbunden“.</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Drucker, die ein anderer PC freigibt</h3>
+      <p>Den Status eines solchen Druckers kennt nur der PC, an dem er angeschlossen ist. Damit Sie ihn hier sehen
+        (in den <span class="ui">Druckerdetails</span> als <span class="ui">Letzter Status</span>), muss dort der Druckerstatus-Dienst laufen: <a href="setup.html#share-a-printer">Druckereinrichtung &gt; Drucker freigeben</a>.</p>
+      <p>Den Status zeigt die Karte nur, solange das Drucken über die Freigabe funktioniert. Gibt der andere PC den Drucker nicht mehr
+        frei (oder unter einem neuen Namen), steht dort <span class="ui">Nicht freigegeben</span> mit <span class="ui">Drucker hier entfernen</span>;
+        antwortet er nicht, <span class="ui">Keine Verbindung</span>. Eine eingelegte Rolle zeigt sie dann nicht.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="default-test.html">← Standardformat und Testdruck</a><a href="setup.html">Weiter: Druckereinrichtung →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

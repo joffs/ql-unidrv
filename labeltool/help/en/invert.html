@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>White on black – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/invert.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objects</span>
+    <h1>White on black for text and QR codes</h1>
+    <p class="lead">Tick <span class="ui">Invert</span> to print text, text frames, QR codes and pictures white on
+      black. It prints exactly what the canvas shows.</p>
+  </header>
+
+  <figure class="frame" style="max-width:460px"><img src="../img/en/invert-label.png" width="522" height="481" alt="A shelf label with &quot;Regal 3&quot;, two lines of text, a QR code and a slanted &quot;NEU&quot;, all white on black; the barcode black on white"></figure>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="text-and-text-frames">Text and text frames</h2>
+        <p>Click the text and tick <span class="ui">Invert</span> on the right, below <span class="ui">Bold</span>,
+          <span class="ui">Italic</span> and <span class="ui">Underline</span>.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/en/invert-text-panel.png" width="348" height="104" alt="Font Segoe UI, size 20 pt, Bold ticked, below it Invert ticked"></figure>
+        <p>The text then stands white in a black box 1 mm larger than its frame. Turn the text and the box turns with it.
+          On the box the selection is drawn in a light dashed line.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="qr-codes">QR codes</h2>
+        <p>For a QR code, <span class="ui">Invert</span> is below <span class="ui">Error correction</span>. The code's
+          modules turn white on black, and the quiet zone around the code is printed black too; the line under the content
+          says so.</p>
+        <figure class="frame" style="max-width:280px"><img src="../img/en/invert-qr-panel.png" width="258" height="136" alt="Contains Web address, Quiet zone: printed black., Error correction M – 15 % (usual), Invert ticked"></figure>
+        <p>The standard allows white on black. Phone cameras usually read it, older or simple scanners often don't.
+          Test it if in doubt.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="pictures">Pictures</h2>
+        <p>For pictures, <span class="ui">Invert</span> swaps black and white in the picture itself, without a box. More
+          under <a href="pictures.html">Pictures</a>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>The box covers what's below</h3>
+      <p>Whatever lies under an inverted text disappears in the black box; whatever lies above it stays visible. Change
+        the order with the <a href="rotate-arrange.html">layers</a>. A black area without text is a box with
+        <span class="ui">Filled</span> (<a href="lines-boxes.html">Lines and boxes</a>).</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Barcodes only black on white</h3>
+      <p>Code 128, GS1-128 and EAN-13 have no <span class="ui">Invert</span>: checkout and warehouse scanners read only dark on
+        light.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="codes.html">← Barcodes and QR codes</a><a href="rotate-arrange.html">Next: Rotating and arranging →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

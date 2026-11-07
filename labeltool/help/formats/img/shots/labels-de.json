@@ -1,0 +1,12 @@
+{
+ "version": "2.00",
+ "source": "sample label formats for the manual's screenshots (make-shots.ps1)",
+ "formats": [
+  {"key": 1, "name": "Regalschild", "paper_id": 259, "length_mm": 20, "feed_mm": 3},
+  {"key": 2, "name": "Adresse", "paper_id": 259, "length_mm": 29, "feed_mm": 3},
+  {"key": 3, "name": "Versand", "paper_id": 259, "length_mm": 100, "feed_mm": 3},
+  {"key": 4, "name": "Adress-Etikett", "paper_id": 271, "length_mm": 89.83, "feed_mm": 3},
+  {"key": 5, "name": "Versand-Etikett", "paper_id": 275, "length_mm": 99.82, "feed_mm": 3},
+  {"key": 6, "name": "Rundes Etikett 24 mm", "paper_id": 363, "length_mm": 24.04, "feed_mm": 2}
+ ]
+}

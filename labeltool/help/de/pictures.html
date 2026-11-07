@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bilder – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/pictures.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objekte</span>
+    <h1>Bilder</h1>
+    <p class="lead">Logos, Fotos und Symbole. Der Drucker druckt nur schwarze Punkte; wie aus dem Bild Schwarz und Weiß
+      wird, bestimmen Sie selbst.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="add-a-picture">Bild einfügen</h2>
+        <p>Werkzeug <span class="ui">Bild</span> oder <span class="path">Einfügen &gt; Bild...</span> und eine Bilddatei
+          wählen. Durchsichtige Stellen werden weiß gedruckt.</p>
+        <dl class="terms">
+          <dt>Unterstützt</dt><dd>PNG (auch mit Transparenz), JPG/JPEG, BMP, GIF (bei Animationen das erste Bild),
+            TIF/TIFF (die erste Seite), WebP (bei Animationen das erste Bild), HEIC/HEIF (Handyfotos), PDF (die erste
+            Seite), SVG (bleibt in jeder Größe scharf); über <span class="ui">Alle Dateien</span> auch ICO und EMF/WMF
+            (werden in Pixel umgewandelt)</dd>
+          <dt>Nicht in SVG</dt><dd>Text entlang einer Linie und senkrechter Text (im Zeichenprogramm vorher
+            in Pfade umwandeln), Filter, Masken, Verweise auf andere Dateien</dd>
+        </dl>
+        <p>Hat ein SVG solche Teile, steht in den Einstellungen des ausgewählten Bildes <span class="ui">Teile dieses Bildes können nicht gedruckt
+          werden – Tipp: als PNG einfügen.</span> Das (i) daneben nennt, was fehlt, und wie alles gedruckt wird: das Bild im
+          Zeichenprogramm als PNG speichern und mit <span class="ui">Ersetzen...</span> einfügen.</p>
+        <p>Text in einem SVG wird mit den Schriftarten dieses PCs gedruckt. Fehlt eine, nimmt der QL Label Maker eine
+          Ersatzschrift und sagt <span class="ui">Dieses Bild wird mit einer Ersatzschrift gedruckt.</span> Das (i) nennt die
+          Schriftart; installieren Sie sie und fügen Sie das Bild mit <span class="ui">Ersetzen...</span> neu ein.</p>
+        <p>WebP braucht die „Webp-Bilderweiterungen“ von Windows; sie sind bei Windows 11 dabei. Für HEIC braucht Windows
+          die kostenlosen „HEIF-Bilderweiterungen“ und „HEVC-Videoerweiterungen“ aus dem Microsoft Store. Fehlen sie, sagt
+          der QL Label Maker das beim Einfügen.</p>
+        <p>Beim Einfügen wird ein Bild auf höchstens 2000 Pixel je Seite verkleinert, mehr als ein Etikett drucken kann; ein SVG bleibt eine Zeichnung.
+          Es wird in der .qllabel-Datei gespeichert; die Bilddatei wird danach nicht mehr gebraucht.</p>
+        <p>An den Ecken ändern Sie die Größe, das Seitenverhältnis bleibt dabei erhalten. Mit gedrückter Umschalttaste
+          ändern Sie sie frei.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>I</kbd></span><span>Bild einfügen</span></div>
+        <div><span><kbd>Umschalt</kbd> an einer Ecke</span><span>Größe frei ändern</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="black-and-white">Schwarzweiß</h2>
+        <figure class="frame" style="max-width:368px"><img src="../img/de/pictures-panel.png" width="348" height="285" alt="Einstellungen eines Bildes: Schwarzweiß Rastern, Invertieren, Ersetzen, Originalproportionen, Lage, Größe und Drehung"></figure>
+        <dl class="terms">
+          <dt>Rastern (Fotos, Graustufen)</dt><dd>Graue Flächen werden zu feinen Punktmustern. Gut für Fotos und
+            Verläufe.</dd>
+          <dt>Schwellenwert (Logos, Zeichnungen)</dt><dd>Was dunkler als der Schieberegler ist, wird schwarz, der Rest
+            weiß. Gut für klare Kanten.</dd>
+          <dt>Invertieren (weiß auf schwarz)</dt><dd>tauscht Schwarz und Weiß.</dd>
+        </dl>
+        <p>Die Zeichenfläche zeigt das Ergebnis Punkt für Punkt, so wie es gedruckt wird.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="replace-and-proportions">Austauschen und Proportionen</h2>
+        <p><span class="ui">Ersetzen...</span> tauscht das Bild gegen eine andere Datei aus.
+          <span class="ui">Originalproportionen</span> stellt das Seitenverhältnis der Bilddatei wieder her.</p>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Gedrehte Bilder</h3>
+      <p>Bilder lassen sich um jeden Winkel drehen. Der QL Label Maker dreht dabei zuerst das Bild und macht es erst danach
+        schwarzweiß; so entstehen keine Streifenmuster.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="lines-boxes.html">← Linien und Rahmen</a><a href="codes.html">Weiter: Barcodes und QR-Codes →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

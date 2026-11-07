@@ -1,0 +1,5 @@
+# The driver's version: the release in which it last changed, its DriverVer and a hash of its
+# sources (driver\gen\version.py; written by "version.py set", not by hand).
+version=0.19
+driverver=11/04/2026,0.19.307.1041
+sources=7b666f894007dd424dbe2229539b6e90b14128d9e77a893a7ea8ab89f6d4e31e

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rotating and arranging – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/rotate-arrange.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Designing</span>
+    <h1>Rotating and arranging</h1>
+    <p class="lead">Text, text frames, boxes and pictures turn to any angle. Line several objects up with the
+      <span class="ui">Arrange</span> toolbar.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="turn-it-with-the-grip">Turn it with the grip</h2>
+        <p>Click the object. A round grip appears above its top edge; it turns with the object (after 90° it is on
+          the right). Drag the grip around; the angle is shown next to the mouse.
+          At 0°, 90°, 180° and 270° it snaps, with a dotted guide.</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/en/rotate-grip.png" width="280" height="140" alt="The word NEU turned by −15°, selected, with the round grip above its top edge"></figure>
+        <p>The handles of a turned object resize it along its own sides.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys while dragging</span>
+        <div><span><kbd>Shift</kbd></span><span>in 15° steps</span></div>
+        <div><span><kbd>Alt</kbd></span><span>free, no snapping</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="type-the-angle">Type the angle</h2>
+        <p>On the right, type an angle from −180° to 180° in the <span class="ui">Rotation</span> field. The outer two
+          buttons next to it turn by 90° anticlockwise or clockwise.</p>
+        <figure class="frame" style="max-width:340px"><img src="../img/en/rotate-angle.png" width="325" height="30" alt="The Rotation field with −15.0 degrees, next to it the buttons 90° anticlockwise, 0° and 90° clockwise"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>R</kbd></span><span>turn 90° clockwise</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="reset-rotation">Reset rotation</h2>
+        <p>The <span class="ui">0°</span> button between the two turn buttons sets the object straight again, also from a
+          free angle such as −15°. It is next to <span class="ui">Rotation</span> on the right and in the
+          <span class="ui">Arrange</span> toolbar; in the <span class="ui">Arrange</span> menu and the context menu it is
+          called <span class="ui">Reset rotation</span>.</p>
+        <figure class="frame" style="max-width:230px"><img src="../img/en/rotate-reset-menu.png" width="216" height="214" alt="An object&#39;s context menu: Duplicate, Delete, Rotate 90°, Reset rotation, Align and the four layer commands"></figure>
+        <p>With several objects selected, all turned ones are set straight. When everything is at 0° already, the command is
+          grey. <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes it like any change.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="select-several-objects">Select several objects</h2>
+        <p><kbd>Ctrl</kbd>+click or <kbd>Shift</kbd>+click adds or removes an object. Or drag a frame from an empty spot:
+          everything it touches is selected. Selected objects get a dashed frame, and the right side says how many there
+          are.</p>
+        <figure class="frame"><img src="../img/en/arrange-several.png" width="870" height="305" alt="Three objects selected with dashed frames; on the right: 3 objects selected"></figure>
+        <p>Clicking a single object edits just that one.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>A</kbd></span><span>Select all</span></div>
+        <div><span>Arrow keys</span><span>move them together</span></div>
+        <div><span><kbd>Del</kbd></span><span>delete them</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="align-and-distribute">Align and distribute</h2>
+        <p>The <span class="ui">Arrange</span> toolbar above the canvas holds, from left to right: duplicate and delete,
+          turn 90° anticlockwise, reset rotation (0°), turn 90° clockwise, six buttons to align, two to distribute, and the four layer commands.
+          Buttons that can't do anything for the selection are grey.</p>
+        <figure class="frame" style="max-width:480px"><img src="../img/en/arrange-toolbar.png" width="471" height="29" alt="The Arrange toolbar with its 17 buttons"></figure>
+        <p>A single object aligns with the printable area. Several objects align with each other:
+          <span class="ui">Align left</span> moves them all to the left edge of the leftmost object. Each button's tooltip
+          adds "with the printable area" or "with the selection".</p>
+        <p><span class="ui">Distribute horizontally</span> and <span class="ui">Distribute vertically</span> need three or
+          more objects. They make the gaps equal; the first and the last object stay where they are. Objects that overlap
+          get equal distances between their centres.</p>
+        <p>The <span class="ui">Arrange</span> menu has the same commands.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span><span>Duplicate</span></div>
+        <div><span><kbd>Del</kbd></span><span>Delete</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="layers">What's on top? Layers</h2>
+        <p>An object added later covers the earlier ones. To change that, use <span class="ui">Bring to front</span>,
+          <span class="ui">Bring forward</span>, <span class="ui">Send backward</span> and
+          <span class="ui">Send to back</span>: in the toolbar, in the <span class="ui">Arrange</span> menu, and by
+          right-clicking the object.</p>
+        <p>An object's context menu also has Duplicate, Delete, Rotate 90°, Reset rotation and Align.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>]</kbd> / <kbd>[</kbd></span><span>forward / backward one layer</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>]</kbd> / <kbd>[</kbd></span><span>to the front / back</span></div>
+        <div><span>also <kbd>Ctrl</kbd> + <kbd>PgUp</kbd> / <kbd>PgDn</kbd></span><span>with <kbd>Shift</kbd>: all the way</span></div>
+        <div><span><kbd>Shift</kbd> + <kbd>F10</kbd></span><span>context menu</span></div>
+      </aside>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Barcodes, QR codes and lines</h3>
+      <p>Barcodes and QR codes turn in 90° steps only, because scanners read them best straight. For them,
+        <span class="ui">Rotation</span> is a list with 0°, 90°, 180° and 270°, and there is no round grip. Lines turn by
+        dragging one of their ends.</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Objects beyond the label</h3>
+      <p>After switching to a shorter or narrower label, objects can reach beyond its edge. The canvas then grows with
+        them: what lies outside is hatched grey and doesn't print, but you can still click it and drag it back. A strip
+        above the canvas says how many objects would print something beyond the label, and when something that would print
+        reaches into the hatched margin along the label's edge, which the printer can't print: a letter, a black
+        background or a turned corner. Empty space of an object there gives no hint.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="invert.html">← White on black</a><a href="view.html">Next: View, direction and zoom →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

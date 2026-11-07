@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Barcodes and QR codes – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/codes.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objects</span>
+    <h1>Barcodes and QR codes</h1>
+    <p class="lead">Barcodes for article numbers and storage places, QR codes for anything a phone should open. Both are
+      laid out on whole printer dots, so scanners read them reliably.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="barcode">Barcode</h2>
+        <p>The <span class="ui">Barcode</span> tool or <span class="path">Insert &gt; Barcode</span>. Under
+          <span class="ui">Type</span> choose:</p>
+        <dl class="terms">
+          <dt>Code 128</dt><dd>letters, digits and ASCII symbols (no umlauts)</dd>
+          <dt>GS1-128</dt><dd>GS1 data, e.g. an article number (GTIN), best-before date and batch</dd>
+          <dt>EAN-13</dt><dd>12 digits, the check digit is added; or all 13 digits</dd>
+        </dl>
+        <p>Type the <span class="ui">Content</span> below. <span class="ui">Text under the bars</span> also prints it in
+          plain text. The code fills its box as far as whole printer dots per bar allow.</p>
+        <figure class="frame" style="max-width:368px"><img src="../img/en/codes-barcode-panel.png" width="348" height="350" alt="Barcode settings: Type Code 128, Content R3{tab}M4-20, Insert field, a Control characters line with (i), a quiet zone note, Text under the bars, position, size and rotation"></figure>
+        <p><strong>Control characters in Code 128</strong> are typed like the date fields, in curly brackets:
+          <code>{tab}</code> tab, <code>{cr}</code> carriage return, <code>{lf}</code> line feed, <code>{gs}</code> group
+          separator, <code>{rs}</code> record separator, <code>{eot}</code> end of transmission, <code>{fnc1}</code> FNC1
+          and <code>{xNN}</code> any ASCII character by its hex code (00–7F). They are encoded but not printed under the
+          bars. The line under the content is a reminder; the (i) next to it shows the whole list.</p>
+        <p><strong>GS1-128</strong> takes elements that start with their application identifier (AI) in brackets, e.g.
+          <code>(01)00000000000000(17)261231(10)ABC123</code>: (01) GTIN, 14 digits; (17) best before, YYMMDD; (10) batch;
+          (21) serial number. The brackets are printed under the bars but not encoded; the FNC1 separators are added
+          automatically. Wrong lengths or check digits show in red on the right.</p>
+        <figure class="frame" style="max-width:460px"><img src="../img/en/codes-gs1-label.png" width="440" height="140" alt="A GS1-128 code with (01)00000000000000(10)ABC123 in brackets under it"></figure>
+        <p>If you switch the type and the content doesn't fit it, a neutral sample content is filled in:
+          <code>0000000000000</code> for EAN-13, <code>(01)00000000000000(10)ABC123</code> for GS1-128.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span><span>add a barcode</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="qr-code">QR code</h2>
+        <p>The <span class="ui">QR code</span> tool or <span class="path">Insert &gt; QR code</span>. Under
+          <span class="ui">Contains</span> choose what a phone should do with the code; the matching fields appear below:</p>
+        <dl class="terms">
+          <dt>Text</dt><dd>any text, also with umlauts</dd>
+          <dt>Web address</dt><dd>opens a web page; <code>https://</code> is added if it's missing</dd>
+          <dt>Contact</dt><dd>first name, last name, company, phone, e-mail, street, postcode and city, website: phones
+            offer to save the contact</dd>
+          <dt>Wi-Fi</dt><dd>network name, password, encryption, hidden network: phones offer to join</dd>
+          <dt>E-mail</dt><dd>to, subject, message</dd>
+          <dt>Phone number</dt><dd>phones offer to call the number</dd>
+          <dt>SMS</dt><dd>number and message</dd>
+        </dl>
+        <figure class="frame" style="max-width:360px"><img src="../img/en/codes-qr-panel.png" width="343" height="325" alt="QR code settings: Contains Web address, web address example.org, light margin note, Error correction M, position, size and rotation"></figure>
+        <p><span class="ui">Error correction</span> sets how much of the code may be damaged: from
+          <span class="ui">L – 7 % (smallest)</span> to <span class="ui">H – 30 % (most robust)</span>; the usual one is
+          <span class="ui">M – 15 %</span>. More correction makes the code denser.
+          <span class="ui">Invert</span> prints it white on black: <a href="invert.html">White on black</a>.</p>
+        <p>A QR code is always square. If details are missing or the content is too long, the right side says so in red,
+          and printing asks first (see below).</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Q</kbd></span><span>add a QR code</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="when-a-code-doesnt-fit">When a code doesn't fit</h2>
+        <p>Below the content, the right side says what is wrong with the code. <strong>In red</strong> are errors; the
+          code gets a red dashed frame:</p>
+        <ul>
+          <li>The content can't be encoded; the message gives the reason. The code prints blank.</li>
+          <li><span class="ui">Too narrow: at least … mm</span> (QR codes: <span class="ui">Too small</span>): at one
+            printer dot per bar the bars don't fit even with the quiet zone. The code prints cut off, as on the
+            canvas.</li>
+        </ul>
+        <p>If a label has such errors, QL Label Maker asks before printing: <span class="ui">The label has errors</span>
+          lists the codes and their errors, with <span class="ui">Print anyway</span> and <span class="ui">Cancel</span>;
+          Cancel is the default.</p>
+        <figure class="frame" style="max-width:539px"><img src="../img/en/codes-errors-dialog.png" width="519" height="264" alt="Dialog The label has errors: Code 128 “Größe 3” takes ASCII only, EAN-13 “0000” needs 12 digits; below, the note that a code that can't be made stays blank; buttons Print anyway and Cancel"></figure>
+        <p><strong>In orange</strong> are hints; the code prints without asking, but scanners may not read it:</p>
+        <ul>
+          <li><span class="ui">The code is wider than its frame – better at least … mm</span>: the frame is narrower than
+            one printer dot per bar, but the code fits with its quiet zone. It is drawn whole and reaches into the quiet
+            zone.</li>
+          <li>The code lies partly outside the printable area and gets cut off.</li>
+          <li><span class="ui">Bars very narrow</span> (QR codes: <span class="ui">Dots very small</span>): narrower than
+            3 printer dots, for an EAN-13 below 80 % of the usual 0.33 mm. The message gives the width.</li>
+          <li>The text under the bars doesn't fit at this size.</li>
+        </ul>
+        <figure class="frame" style="max-width:368px"><img src="../img/en/codes-gs1-hint.png" width="348" height="190" alt="GS1-128 settings with the hint in orange: Bars very narrow (0.08 mm) – make the code wider"></figure>
+        <p>When the code gets narrower, the text under the bars gets smaller so that it fits.</p>
+        <figure class="frame" style="max-width:265px"><img src="../img/en/codes-text-shrinks.png" width="245" height="135" alt="A narrow GS1-128 code with smaller text under it"></figure>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="a-date-in-the-code">A date in the code</h2>
+        <p><span class="ui">Insert field ▾</span> is here too, for example for a batch number
+          <code>LOT{date:yyMMdd}</code>. How fields work: <a href="text.html">Text and text frames</a>.</p>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>The quiet zone</h3>
+      <div class="row">
+        <p>Scanners need a clear margin around a code to find where it starts and ends: 4 modules all round for a QR code,
+          10 modules left and right for Code 128 and GS1-128, 11 left and 7 right for EAN-13. While the code is selected, QL Label
+          Maker shows this margin in a light colour. It doesn't print, but it must stay clear.</p>
+        <figure class="frame"><img src="../img/en/codes-quiet-zone.png" width="175" height="174" alt="A selected QR code with a light margin: the quiet zone"></figure>
+      </div>
+      <p>If another object reaches into it, the margin turns orange, the right side names the object, and a strip above
+        the canvas counts the codes concerned. Move the object away or make the code smaller.</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>90° steps only</h3>
+      <p>Scanners read codes best straight. For barcodes and QR codes, <span class="ui">Rotation</span> is therefore a list
+        with 0°, 90°, 180° and 270°.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="pictures.html">← Pictures</a><a href="invert.html">Next: White on black →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

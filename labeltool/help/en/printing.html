@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Printing – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/printing.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printing and files</span>
+    <h1>Printing</h1>
+    <p class="lead">The picture on the canvas is the print: QL Label Maker turns the label into the printer's black dots
+      and sends exactly these dots.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="copies-and-print">Copies and Print</h2>
+        <p>Set the number of labels under <span class="ui">Copies</span>, then click <span class="ui">Print</span>. The
+          label prints on the printer shown under <span class="ui">Printer</span> at the top.</p>
+        <figure class="frame" style="max-width:220px"><img src="../img/en/printing-copies.png" width="135" height="21" alt="Copies: 1 and the Print button"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>P</kbd></span><span>print</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="the-loaded-roll">The loaded roll</h2>
+        <p>Before printing, QL Label Maker asks the printer for the loaded roll: always on USB and on the network, and
+          a shared printer when the printer status service runs on the PC it is plugged into. It shows first:</p>
+        <ul>
+          <li>an error on the printer,</li>
+          <li>a roll that doesn't fit the label (the printer would otherwise stop with a red light),</li>
+          <li>a printer set to "Use Printer Offline"; QL Label Maker offers to use it online again.</li>
+        </ul>
+        <p>If a code on the label has an error, QL Label Maker asks first too, see <a href="codes.html">Barcodes and QR
+          codes</a>.</p>
+        <p>The status bar at the bottom shows what is loaded. Clicking it asks the printer again, and so does
+          <span class="path">Printer &gt; Check the loaded roll</span>.</p>
+        <figure class="frame" style="max-width:210px"><img src="../img/en/printing-roll.png" width="183" height="21" alt="Status bar: Ready, 62 mm continuous loaded"></figure>
+        <p><span class="path">Printer &gt; Printer status</span> tells you more about the printer.
+          <span class="path">Printer &gt; Notify me about printer errors</span> shows a Windows notification when a QL
+          printer stops (<a href="../formats/en/status.html#notify-me-about-printer-errors">more</a>), and
+          <span class="path">Printer &gt; Printer setup</span> adds a network or shared QL printer
+          (<a href="../formats/en/setup.html">Printer setup</a>).</p>
+        <p><strong>Tip:</strong> that's why labels are best printed with QL Label Maker. If a label doesn't fit the roll,
+          it says so before sending it, so the printer doesn't get stuck in its error state (which only opening and
+          closing the roll cover clears). That's especially handy when the printer is on the network or at another PC.
+          Word and other programs print too, but without this check.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>F6</kbd></span><span>Printer status</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="300-600-dpi">300 × 600 dpi</h2>
+        <p>Twice the dots along the label: sharper text, slower printing. Turn it on under <span class="ui">Resolution</span>
+          on the right while nothing is selected, or with <span class="path">Printer &gt; 300 × 600 dpi (sharper,
+          slower)</span>. A new label starts with the printer's setting.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="what-doesnt-print">What doesn't print</h2>
+        <ul>
+          <li>hatched areas: the printer can't print there,</li>
+          <li>parts of objects beyond the label,</li>
+          <li>the light margin around a selected code (the quiet zone).</li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Apply a new label format first</h3>
+      <p>Windows doesn't know a label format until it is saved with <span class="ui">Save &amp; apply</span> in QL Label
+        Formats. QL Label Maker still shows it; the printable area is then estimated, and the status bar says so. Printing
+        works after <span class="ui">Save &amp; apply</span>.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="view.html">← View, direction and zoom</a><a href="files.html">Next: Saving and opening →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

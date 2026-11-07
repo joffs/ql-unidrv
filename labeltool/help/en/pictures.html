@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pictures – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/pictures.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objects</span>
+    <h1>Pictures</h1>
+    <p class="lead">Logos, photos and symbols. The printer prints black dots only; you decide how the picture becomes
+      black and white.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="add-a-picture">Add a picture</h2>
+        <p>The <span class="ui">Picture</span> tool or <span class="path">Insert &gt; Picture...</span>, then choose a
+          picture file. Transparent parts print white.</p>
+        <dl class="terms">
+          <dt>Supported</dt><dd>PNG (also with transparency), JPG/JPEG, BMP, GIF (an animation: its first frame),
+            TIF/TIFF (the first page), WebP (an animation: its first frame), HEIC/HEIF (phone photos), PDF (the first
+            page), SVG (stays sharp at any size); with <span class="ui">All files</span> also ICO and EMF/WMF (turned
+            into pixels)</dd>
+          <dt>Not in SVG</dt><dd>text along a line and vertical text (convert it to paths in your drawing
+            program first), filters, masks, links to other files</dd>
+        </dl>
+        <p>If an SVG has such parts, the selected picture's settings show <span class="ui">Parts of this picture can't be printed –
+          tip: insert it as a PNG.</span> The (i) next to it says what is missing and how to print it all: save the picture
+          as a PNG in your drawing program and insert it with <span class="ui">Replace...</span>.</p>
+        <p>Text in an SVG prints with the fonts on this PC. If one is missing, QL Label Maker uses a substitute font and says
+          <span class="ui">This picture prints with a substitute font.</span> The (i) names the font; install it and insert
+          the picture again with <span class="ui">Replace...</span>.</p>
+        <p>WebP needs Windows' "Webp Image Extensions"; they come with Windows 11. For HEIC, Windows needs the free "HEIF
+          Image Extensions" and "HEVC Video Extensions" from the Microsoft Store. If they are missing, QL Label Maker says
+          so when you insert the picture.</p>
+        <p>On insert a picture is reduced to at most 2000 pixels per side, more than a label can print; an SVG stays a drawing. It is stored in
+          the .qllabel file; the picture file isn't needed afterwards.</p>
+        <p>Drag a corner to change the size; the proportions stay. Hold Shift to change them freely.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>I</kbd></span><span>add a picture</span></div>
+        <div><span><kbd>Shift</kbd> at a corner</span><span>free size</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="black-and-white">Black and white</h2>
+        <figure class="frame" style="max-width:368px"><img src="../img/en/pictures-panel.png" width="348" height="285" alt="Picture settings: Black and white Dither, Invert, Replace, Original proportions, position, size and rotation"></figure>
+        <dl class="terms">
+          <dt>Dither (photos, shades)</dt><dd>Grey areas become fine dot patterns. Good for photos and gradients.</dd>
+          <dt>Threshold (logos, drawings)</dt><dd>Everything darker than the slider becomes black, the rest white. Good
+            for sharp edges.</dd>
+          <dt>Invert (white on black)</dt><dd>swaps black and white.</dd>
+        </dl>
+        <p>The canvas shows the result dot for dot, as it will print.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="replace-and-proportions">Replace and proportions</h2>
+        <p><span class="ui">Replace...</span> swaps the picture for another file. <span class="ui">Original
+          proportions</span> restores the proportions of the picture file.</p>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Turned pictures</h3>
+      <p>Pictures turn to any angle. QL Label Maker turns the picture first and only then makes it black and white, so no
+        stripe patterns appear.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="lines-boxes.html">← Lines and boxes</a><a href="codes.html">Next: Barcodes and QR codes →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

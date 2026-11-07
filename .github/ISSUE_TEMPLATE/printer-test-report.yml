@@ -1,0 +1,66 @@
+name: Printer test report
+description: Results of the test kit (testkit/) on your Brother QL printer – good or bad, both help.
+title: "Printer test report"
+labels: ["test report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing! Please attach the file `qltest-report-<model>-<time>.txt` from the kit folder
+        (drag it into the "Report file" box). Photos help if a label looked wrong.
+  - type: textarea
+    id: report
+    attributes:
+      label: Report file
+      description: Drag `qltest-report-....txt` here (or paste its content). With the report attached, only the model and the overall result below are needed; the other fields are for reports without the file.
+  - type: dropdown
+    id: model
+    attributes:
+      label: Printer model
+      options: [QL-500, QL-550, QL-560, QL-570, QL-580N, QL-600, QL-650TD, QL-700, QL-710W, QL-720NW, QL-800, QL-810W, QL-820NWB, QL-1050, QL-1060N, QL-1100, QL-1110NWB, QL-1115NWB]
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Overall result
+      options: ["All labels looked like the pictures", "Some labels looked wrong", "Nothing printed / the printer showed an error"]
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows
+      description: Already in the report file.
+      options: ["Windows 11 x64", "Windows 11 ARM64", "Windows 10 x64", "other"]
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Tested over
+      description: Already in the report file.
+      options: ["USB", "USB and network (-Network)", "Network only (-Network)"]
+  - type: input
+    id: roll
+    attributes:
+      label: Roll(s) used
+      placeholder: "e.g. 62 mm continuous DK-22205 (US: DK-2205), 29 × 90 mm DK-11201 (US: DK-1201)"
+      description: "Already in the report file. Otherwise: the size and the DK number on the roll's box or holder."
+  - type: textarea
+    id: notes
+    attributes:
+      label: What looked wrong (if anything)
+      description: Which label, what you saw (cut, position, missing parts, red light). Photos welcome.
+  - type: dropdown
+    id: credits
+    attributes:
+      label: "Thanks page: may we name you?"
+      description: Once the models are tested, the project adds a thanks page with the testers who said yes here.
+      options: ["No, stay anonymous", "Yes, with my GitHub user name", "Yes, with the name below"]
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: credits-name
+    attributes:
+      label: Name for the thanks page
+      description: Only if you chose "Yes, with the name below".

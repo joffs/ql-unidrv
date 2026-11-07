@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Druckereinrichtung – QL Label Formats Hilfe</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Hilfe · Etikettenformate, Drucker und Status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Programme</a>
+  <a class="lang" href="../en/setup.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucker</span>
+    <h1>Druckereinrichtung</h1>
+    <p class="lead">Hier fügen Sie QL-Drucker im Netzwerk und Drucker eines anderen PCs hinzu, geben einen QL-Drucker
+      dieses PCs frei und schalten das Treiberprotokoll ein. Zum Drucken braucht ein USB-Drucker nichts davon: Die
+      Installation richtet ihn selbst ein.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="open-it">Öffnen</h2>
+        <p><span class="path">Drucker &gt; Druckereinrichtung</span>, ein Klick links in der Statusleiste auf
+          „QL Unidrv … · … QL-Drucker“, oder unter Windows <span class="ui">Installierte Apps</span> &gt;
+          <span class="ui">QL Unidrv printer driver</span> &gt; <span class="ui">Ändern</span>. Oben steht die Liste der
+          QL-Drucker auf diesem PC; ein freigegebener Drucker zeigt seinen Freigabenamen. Bei einem
+          Drucker eines anderen PCs steht „nicht mehr freigegeben“, wenn der andere PC ihn nicht mehr freigibt (oder die
+          Freigabe umbenannt hat), und „nicht erreichbar“, wenn der andere PC nicht antwortet: Druckaufträge kommen dann
+          nicht an. Entfernen Sie ihn hier, und fügen Sie ihn bei Bedarf mit dem neuen Namen wieder hinzu. Für den gewählten Drucker:
+          <span class="ui">Drucker entfernen</span> (fragt vorher; der Treiber bleibt installiert) und
+          <span class="ui">Druckereigenschaften</span> (das Fenster von Windows: Anschlüsse und mehr; auch per
+          Doppelklick). Ist ein QL-Drucker per USB angeschlossen, aber hier noch nicht eingerichtet (etwa nach
+          <span class="ui">Drucker entfernen</span>: Windows legt ihn nicht von selbst wieder an), steht unter der Liste
+          eine Zeile mit <span class="ui">Drucker hinzufügen</span>; bei mehreren solchen Druckern zählt die Zeile sie,
+          und der Knopf lässt einen wählen. Die Zeile folgt, wenn ein Drucker bei offenem Fenster eingesteckt oder
+          ausgesteckt wird. Der neue Drucker ist nicht freigegeben; das Fenster bietet danach
+          <span class="ui">Freigeben</span> an. Einen freigegebenen Drucker halten PCs, die darüber drucken, eventuell
+          noch offen: Dann schließt Windows das Entfernen erst ab, wenn dort der Dienst
+          <span class="ui">Druckwarteschlange</span> oder einer der beiden PCs neu startet; das Fenster sagt es.</p>
+        <p>Unter der Liste stehen vier Registerkarten; das Fenster öffnet die zuletzt benutzte.
+          <kbd>Strg</kbd>+<kbd>Tab</kbd> wechselt zwischen ihnen.</p>
+        <figure class="frame" style="max-width:660px"><img src="../img/de/setup-sections.png" width="641" height="254" alt="Die Registerkarten Netzwerkdrucker, Drucker eines anderen PCs, Drucker freigeben und Optionen; auf Drucker freigeben der Drucker, sein Freigabename und die Knöpfe Freigeben, Namen ändern und Freigabe beenden; unten Deinstallieren, Neue Version und Fertig"></figure>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="printers-on-the-network">Netzwerkdrucker</h2>
+        <p>Für QL-Drucker mit Ethernet oder WLAN: <span class="ui">IP-Adresse</span> eintippen. Sie steht auf dem
+          Konfigurationsetikett, das der Drucker druckt, oder in seinen Netzwerkeinstellungen. Bei
+          <span class="ui">Modell</span> bleibt <span class="ui">(Drucker fragen)</span>: Der Drucker nennt sein Modell
+          selbst; nur wenn er nicht antwortet, wählen Sie es aus. Dann <span class="ui">Hinzufügen</span>.</p>
+        <p>Das Fenster zeigt, was hinzugefügt wird, mit Modell und eingelegter Rolle; <span class="ui">Drucker
+          hinzufügen</span> fragt einmal nach Administratorrechten. Danach bietet es <span class="ui">Testetikett
+          drucken</span>, <span class="ui">Druckwarteschlange öffnen</span> und <span class="ui">Als Standarddrucker
+          festlegen</span>. Jeder PC richtet einen Netzwerkdrucker so über seine Adresse ein; er wird nicht über einen
+          PC freigegeben.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="a-printer-of-another-pc">Drucker eines anderen PCs</h2>
+        <p>Ein USB-Drucker an einem anderen PC lässt sich über eine Freigabe mitbenutzen. Zuerst am anderen PC: den
+          Drucker freigeben (<a href="#share-a-printer">Drucker freigeben</a>). Dann auf diesem PC einmal
+          <code>\\Name-des-anderen-PCs</code> im Explorer öffnen und sich mit „Anmeldedaten speichern“ anmelden.</p>
+        <p>Anschließend hier bei <span class="ui">Freigabe</span> <code>\\PC\Freigabename</code> eintippen, das
+          <span class="ui">Modell</span> wählen und auf <span class="ui">Hinzufügen</span> klicken. Heißt die Freigabe
+          wie das Modell (<code>\\PC\QL-800</code>), ist es schon gewählt.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="share-a-printer">Drucker freigeben</h2>
+        <p>Hier bekommen andere PCs einen QL-Drucker, der per USB an diesem PC angeschlossen ist. Wählen Sie den
+          <span class="ui">Drucker</span>, behalten Sie den vorgeschlagenen <span class="ui">Freigabenamen</span> (das
+          Modell, etwa <code>QL-800</code>) oder tippen Sie einen anderen ein, und klicken Sie auf
+          <span class="ui">Freigeben</span>. Ein Freigabename hat höchstens 80 Zeichen, keines von
+          <code>" / \ [ ] : | &lt; &gt; + = ; , ? *</code>, und keine andere Freigabe auf diesem PC darf ihn schon
+          benutzen; das Fenster sagt es schon beim Tippen. Danach zeigt es die Adresse für die anderen PCs, etwa
+          <code>\\DIESER-PC\QL-800</code>.</p>
+        <p>Bei einem freigegebenen Drucker ändert <span class="ui">Namen ändern</span> den Freigabenamen, und
+          <span class="ui">Freigabe beenden</span> beendet sie. Beides fragt vorher: PCs, die über den alten Namen
+          drucken, erreichen den Drucker danach nicht mehr und müssen ihn neu hinzufügen. Jede Änderung fragt einmal
+          nach Administratorrechten.</p>
+        <p>Andere PCs erreichen die Freigabe nur, wenn die Datei- und Druckerfreigabe von Windows an ist und das
+          Netzwerk nicht als öffentlich eingestellt ist. Sonst sagt es die Seite, mit
+          <span class="ui">Einstellungen öffnen</span>.</p>
+        <dl class="terms">
+          <dt>Druckerstatus-Dienst für freigegebene Drucker</dt><dd>Ein Windows-Dienst fragt die Drucker dieses PCs alle
+            3 Sekunden ab, so sehen auch die PCs, die über eine Freigabe drucken, Rolle und Fehler und können
+            Testetiketten drucken. Drucken funktioniert auch ohne ihn.</dd>
+        </dl>
+        <p>Netzwerkdrucker werden hier nicht freigegeben: Jeder PC richtet sie über ihre Adresse ein.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="options">Optionen</h2>
+        <dl class="terms">
+          <dt>Treiberprotokoll zur Fehlersuche</dt><dd>schreibt mit, was der Treiber bei jedem Druck tut
+            (<code>C:\ProgramData\QLUnidrv\log\plugin.log</code>). Nur für eine Fehlermeldung einschalten, danach wieder
+            aus. Fragt einmal nach Administratorrechten.</dd>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Testetikett über eine Freigabe</h3>
+      <p>Ein Testetikett fragt zuerst nach der eingelegten Rolle, damit ein falsches Format den Drucker nicht anhält.
+        Über eine Freigabe kann nur der PC antworten, an dem der Drucker angeschlossen ist, und nur mit dem
+        Druckerstatus-Dienst. Schalten Sie ihn dort ein: <span class="path">QL Label Formats &gt; Drucker &gt;
+        Druckereinrichtung &gt; Drucker freigeben</span>. Drucken funktioniert auch ohne ihn.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="status.html">← Druckerstatus und Benachrichtigungen</a><a href="install.html">Weiter: Installieren, reparieren, deinstallieren →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

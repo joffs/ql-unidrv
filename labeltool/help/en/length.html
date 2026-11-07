@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Label formats and custom lengths – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/length.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Getting started</span>
+    <h1>Label formats and custom lengths</h1>
+    <p class="lead">On continuous tape you set the label's length yourself: in the <span class="ui">Length</span> field
+      or with the grip at the label's end. You don't need a label format for it.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="choose-the-label">Choose the label</h2>
+        <p>The <span class="ui">Label</span> list at the top shows your label formats first, then Brother's papers for the
+          printer's model. For a length of your own, choose a continuous tape, for example "62 mm continuous" (e.g. DK-22205, in the US DK-2205).</p>
+        <figure class="frame" style="max-width:400px"><img src="../img/en/length-label-box.png" width="382" height="26" alt="Label: 62 mm continuous – own length"></figure>
+        <p>As soon as you set a length, it says "own length" there.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="type-the-length">Type the length</h2>
+        <p>Click an empty spot next to the label so that nothing is selected. On the right, under
+          <span class="ui">Label</span>, you then see the <span class="ui">Length</span> field. Type the length in
+          millimetres.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/en/length-panel.png" width="348" height="79" alt="Length: 50.0 mm, below it Automatic from the content and the link Save as label format"></figure>
+        <p>It prints exactly this length. The (i) next to the field says what the printer can do: 12.7 to 1000 mm on
+          the QL-800 and the other models with a narrow print head, 25.4 to 3000 mm on the wide models (QL-1050 to
+          QL-1115NWB).</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="drag-the-end">Drag the end</h2>
+        <p>There is a grip at the end of the label. Drag it to make the label longer or shorter; the measure under the
+          label shows the length.</p>
+        <figure class="frame" style="max-width:340px"><img src="../img/en/length-canvas.png" width="455" height="490" alt="A label 50 mm long, the grip at its end on the right, the measure 50 mm below"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys while dragging</span>
+        <div><span>no key</span><span>in 1 mm steps</span></div>
+        <div><span><kbd>Alt</kbd></span><span>in 0.1 mm steps</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="automatic-from-the-content">Automatic from the content</h2>
+        <p>With <span class="ui">Automatic from the content</span> ticked, the end follows the last object, with the same
+          margin as at the start. The field turns grey and the measure says "automatic". Move an object further along and
+          the label grows with it.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/en/length-auto.png" width="348" height="51" alt="Length 40.0 mm in grey, Automatic from the content ticked"></figure>
+        <p>For a fixed length, untick it again.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="too-short-or-too-long">Too short or too long</h2>
+        <p>QL Label Maker doesn't accept a length the printer can't print. A red line under the field says what this
+          printer can do.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/en/length-error.png" width="348" height="76" alt="Length 8.0 mm, below it in red: Possible: 12.7–1000 mm on this printer."></figure>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="save-as-label-format">Save as label format</h2>
+        <p>Only needed if you want to choose the length in other programs too, for example in Word. The link
+          <span class="ui">Save as label format …</span> opens QL Label Formats with a new format of this length. Click
+          <span class="ui">Save &amp; apply</span> there as usual (Windows asks for administrator permission).</p>
+        <p>You manage your label formats in QL Label Formats, also through
+          <span class="path">Tools &gt; QL Label Formats</span>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Die-cut and round labels</h3>
+      <p>Here the labels on the roll set the length. The panel shows it instead of the field; for a length of your own,
+        choose continuous tape.</p>
+      <figure class="frame" style="max-width:280px"><img src="../img/en/length-diecut.png" width="268" height="25" alt="Length: 28.9 mm – die-cut, fixed"></figure>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="first-label.html">← Your first label</a><a href="text.html">Next: Text and text frames →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Etikettenformate anlegen und ordnen – QL Label Formats Hilfe</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Hilfe · Etikettenformate, Drucker und Status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Programme</a>
+  <a class="lang" href="../en/formats.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Etikettenformate</span>
+    <h1>Etikettenformate anlegen und ordnen</h1>
+    <p class="lead">Ein Etikettenformat ist ein Name für eine Rolle und, bei Endlosband, eine Länge. Die Liste gilt für
+      alle QL-Drucker dieses PCs.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="new-format">Neues Format</h2>
+        <p>Klicken Sie auf <span class="ui">Neu</span>. In der Liste erscheint „Neues Etikett“ auf 62 mm Endlosband mit
+          50 mm Länge, und rechts steht der Cursor im Feld <span class="ui">Name</span>.</p>
+        <figure class="frame"><img src="../img/de/new-format.png" width="960" height="200" alt="Die Liste mit dem neuen Format „Neues Etikett“, 62 × 50 mm, rechts Name, Brother-Medium, Länge, Vorschub und Standard"></figure>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>N</kbd></span><span>Neu</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="settings">Einstellen</h2>
+        <dl class="terms">
+          <dt>Name</dt><dd>so heißt das Papierformat später in den Programmen.</dd>
+          <dt>Brother-Medium</dt><dd>die Rolle: ein Endlosband, Einzeletiketten oder runde Etiketten.</dd>
+          <dt>Länge (mm)</dt><dd>bei Endlosband; daneben steht, was der Drucker kann. Bei Einzeletiketten und runden
+            Etiketten legt das Etikett sie fest.</dd>
+          <dt>Vorschub (mm)</dt><dd>der unbedruckte Rand am Anfang und Ende jedes Etiketts auf Endlosband, 0 bis 8,3 mm
+            (Brother-Vorgabe 3 mm).</dd>
+        </dl>
+        <p>Die Vorschau darunter zeigt das Etikett mit seinen Maßen. Was Sie ändern, gilt erst nach
+          <a href="apply.html">Übernehmen</a>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="duplicate-delete-order">Duplizieren, löschen, ordnen</h2>
+        <p>Ein Rechtsklick auf ein Format bietet <span class="ui">Testdruck</span>, das Format als Standard, <span
+          class="ui">Etikett mit diesem Format gestalten</span> (öffnet den QL Label Maker), <span
+          class="ui">Duplizieren</span> und <span class="ui">Löschen</span>.</p>
+        <figure class="frame" style="max-width:360px"><img src="../img/de/context-menu.png" width="360" height="120" alt="Kontextmenü: Testdruck, „Regalschild“ als Standard-Etikettenformat verwenden, Etikett mit diesem Format gestalten, Duplizieren, Löschen"></figure>
+        <p>Die Reihenfolge ändern Sie, indem Sie ein Format in der Liste an eine andere Stelle ziehen, oder mit
+          <span class="path">Bearbeiten &gt; Nach oben</span> und <span class="ui">Nach unten</span>.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten in der Liste</span>
+        <div><span><kbd>Entf</kbd></span><span>Löschen</span></div>
+        <div><span><kbd>Alt</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd></span><span>nach oben / unten</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="import-and-export">Importieren und exportieren</h2>
+        <p>Im Menü <span class="ui">Datei</span>:</p>
+        <figure class="frame" style="max-width:200px"><img src="../img/de/menu-file.png" width="186" height="148" alt="Menü Datei: Neu, Import, Export, Übernehmen, Verwerfen, Beenden"></figure>
+        <dl class="terms">
+          <dt>Import</dt><dd><span class="ui">Brother-Etikettenformate (.dat, .org)...</span> liest die Liste aus
+            Brothers eigenem Etikettenformat-Programm, <span class="ui">JSON...</span> eine exportierte Liste.
+            <span class="ui">Brother-Werksliste</span> stellt Brothers ab Werk mitgelieferte Formate her; in Versionen
+            ohne diese Liste ist der Eintrag grau. Danach fragt das Programm: <span class="ui">Liste ersetzen</span>
+            oder <span class="ui">Hinzufügen</span>.</dd>
+          <dt>Export</dt><dd>als Brother-Datei (.dat) für Brothers Programm oder als JSON, zum Beispiel für einen
+            anderen PC.</dd>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Nur eine Länge für ein Etikett?</h3>
+      <p>Im QL Label Maker stellen Sie auf Endlosband jede Länge direkt ein, ganz ohne Etikettenformat. Ein Format
+        brauchen Sie, wenn andere Programme diese Länge anbieten sollen.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="index.html">← Inhalt</a><a href="apply.html">Weiter: Übernehmen →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

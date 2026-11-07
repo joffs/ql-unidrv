@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Installieren, reparieren, deinstallieren – QL Label Formats Hilfe</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Hilfe · Etikettenformate, Drucker und Status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Programme</a>
+  <a class="lang" href="../en/install.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucker</span>
+    <h1>Installieren, reparieren, deinstallieren</h1>
+    <p class="lead">Treiber und Programme kommen aus einem Zip mit <span class="ui">Setup.exe</span>. Der Treiber wird
+      auf Ihrem PC mit einem eigenen Zertifikat signiert; Sie müssen keinem fremden Zertifikat vertrauen.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="installing">Installieren</h2>
+        <p>Das Zip ganz entpacken (Rechtsklick &gt; <span class="ui">Alle extrahieren</span>), den Drucker anschließen
+          und einschalten, dann <span class="ui">Setup.exe</span> doppelklicken. Sagt Windows „Der Computer wurde durch
+          Windows geschützt“: <span class="ui">Weitere Informationen</span> &gt; <span class="ui">Trotzdem
+          ausführen</span>.</p>
+        <p>Das Fenster führt durch vier Schritte:</p>
+        <ol>
+          <li><span class="ui">Diesen PC prüfen</span>: die Art des PCs (x64 oder ARM64), die installierte und die
+            neue Version, angeschlossene QL-Drucker und ihre Rolle.</li>
+          <li><span class="ui">Den Treiber für diesen PC signieren</span>.</li>
+          <li><span class="ui">Treiber und Programme installieren</span>: eine Abfrage nach
+            Administratorrechten. Vorher wählen Sie, ob Sie bei Druckerfehlern benachrichtigt werden möchten.</li>
+          <li><span class="ui">Ein Testetikett drucken</span> auf der eingelegten Rolle.</li>
+        </ol>
+        <p>Danach stehen im Startmenü <span class="ui">QL Label Formats</span>, <span class="ui">QL Label Maker</span>
+          und <span class="ui">QL Printer Status</span>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="arm64-restart">ARM64-PCs: Neustart mit Taste 7</h2>
+        <p>Windows auf ARM64 installiert einen selbst signierten Treiber nur nach einem Neustart, bei dem die
+          Treibersignaturprüfung einmal aus ist. Das Fenster hat dafür einen eigenen Schritt:</p>
+        <ol>
+          <li><span class="ui">Vorbereiten und neu starten</span> (eine Abfrage nach Administratorrechten).</li>
+          <li>Auf dem blauen Bildschirm <span class="ui">Starteinstellungen</span> die Taste <kbd>7</kbd> drücken.</li>
+          <li>Nach der Anmeldung öffnet sich das Fenster wieder. Fragt Windows nach dem Herausgeber, <span
+            class="ui">Diese Treibersoftware trotzdem installieren</span> wählen.</li>
+          <li>Zum Schluss normal neu starten. Der Treiber funktioniert danach mit eingeschalteter Prüfung.</li>
+        </ol>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="repairing-or-updating">Reparieren oder aktualisieren</h2>
+        <p><span class="ui">Setup.exe</span> aus dem entpackten Zip noch einmal starten. Es prüft den PC und installiert
+          Treiber und Programme neu; Drucker, Einstellungen und Etikettenformate bleiben. Die Druckereinrichtung zeigt
+          unten einen Link zur Downloadseite.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="uninstalling">Deinstallieren</h2>
+        <p>Unter Windows <span class="ui">Installierte Apps</span> &gt; <span class="ui">QL Unidrv printer
+          driver</span> &gt; <span class="ui">Deinstallieren</span>, oder in der Druckereinrichtung
+          <span class="ui">Deinstallieren</span>. Das Fenster zeigt vorher, was entfernt wird: die QL-Drucker, die
+          Programme, den Treiber, sein Zertifikat und die Protokolle.</p>
+        <p><span class="ui">Meine Etikettenformate behalten</span> ist angehakt: Die Liste bleibt dann für eine spätere
+          Installation. Ein freigegebener Drucker ist orange markiert, denn andere PCs können danach nicht mehr über ihn
+          drucken.</p>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Wenn Windows den Treiber blockiert</h3>
+      <p>Ist die <span class="ui">Intelligente App-Steuerung</span> an oder der geschützte Druckmodus von Windows, sagt
+        die Prüfung im ersten Schritt das gleich: Beide lassen nur Programme mit gekaufter Signatur bzw. Windows' eigene
+        Druckertreiber zu.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="setup.html">← Druckereinrichtung</a><a href="appendix.html">Weiter: Tasten und Programme →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

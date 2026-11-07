@@ -1,0 +1,4 @@
+LIBRARY QLUnidrv
+EXPORTS
+    DllCanUnloadNow     PRIVATE
+    DllGetClassObject   PRIVATE

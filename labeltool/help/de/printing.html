@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drucken – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/printing.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucken und Dateien</span>
+    <h1>Drucken</h1>
+    <p class="lead">Das Bild auf der Zeichenfläche ist der Druck: Der QL Label Maker rechnet das Etikett in die schwarzen
+      Punkte des Druckers um und schickt genau diese Punkte.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="copies-and-print">Kopien und Drucken</h2>
+        <p>Bei <span class="ui">Kopien</span> die Anzahl der Etiketten einstellen, dann auf <span class="ui">Drucken</span>
+          klicken. Gedruckt wird auf dem Drucker, der oben bei <span class="ui">Drucker</span> steht.</p>
+        <figure class="frame" style="max-width:240px"><img src="../img/de/printing-copies.png" width="150" height="21" alt="Kopien: 1 und der Knopf Drucken"></figure>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>P</kbd></span><span>Drucken</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="the-loaded-roll">Die eingelegte Rolle</h2>
+        <p>Vor dem Druck fragt der QL Label Maker den Drucker, welche Rolle eingelegt ist: an USB und im Netzwerk immer,
+          einen freigegebenen Drucker, wenn auf dem PC mit dem Drucker der Druckerstatus-Dienst läuft. Zuerst gezeigt
+          werden:</p>
+        <ul>
+          <li>ein Fehler am Drucker,</li>
+          <li>eine Rolle, die nicht zum Etikett passt (der Drucker würde sonst mit roter Lampe anhalten),</li>
+          <li>ein Drucker, der auf „Drucker offline verwenden“ steht; der QL Label Maker bietet an, ihn wieder online zu
+            schalten.</li>
+        </ul>
+        <p>Hat ein Code auf dem Etikett einen Fehler, fragt der QL Label Maker vorher ebenfalls nach, siehe
+          <a href="codes.html">Barcodes und QR-Codes</a>.</p>
+        <p>Unten in der Statusleiste steht, was eingelegt ist. Ein Klick darauf fragt den Drucker erneut, ebenso
+          <span class="path">Drucker &gt; Eingelegte Rolle prüfen</span>.</p>
+        <figure class="frame" style="max-width:220px"><img src="../img/de/printing-roll.png" width="197" height="21" alt="Statusleiste: Bereit, 62 mm Endlosband eingelegt"></figure>
+        <p>Mehr über den Drucker zeigt <span class="path">Drucker &gt; Druckerstatus</span>.
+          <span class="path">Drucker &gt; Bei Druckerfehlern benachrichtigen</span> zeigt eine Windows-Benachrichtigung,
+          wenn ein QL-Drucker stehen bleibt (<a href="../formats/de/status.html#notify-me-about-printer-errors">mehr</a>),
+          und <span class="path">Drucker &gt; Druckereinrichtung</span> fügt einen Netzwerk- oder freigegebenen QL-Drucker
+          hinzu (<a href="../formats/de/setup.html">Druckereinrichtung</a>).</p>
+        <p><strong>Tipp:</strong> Drucken Sie Etiketten deshalb am besten mit dem QL Label Maker. Passt ein Etikett nicht zur
+          Rolle, sagt er das, bevor er es schickt. So bleibt der Drucker nicht im Fehler stehen (dann hilft nur, die
+          Rollenabdeckung zu öffnen und zu schließen). Das ist besonders praktisch, wenn der Drucker im Netzwerk oder
+          an einem anderen PC steht. Word und andere Programme drucken auch, aber ohne diese Prüfung.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>F6</kbd></span><span>Druckerstatus</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="300-600-dpi">300 × 600 dpi</h2>
+        <p>Doppelt so viele Punkte entlang des Etiketts: schärferer Text, langsamerer Druck. Sie schalten das rechts bei
+          <span class="ui">Auflösung</span> ein, solange nichts ausgewählt ist, oder im Menü
+          <span class="path">Drucker &gt; 300 × 600 dpi (schärfer, langsamer)</span>. Ein neues Etikett beginnt mit der
+          Einstellung des Druckers.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="what-doesnt-print">Was nicht gedruckt wird</h2>
+        <ul>
+          <li>schraffierte Flächen: Dort kann der Drucker nicht drucken,</li>
+          <li>Teile von Objekten außerhalb des Etiketts,</li>
+          <li>der helle Rand um einen ausgewählten Code (die Ruhezone).</li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Neues Etikettenformat erst übernehmen</h3>
+      <p>Ein Etikettenformat, das in QL Label Formats noch nicht mit <span class="ui">Übernehmen</span> gespeichert ist,
+        kennt Windows noch nicht. Der QL Label Maker zeigt es trotzdem an; der druckbare Bereich ist dann geschätzt, und
+        die Statusleiste sagt das. Drucken funktioniert erst nach <span class="ui">Übernehmen</span>.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="view.html">← Ansicht, Richtung und Zoom</a><a href="files.html">Weiter: Speichern und Öffnen →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

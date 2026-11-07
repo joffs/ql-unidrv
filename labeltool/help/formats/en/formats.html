@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adding and ordering label formats – QL Label Formats Help</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Help · Label formats, printers and status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and programs</a>
+  <a class="lang" href="../de/formats.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Label formats</span>
+    <h1>Adding and ordering label formats</h1>
+    <p class="lead">A label format is a name for a roll and, on continuous tape, a length. The list applies to all QL
+      printers on this PC.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="new-format">New format</h2>
+        <p>Click <span class="ui">New</span>. "New label" appears in the list, on 62 mm continuous tape and 50 mm long,
+          and on the right the cursor is in the <span class="ui">Name</span> field.</p>
+        <figure class="frame"><img src="../img/en/new-format.png" width="960" height="200" alt="The list with the new format &quot;New label&quot;, 62 × 50 mm; on the right Name, Brother media, Length, Feed and Default"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>N</kbd></span><span>New</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="settings">Settings</h2>
+        <dl class="terms">
+          <dt>Name</dt><dd>the paper size's name in the programs later.</dd>
+          <dt>Brother media</dt><dd>the roll: a continuous tape, die-cut labels or round labels.</dd>
+          <dt>Length (mm)</dt><dd>on continuous tape; next to it you see what the printer can do. On die-cut and round
+            labels the label sets it.</dd>
+          <dt>Feed (mm)</dt><dd>the blank margin at the start and end of every label on continuous tape, 0 to 8.3 mm
+            (Brother's default 3 mm).</dd>
+        </dl>
+        <p>The preview below shows the label with its sizes. Your changes take effect only after
+          <a href="apply.html">Save &amp; apply</a>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="duplicate-delete-order">Duplicate, delete, order</h2>
+        <p>Right-click a format for <span class="ui">Test print</span>, the format as default, <span class="ui">Design a
+          label on this format</span> (opens QL Label Maker), <span class="ui">Duplicate</span> and
+          <span class="ui">Delete</span>.</p>
+        <figure class="frame" style="max-width:290px"><img src="../img/en/context-menu.png" width="278" height="120" alt="Context menu: Test print, Use 'Shelf label' as default label format, Design a label on this format, Duplicate, Delete"></figure>
+        <p>To change the order, drag a format to another place in the list, or use
+          <span class="path">Edit &gt; Move up</span> and <span class="ui">Move down</span>.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys in the list</span>
+        <div><span><kbd>Del</kbd></span><span>Delete</span></div>
+        <div><span><kbd>Alt</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd></span><span>move up / down</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="import-and-export">Import and export</h2>
+        <p>In the <span class="ui">File</span> menu:</p>
+        <figure class="frame" style="max-width:200px"><img src="../img/en/menu-file.png" width="184" height="148" alt="File menu: New, Import, Export, Save &amp; apply, Revert, Exit"></figure>
+        <dl class="terms">
+          <dt>Import</dt><dd><span class="ui">Brother label formats (.dat, .org)...</span> reads the list from Brother's
+            own label format tool, <span class="ui">JSON...</span> an exported list. <span class="ui">Brother factory
+            list</span> brings back the formats Brother ships; in versions without that list the item is grey. Then
+            you choose: <span class="ui">Replace list</span> or <span class="ui">Add</span>.</dd>
+          <dt>Export</dt><dd>as a Brother file (.dat) for Brother's tool, or as JSON, for example for another PC.</dd>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Just one length for one label?</h3>
+      <p>In QL Label Maker you set any length on continuous tape directly, without a label format. You need a format
+        when other programs should offer that length.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="index.html">← Contents</a><a href="apply.html">Next: Save &amp; apply →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Help · QL Unidrv</div></footer>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Printer setup – QL Label Formats Help</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Help · Label formats, printers and status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and programs</a>
+  <a class="lang" href="../de/setup.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printers</span>
+    <h1>Printer setup</h1>
+    <p class="lead">Here you add QL printers on the network and printers of another PC, share this PC's QL printer and
+      turn on the driver log. A USB printer needs none of this to print: the install sets it up by itself.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="open-it">Open it</h2>
+        <p><span class="path">Printer &gt; Printer setup</span>, a click on "QL Unidrv … · … QL printers" at the left
+          of the status bar, or in Windows <span class="ui">Installed apps</span> &gt; <span class="ui">QL Unidrv printer
+          driver</span> &gt; <span class="ui">Modify</span>. At the top is the list of QL printers on this PC; a shared
+          printer shows its share name. A printer of another PC says "no longer shared" when that PC stopped sharing it
+          (or renamed the share), and "not reachable" when that PC doesn't answer: print jobs then don't arrive. Remove
+          it here, and add it again with the new name if needed. For the selected printer: <span class="ui">Remove printer</span> (asks first;
+          the driver stays installed) and <span class="ui">Printer properties</span> (Windows' own window: ports and
+          more; also by double-click). A QL printer connected by USB that has no printer here (for example after
+          <span class="ui">Remove printer</span>: Windows doesn't add it again by itself) gets a line below the list with
+          <span class="ui">Add printer</span>; with several such printers the line counts them and the button lets you
+          choose one. The line follows when a printer is plugged in or unplugged while the window is open. The new
+          printer isn't shared; the window then offers <span class="ui">Share printer</span>. A shared printer may stay
+          open on PCs that print to it: then Windows finishes removing it only after the service
+          <span class="ui">Print Spooler</span> on that PC, or one of the two PCs, restarts; the window says so.</p>
+        <p>Below the list are four tabs; the window opens on the one used last. <kbd>Ctrl</kbd>+<kbd>Tab</kbd> switches
+          between them.</p>
+        <figure class="frame" style="max-width:650px"><img src="../img/en/setup-sections.png" width="629" height="254" alt="The tabs Network printer, Another PC's printer, Share a printer and Options; the Share a printer tab shows the printer, its share name and the buttons Share printer, Rename and Stop sharing; at the bottom Uninstall, New version and Done"></figure>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="printers-on-the-network">Network printer</h2>
+        <p>For QL printers with Ethernet or Wi-Fi: type the <span class="ui">IP address</span>. It is on the
+          configuration label the printer prints, or in its network settings. Leave <span class="ui">Model</span> at
+          <span class="ui">(ask the printer)</span>: the printer tells its model itself; only if it doesn't answer, choose
+          it. Then <span class="ui">Add</span>.</p>
+        <p>The window shows what will be added, with the model and the loaded roll; <span class="ui">Add printer</span>
+          asks once for administrator permission. Afterwards it offers <span class="ui">Print test label</span>,
+          <span class="ui">Open print queue</span> and <span class="ui">Set as default printer</span>. Every PC adds a
+          network printer by its address like this; it isn't shared through a PC.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="a-printer-of-another-pc">Another PC's printer</h2>
+        <p>A USB printer on another PC can be used through a share. First, on the other PC: share the printer
+          (<a href="#share-a-printer">Share a printer</a>). Then on this PC open <code>\other-PC-name</code> once in
+          Explorer and sign in with "Remember my credentials".</p>
+        <p>Then type <code>\PC\share name</code> under <span class="ui">Share</span> here, choose the
+          <span class="ui">Model</span> and click <span class="ui">Add</span>. If the share is named after the model
+          (<code>\PC\QL-800</code>), it is already chosen.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="share-a-printer">Share a printer</h2>
+        <p>Here other PCs get a QL printer that is connected to this PC by USB. Choose the <span class="ui">Printer</span>,
+          keep the suggested <span class="ui">Share name</span> (the model, for example
+          <code>QL-800</code>) or type another, and click <span class="ui">Share printer</span>. A share name has at most
+          80 characters, none of <code>" / \ [ ] : | &lt; &gt; + = ; , ? *</code>, and no other share on this PC may use
+          it; the window says so while you type. Afterwards it shows the address for the other PCs, for example
+          <code>\THIS-PC\QL-800</code>.</p>
+        <p>For a shared printer, <span class="ui">Rename</span> changes the share name and
+          <span class="ui">Stop sharing</span> ends it. Both ask first: PCs that print through the old name no longer
+          reach the printer and must add it again. Each change asks once for administrator permission.</p>
+        <p>Other PCs reach the share only when Windows' file and printer sharing is on and the network isn't set to
+          public. Otherwise the tab says so, with <span class="ui">Open settings</span>.</p>
+        <dl class="terms">
+          <dt>Printer status service for shared printers</dt><dd>A Windows service asks this PC's printers every 3
+            seconds, so the PCs that print through a share see the roll and errors too, and can print test labels.
+            Printing works without it.</dd>
+        </dl>
+        <p>Network printers aren't shared here: every PC adds them by their address.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="options">Options</h2>
+        <dl class="terms">
+          <dt>Driver log for troubleshooting</dt><dd>records what the driver does for every print
+            (<code>C:\ProgramData\QLUnidrv\log\plugin.log</code>). Turn it on only for a bug report, then off again.
+            Asks once for administrator permission.</dd>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Test label through a share</h3>
+      <p>A test label first asks for the loaded roll, so a wrong size doesn't stop the printer. Through a share only the
+        PC the printer is plugged into can answer, and only with the printer status service. Turn it on there:
+        <span class="path">QL Label Formats &gt; Printer &gt; Printer setup &gt; Share a printer</span>. Printing works
+        without it too.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="status.html">← Printer status and notifications</a><a href="install.html">Next: Installing, repairing, uninstalling →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Help · QL Unidrv</div></footer>
+</body>
+</html>

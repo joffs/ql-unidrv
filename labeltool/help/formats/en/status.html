@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Printer status and notifications – QL Label Formats Help</title>
+<link rel="stylesheet" href="../../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Formats</div><div class="sub">Help · Label formats, printers and status</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and programs</a>
+  <a class="lang" href="../de/status.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printers</span>
+    <h1>Printer status and notifications</h1>
+    <p class="lead">When a label printer stops, Windows usually doesn't say why. QL Printer Status shows it, with the
+      loaded roll and what to do.</p>
+  </header>
+
+  <ol class="steps">
+    <li>
+      <div class="step">
+        <h2 id="the-status-window">The status window</h2>
+        <p>Click <span class="ui">Printer status</span> in the toolbar, the roll in the status bar, or
+          <span class="ui">QL Printer Status</span> in the Start menu. Every QL printer has a card: whether it is ready,
+          which roll is loaded, and on an error, what to do. There is only one status window: if it is already open, it comes to the front.</p>
+        <figure class="frame" style="max-width:380px"><img src="../img/en/status-window.png" width="360" height="164" alt="QL Printer Status: Brother QL-800 (Unidrv), Ready, 62 mm continuous loaded, the links Printer details and Print queue; at the bottom Notify me about printer errors and Close"></figure>
+        <p><span class="ui">Print queue</span> opens the printer's jobs, for example to cancel a stuck one.</p>
+        <p><span class="ui">Printer details</span> shows the model, the connection, the loaded roll and the driver version
+          under the card; a second click hides them. Printers on the network also report their counters (pages, cuts,
+          length printed), firmware, memory and serial number. Printers on USB or shared by another PC have no counters.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>F6</kbd></span><span>Printer status</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="notify-me-about-printer-errors">Notify me about printer errors</h2>
+        <p>With this box ticked in the status window (or in the <span class="ui">Printer</span> menu), a small monitor
+          runs in the notification area next to the clock. When a QL printer stops, a Windows notification appears at the
+          bottom right with the reason and the fix, for example cover open, roll empty or wrong roll. For all QL printers
+          and every program.</p>
+        <figure class="frame" style="max-width:290px"><img src="../img/en/menu-printer.png" width="278" height="126" alt="Printer menu: Test print, default label format, Printer status, Notify me about printer errors (ticked), Printer setup"></figure>
+        <p>The monitor starts with Windows and needs no administrator rights. While it is off, a tip above the list
+          suggests turning it on (<span class="ui">Turn on notifications</span>, <span class="ui">Don't show
+          again</span>).</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="wrong-roll">Wrong roll</h2>
+        <p>If the roll doesn't fit the job, the LED blinks red and the job leaves the queue without a message. The
+          printer then doesn't answer until the cover is opened and closed again. To fix it:</p>
+        <ol>
+          <li>cancel the waiting jobs in the <span class="ui">Print queue</span>,</li>
+          <li>open and close the roll cover,</li>
+          <li>print again with a format for the loaded roll.</li>
+        </ol>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Use Printer Offline</h3>
+      <p>If a printer is set to Windows' "Use Printer Offline", jobs wait on this PC without an error. QL Label Formats
+        shows that for the selected printer above the list; <span class="ui">Use online</span> clears it (Windows may
+        ask for administrator permission). If the printer is just switched off, Windows sets it offline and back by
+        itself: then it simply says "not connected".</p>
+    </div>
+  </aside>
+
+  <aside class="info" aria-label="Note">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Printers shared by another PC</h3>
+      <p>Only the PC the printer is plugged into knows its status. To see it here (in <span class="ui">Printer details</span> as <span class="ui">Last status</span>), the printer status
+        service must run there: <a href="setup.html#share-a-printer">Printer setup &gt; Share a printer</a>.</p>
+      <p>The card shows the status only while printing through the share works. If the other PC no longer shares the printer (or
+        shares it under a new name), it says <span class="ui">Not shared</span> with <span class="ui">Remove the printer here</span>; if that PC
+        doesn't answer, <span class="ui">No connection</span>. It then shows no loaded roll.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Pages"><a href="default-test.html">← Default format and test print</a><a href="setup.html">Next: Printer setup →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Formats · Help · QL Unidrv</div></footer>
+</body>
+</html>

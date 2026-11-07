@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Speichern und Öffnen – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/files.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucken und Dateien</span>
+    <h1>Speichern und Öffnen</h1>
+    <p class="lead">Ein Etikett ist eine <code>.qllabel</code>-Datei. Alles steckt darin, auch die Bilder; Sie können sie
+      kopieren, verschicken und auf einem anderen PC öffnen.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="saving">Speichern</h2>
+        <p><span class="path">Datei &gt; Speichern</span> speichert das Etikett, beim ersten Mal an einem Ort Ihrer Wahl;
+          <span class="path">Datei &gt; Speichern unter...</span> legt eine Kopie unter neuem Namen an.</p>
+        <p>In der Datei stehen das Etikettenformat (Name, Papier und Länge), die Richtung und alle Objekte. Bilder werden
+          eingebettet; die Bilddatei wird danach nicht mehr gebraucht. Drucker und Auflösung gehören nicht zur Datei.</p>
+        <p>Ungespeicherte Änderungen zeigt ein Sternchen im Fenstertitel, zum Beispiel <span class="ui">Regal 3 *</span>.
+          Vor <span class="ui">Neu</span>, <span class="ui">Öffnen</span> und beim Schließen fragt der QL Label Maker:
+          <span class="ui">Änderungen an diesem Etikett speichern?</span></p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>S</kbd></span><span>speichern</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>S</kbd></span><span>speichern unter</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="opening-and-starting-anew">Öffnen und neu anfangen</h2>
+        <p><span class="path">Datei &gt; Öffnen...</span> oder ein Doppelklick auf die Datei im Explorer.
+          <span class="path">Datei &gt; Neu</span> beginnt ein leeres Etikett auf dem gewählten Etikettenformat.
+          Starten mit einer Datei, einem Drucker oder einem Format: <a href="appendix.html">Kommandozeile</a>.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>O</kbd></span><span>öffnen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>N</kbd></span><span>neu</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="on-another-pc-or-printer">Auf einem anderen PC oder Drucker</h2>
+        <p>Gibt es das Etikettenformat dort nicht, nimmt der QL Label Maker ein Format oder Papier mit demselben Papier
+          und derselben Länge und sagt das beim Öffnen: <span class="ui">Das Etikett wurde für „…“ gestaltet, das … nicht
+          anbietet. Es wird auf … angezeigt.</span> Gespeichert wird es dann weiter für das ursprüngliche Format.</p>
+        <p>Ein Etikett mit eigener Länge öffnet auf demselben Band, wenn der Drucker es hat.</p>
+        <p>Dateien aus einer neueren Version des QL Label Maker öffnen ebenfalls. Objekte, die diese Version noch nicht
+          kennt, werden weggelassen, und eine Meldung sagt, wie viele.</p>
+      </div>
+    </li>
+  </ul>
+
+  <aside class="info" aria-label="Hinweis">
+    <svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="var(--accent)"/><rect x="9.6" y="9.2" width="2.8" height="7.6" rx="1.2" fill="var(--accent-ink)"/><circle cx="11" cy="6.2" r="1.6" fill="var(--accent-ink)"/></svg>
+    <div class="body">
+      <h3>Etikettenformate gehören nicht zur Datei</h3>
+      <p>Die Datei nennt nur den Namen des Formats. Die Formate selbst verwaltet QL Label Formats, für alle Programme
+        gemeinsam: <a href="length.html">Etikettenformate und eigene Längen</a>.</p>
+    </div>
+  </aside>
+
+  <nav class="pager" aria-label="Seiten"><a href="printing.html">← Drucken</a><a href="limits.html">Weiter: Was (noch) nicht funktioniert →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Text and text frames – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/text.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objects</span>
+    <h1>Text and text frames</h1>
+    <p class="lead">A text is either a single line or a text frame with several lines. You set everything else in the
+      settings on the right.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="single-line">Single line</h2>
+        <p>The <span class="ui">Text</span> tool or <span class="path">Insert &gt; Text</span>. The box always fits the
+          text. Drag a handle to make the text larger or smaller; the opposite side stays where it is. Or type the
+          <span class="ui">Size (pt)</span>.</p>
+        <p>Enter does nothing here; pasted line breaks become spaces.</p>
+        <figure class="frame" style="max-width:340px"><img src="../img/en/text-panel.png" width="230" height="173" alt="Settings of a single-line text: Text, Insert field, Kind Single line, Font, Size, Bold, Italic, Underline"></figure>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>T</kbd></span><span>add text</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="text-frame">Text frame</h2>
+        <p><span class="path">Insert &gt; Text frame</span>. You set the box with the handles; the text wraps at its edge
+          at its font size. A word longer than a line breaks between letters.</p>
+        <p>You also get the alignment of the lines (<span class="ui">Left</span>, <span class="ui">Centre</span>,
+          <span class="ui">Right</span>) and the <span class="ui">Line spacing</span> (0.5 to 3 times).</p>
+        <p>A text that doesn't fit the box is cut off at the box. On the screen the box then gets a red edge, and a red note
+          appears on the right.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></span><span>add a text frame</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="switch-between-the-two">Switch between the two</h2>
+        <p><span class="ui">Kind</span> switches between <span class="ui">Single line</span> and
+          <span class="ui">Text frame</span>. A text frame becomes one line (line breaks become spaces), a single line
+          becomes a frame around its text.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="font">Font</h2>
+        <p><span class="ui">Font</span>, <span class="ui">Size (pt)</span>, <span class="ui">Bold</span>,
+          <span class="ui">Italic</span>, <span class="ui">Underline</span> and <span class="ui">Letter spacing (pt)</span>
+          from −5 to +20 work for both kinds. <span class="ui">Invert</span> prints the text white on black:
+          <a href="invert.html">White on black</a>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="date-and-time">Date and time</h2>
+        <p><span class="ui">Insert field ▾</span> below the text adds a field that is filled in whenever the label is shown
+          or printed:</p>
+        <dl class="terms">
+          <dt><code>{date}</code></dt><dd>today's date</dd>
+          <dt><code>{date+30}</code></dt><dd>the date in 30 days; <code>{date-1}</code> is yesterday</dd>
+          <dt><code>{time}</code></dt><dd>the time</dd>
+          <dt><code>{date:yyyy-MM-dd}</code></dt><dd>with a format of your own after the colon, e.g.
+            <code>{date+7:dd.MM.yy}</code> or <code>{time:HH:mm}</code></dd>
+        </dl>
+        <p>Without a format, the date and time look as in your Windows settings. <code>{{</code> and <code>}}</code> print
+          single braces. Example for a freezer label: "Frozen {date} – use by {date+90}".</p>
+        <p>Fields also work in the content of barcodes and QR codes.</p>
+      </div>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Pages"><a href="length.html">← Label formats and custom lengths</a><a href="lines-boxes.html">Next: Lines and boxes →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

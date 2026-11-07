@@ -1,0 +1,22 @@
+{
+ "version": "2.00",
+ "source": "Brother factory list bsq80V.ORG (same for QL-800, QL-810W, QL-820NWB)",
+ "formats": [
+  {"key": 1, "name": "Adress-Etikett (Standard)", "paper_id": 271, "length_mm": 89.83, "feed_mm": 3},
+  {"key": 2, "name": "Adress-Etikett (groß)", "paper_id": 272, "length_mm": 89.83, "feed_mm": 3},
+  {"key": 3, "name": "Adress-Etikett (klein)", "paper_id": 274, "length_mm": 28.87, "feed_mm": 3},
+  {"key": 4, "name": "Absender-Etikett", "paper_id": 269, "length_mm": 53.85, "feed_mm": 3},
+  {"key": 5, "name": "Versand-Etikett (Päckchen)", "paper_id": 275, "length_mm": 99.82, "feed_mm": 3},
+  {"key": 6, "name": "Namensschild", "paper_id": 275, "length_mm": 99.82, "feed_mm": 3},
+  {"key": 7, "name": "Ordnerregister-Etikett", "paper_id": 270, "length_mm": 86.87, "feed_mm": 3},
+  {"key": 8, "name": "Hängeregister-Etikett", "paper_id": 269, "length_mm": 53.85, "feed_mm": 3},
+  {"key": 9, "name": "Mappe 3 cm - Rücken", "paper_id": 258, "length_mm": 209.1, "feed_mm": 3},
+  {"key": 10, "name": "Mappe 5 cm - Rücken", "paper_id": 259, "length_mm": 209.1, "feed_mm": 3},
+  {"key": 11, "name": "CD/DVD-Etikett", "paper_id": 273, "length_mm": 58.25, "feed_mm": 3},
+  {"key": 12, "name": "Rundes Etikett ø 12 mm", "paper_id": 362, "length_mm": 12.02, "feed_mm": 2},
+  {"key": 13, "name": "Rundes Etikett ø 24 mm", "paper_id": 363, "length_mm": 24.04, "feed_mm": 2},
+  {"key": 14, "name": "Quadratisches Etikett", "paper_id": 370, "length_mm": 23.03, "feed_mm": 3},
+  {"key": 15, "name": "Porto-Etikett 62mmx184mm", "paper_id": 259, "length_mm": 183.9, "feed_mm": 3},
+  {"key": 16, "name": "Porto-Etikett 62mmx209mm", "paper_id": 259, "length_mm": 209.3, "feed_mm": 3}
+ ]
+}

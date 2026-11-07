@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linien und Rahmen – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/lines-boxes.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Objekte</span>
+    <h1>Linien und Rahmen</h1>
+    <p class="lead">Linien trennen Bereiche auf dem Etikett, Rahmen fassen etwas ein oder werden zur schwarzen Fläche.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="line">Linie</h2>
+        <p>Werkzeug <span class="ui">Linie</span> oder <span class="path">Einfügen &gt; Linie</span>. Rechts stellen Sie die
+          <span class="ui">Linienstärke (mm)</span> ein.</p>
+        <p>Eine ausgewählte Linie hat ein helles Band und an jedem Ende einen Anfasser.</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/de/lines-selected.png" width="280" height="180" alt="Eine ausgewählte schräge Linie mit hellem Band und zwei Anfassern an den Enden"></figure>
+        <p>Ziehen Sie an einem Ende, um die Linie zu verlängern oder schräg zu stellen. Neben der Maus stehen Winkel und
+          Länge. Bei 0°, 45°, 90°, 135° usw. rastet sie ein, sobald sie weniger als 5° davon entfernt ist; eine gepunktete
+          Hilfslinie zeigt das. Waagerechte und senkrechte Linien rasten außerdem an den Kanten und der Mitte des Etiketts
+          ein.</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/de/lines-dragging.png" width="280" height="180" alt="Das obere Ende wird gezogen; die Linie rastet bei 45° ein, gepunktete Hilfslinie, daneben 45° 23,3 mm"></figure>
+        <p>Genau einstellen lässt sie sich rechts: <span class="ui">Winkel (°)</span> von 0° (waagerecht) über 90° (senkrecht) bis 180° und
+          <span class="ui">Länge (mm)</span>. Beim Eintippen bleibt das linke Ende, wo es ist (bei einer senkrechten Linie
+          das untere).</p>
+        <figure class="frame" style="max-width:300px"><img src="../img/de/lines-panel.png" width="273" height="142" alt="Einstellungen einer Linie: Linienstärke, Links, Oben, Winkel 31° und Länge 23,3 mm"></figure>
+        <p>Ragt eine Linie über das Etikett hinaus, ist der Teil draußen entlang der Linie hell markiert; er wird nicht
+          gedruckt.</p>
+        <figure class="frame" style="max-width:410px"><img src="../img/de/lines-outside.png" width="390" height="180" alt="Eine schräge Linie, deren rechtes Ende über das Etikett hinausragt; der Teil draußen ist hell"></figure>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>L</kbd></span><span>Linie einfügen</span></div>
+        <div><span><kbd>Umschalt</kbd> beim Ziehen</span><span>in 15°-Schritten</span></div>
+        <div><span><kbd>Alt</kbd> beim Ziehen</span><span>frei, ohne Einrasten</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="box">Rahmen</h2>
+        <p>Werkzeug <span class="ui">Rahmen</span> oder <span class="path">Einfügen &gt; Rahmen</span>. Rechts stellen Sie
+          ein:</p>
+        <ul>
+          <li><span class="ui">Linienstärke (mm)</span></li>
+          <li><span class="ui">Gefüllt</span>: eine schwarze Fläche statt eines Rahmens</li>
+          <li><span class="ui">Ellipse</span>: rund statt eckig</li>
+        </ul>
+        <p>Ein Rahmen lässt sich um jeden Winkel drehen, siehe <a href="rotate-arrange.html">Drehen und Anordnen</a>.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>B</kbd></span><span>Rahmen einfügen</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="exact-position-and-size">Lage und Größe genau</h2>
+        <p>Für jedes Objekt stehen rechts <span class="ui">Links (mm)</span>, <span class="ui">Oben (mm)</span>,
+          <span class="ui">Breite (mm)</span> und <span class="ui">Höhe (mm)</span>. Dort tippen Sie Maße auf den
+          Zehntelmillimeter genau ein. Bei einer Linie stehen statt Breite und Höhe <span class="ui">Winkel (°)</span> und
+          <span class="ui">Länge (mm)</span>.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></span><span>0,1 mm verschieben</span></div>
+        <div><span><kbd>Umschalt</kbd> + Pfeil</span><span>1 mm verschieben</span></div>
+      </aside>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Seiten"><a href="text.html">← Text und Textrahmen</a><a href="pictures.html">Weiter: Bilder →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>
