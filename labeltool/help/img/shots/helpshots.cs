@@ -1,7 +1,9 @@
 // Window screenshots of the real QL Label Maker for the help, taken by make-shots.ps1. The editor runs in this process
 // (its window class through reflection), on a screen with the given scaling, with the labels in labels\. Runs only on
 // deskrun's own desktop (tools\uitest): it never takes the user's mouse or focus. Screenshots with PrintWindow.
-//   helpshots.exe <QlLabelMaker.exe> <labels folder> <out folder> <de|en> <100|150>
+// The loaded roll is always the same (FixedRoll: ready, 62 mm continuous), whatever the printer has loaded, so the
+// pictures can be compared from release to release; the printer is only named, never printed to.
+//   helpshots.exe <QlLabelMaker.exe> <labels folder> <out folder> <de|en> <100|150> [printer]
 // -> <out folder>\<scale>-<lang>\<scale>-<lang>-<shot>.png
 using System;
 using System.Collections;
@@ -26,7 +28,7 @@ static class HelpShots
 
     static Assembly asm;
     static Form form;
-    static string outDir, prefix;
+    static string outDir, prefix, printer = "Brother QL-800 (Unidrv)";
     const BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
     [STAThread]
@@ -37,6 +39,7 @@ static class HelpShots
         if (name.ToString() == "Default") { Console.WriteLine("refused: normal desktop"); return 2; }
         asm = Assembly.LoadFrom(a[0]);
         string dir = a[1]; string lang = a[3]; int scale = int.Parse(a[4]);
+        if (a.Length > 5) printer = a[5];
         prefix = scale + "-" + lang + "-";
         outDir = System.IO.Path.Combine(a[2], scale + "-" + lang);
         System.IO.Directory.CreateDirectory(outDir);
@@ -52,7 +55,7 @@ static class HelpShots
         Step(dir + "\\sample\\Regal 3.qllabel", target, size, () =>
         {
             Shot("window");
-            Select(o => Text(o) == "Regal 3"); Shot("text");
+            Select(o => Text(o) == "Regal 3"); NoFontHighlight(); Shot("text");
             Select(o => o.GetType().Name == "ImageObject"); Shot("picture");
             Select(o => Kind(o) == "Qr"); Shot("qr");
             Select(o => Text(o) == "Regal 3" || Kind(o) == "Qr" || Kind(o) == "Code128"); Shot("three");
@@ -87,7 +90,7 @@ static class HelpShots
             arrange.ShowDropDown(); Pump(500); ShotOf(arrange.DropDown, "reset-arrange-menu"); arrange.HideDropDown(); Pump(300);
             var canvas = (Control)Field("canvas");
             form.GetType().GetMethod("ShowObjectMenu", All).Invoke(form, new object[] { new Point(canvas.Width / 2, canvas.Height / 2) });
-            Pump(500); var cm = (ContextMenuStrip)Field("objectMenu"); ShotOf(cm, "reset-context-menu"); cm.Close(); Pump(300);
+            Pump(500); var cm = (ContextMenuStrip)Field("objectMenu"); FixPaste(cm); ShotOf(cm, "reset-context-menu"); cm.Close(); Pump(300);
             form.GetType().GetMethod("ResetRotation", All).Invoke(form, null); Pump(600); Shot("reset-after");
         });
         Step(dir + "\\line\\Regal 3.qllabel", target, size, () =>
@@ -108,6 +111,44 @@ static class HelpShots
         Step(dir + "\\lineout\\Regal 3.qllabel", target, size, () =>
         {
             Select(o => o.GetType().Name == "LineObject"); Shot("lineout-selected");
+        });
+        Step(dir + "\\shapes\\Regal 3.qllabel", target, size, () =>
+        {
+            // the palette as on a fresh PC: tool names shown, every group on its first tool (in memory only: the
+            // remembered tools and the names setting live in the registry)
+            form.GetType().GetField("showToolNames", All).SetValue(form, true);
+            form.GetType().GetMethod("SizePalette", All).Invoke(form, null);
+            var update = form.GetType().GetMethod("UpdatePaletteButton", All);
+            foreach (var g in (IEnumerable)form.GetType().GetMethod("ToolGroups", All).Invoke(form, null))
+            {
+                var tools = ((IEnumerable)Member(g, "Tools")).Cast<object>().First();
+                g.GetType().GetField("Current", All).SetValue(g, tools);
+                update.Invoke(form, new[] { g });
+            }
+            form.PerformLayout(); Pump(600);
+            Shot("tools");
+            // the Shapes group's flyout, opened as by its corner triangle
+            var palette = (ToolStrip)Field("palette");
+            form.GetType().GetMethod("ShowFlyout", All).Invoke(form, new object[] { palette.Items[1], false }); Pump(600);
+            var flyout = (Control)Field("flyout");
+            ShotWith(flyout, "tools-flyout");
+            ((ToolStripDropDown)flyout).Close(); Pump(300);
+            Select(o => o.GetType().Name == "ShapeObject" && Convert.ToString(Member(o, "Kind")) == "Star"); Shot("shape-star");
+            // the Edit menu with the star selected
+            var edit = (ToolStripMenuItem)((MenuStrip)Field("menuBar")).Items[1];
+            edit.ShowDropDown(); Pump(500); FixPaste(edit.DropDown); ShotOf(edit.DropDown, "edit-menu"); edit.HideDropDown(); Pump(300);
+            // a right click on an empty spot of the label
+            Select(o => false);
+            var canvas = (Control)Field("canvas");
+            form.GetType().GetMethod("ShowCanvasMenu", All).Invoke(form, new object[] { (Point?)new Point(canvas.Width / 2, canvas.Height * 3 / 4) });
+            Pump(500); var cm = (ToolStripDropDown)Field("canvasMenu"); FixPaste(cm); ShotOf(cm, "canvas-menu"); cm.Close(); Pump(300);
+        });
+        Step(dir + "\\runs\\Regal 3.qllabel", target, size, () =>
+        {
+            // a paragraph text with words in their own format: the panel's text box shows them
+            Select(o => Text(o) != null && Text(o).StartsWith("Schrauben"));
+            NoFontHighlight();
+            Shot("runs");
         });
         Step(dir + "\\errors\\Regal 3.qllabel", target, size, () =>
         {
@@ -144,10 +185,60 @@ static class HelpShots
         return GetDpiForMonitor(m, 0, out x, out y) == 0 ? (int)x : 96;
     }
 
+    // A step that doesn't finish within 3 minutes (a message box the editor opened, e.g. "objects from a newer version"
+    // when out\tools is older than the labels here) ends the run with exit code 3: the windows still open and their
+    // texts are logged and the topmost one saved as <prefix>HUNG.png, instead of waiting for ever (2026-11-08, 1.5 h).
+    [DllImport("user32.dll")] static extern bool EnumThreadWindows(int id, EnumProc f, IntPtr p);
+    [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr h, EnumProc f, IntPtr p);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, System.Text.StringBuilder b, int n);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr h, int msg, IntPtr w, System.Text.StringBuilder l, int flags, int ms, out IntPtr result);
+    delegate bool EnumProc(IntPtr h, IntPtr p);
+    static int uiThread;
+
+    static string WindowText(IntPtr h)
+    {
+        var b = new System.Text.StringBuilder(1024); IntPtr r;
+        SendMessageTimeout(h, 0x000D /* WM_GETTEXT */, (IntPtr)1024, b, 2 /* SMTO_ABORTIFHUNG */, 2000, out r);
+        return b.ToString();
+    }
+
+    static void Hung(string file)
+    {
+        Console.WriteLine("FAILED: step " + System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(file)) + " hung (no end after 180 s); open windows:");
+        IntPtr first = IntPtr.Zero;
+        EnumThreadWindows(uiThread, (h, p) =>
+        {
+            if (!IsWindowVisible(h)) return true;
+            if (first == IntPtr.Zero) first = h;
+            var cls = new System.Text.StringBuilder(256); GetClassName(h, cls, 256);
+            var texts = new List<string>();
+            EnumChildWindows(h, (c, q) => { var s = WindowText(c); if (s.Trim().Length > 0 && texts.Count < 12) texts.Add(s.Replace("\r", " ").Replace("\n", " ")); return true; }, IntPtr.Zero);
+            Console.WriteLine("  [" + cls + "] \"" + WindowText(h) + "\": " + string.Join(" | ", texts));
+            return true;
+        }, IntPtr.Zero);
+        if (first != IntPtr.Zero)
+            try
+            {
+                RECT r; GetWindowRect(first, out r);
+                using (var bmp = new Bitmap(Math.Max(1, r.R - r.L), Math.Max(1, r.B - r.T)))
+                {
+                    using (var g = Graphics.FromImage(bmp)) { var dc = g.GetHdc(); PrintWindow(first, dc, 2); g.ReleaseHdc(dc); }
+                    bmp.Save(System.IO.Path.Combine(outDir, prefix + "HUNG.png"));
+                }
+            }
+            catch (Exception e) { Console.WriteLine("  no picture: " + e.Message); }
+        Console.Out.Flush();
+        Environment.Exit(3);
+    }
+
     static void Step(string file, Screen target, Size size, Action work)
     {
+        if (uiThread == 0) uiThread = GetCurrentThreadId();
+        Console.WriteLine("step " + System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(file)));
+        var watchdog = new System.Threading.Timer(_ => Hung(file), null, 180000, Timeout.Infinite);
         var t = asm.GetType("QlLabels.EditorForm");
-        form = (Form)Activator.CreateInstance(t, new object[] { file, "Brother QL-800 (Unidrv)", null });
+        form = (Form)Activator.CreateInstance(t, new object[] { file, printer, null });
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(target.WorkingArea.Left + 40, target.WorkingArea.Top + 40);
         bool done = false;
@@ -156,6 +247,7 @@ static class HelpShots
             Pump(800);
             form.Bounds = new Rectangle(target.WorkingArea.Left + 40, target.WorkingArea.Top + 40, size.Width, size.Height);
             Pump(3500);   // layout and the roll check
+            FixedRoll();
             try { work(); } catch (Exception e) { Console.WriteLine("FAILED: " + e); }
             done = true;
             Set("dirty", false);
@@ -163,7 +255,30 @@ static class HelpShots
         };
         form.Show();
         while (!done || form.Visible) { Application.DoEvents(); Thread.Sleep(15); }
+        watchdog.Dispose();
         form.Dispose();
+    }
+
+    // Ready, 62 mm continuous loaded (a QL-800's status reply), as the editor's roll; no further roll checks.
+    const string Ready62 = "80 20 42 34 38 30 00 00 00 00 3E 0A 00 00 15 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00";
+    static void FixedRoll()
+    {
+        form.GetType().GetField("roll", All).SetValue(form, FixedCheck(asm, printer));
+        form.GetType().GetField("lastRollCheck", All).SetValue(form, DateTime.MaxValue);
+        form.GetType().GetMethod("ShowRoll", All).Invoke(form, null);
+        Pump(400);
+    }
+
+    internal static object FixedCheck(Assembly asm, string printer)
+    {
+        var device = Activator.CreateInstance(asm.GetType("QlLabels.DeviceResult"));
+        Action<string, object> set = (n, v) => device.GetType().GetField(n, All).SetValue(device, v);
+        set("Printer", printer);
+        set("Port", "USB001");
+        set("State", Enum.Parse(asm.GetType("QlLabels.DeviceState"), "Open"));
+        set("Reply", asm.GetType("QlLabels.QlStatus").GetMethod("FromHex", All).Invoke(null, new object[] { Ready62, DateTime.Now }));
+        var jobs = Activator.CreateInstance(typeof(List<>).MakeGenericType(asm.GetType("QlLabels.JobInfo")));
+        return asm.GetType("QlLabels.PrinterCheck").GetMethod("From", All).Invoke(null, new object[] { printer, device, jobs, null });
     }
 
     static object Field(string n) { return form.GetType().GetField(n, All).GetValue(form); }
@@ -192,6 +307,15 @@ static class HelpShots
         Console.WriteLine("selected " + pick.Count);
     }
 
+    // The text panel's font box shows its name selected (blue) after a selection: focus on the canvas, nothing selected.
+    static void NoFontHighlight()
+    {
+        form.ActiveControl = (Control)Field("canvas");
+        var box = (ComboBox)Field("fontBox");
+        box.SelectionStart = 0; box.SelectionLength = 0;
+        Pump(400);
+    }
+
     static void Pump(int ms)
     {
         var end = DateTime.Now.AddMilliseconds(ms);
@@ -214,5 +338,41 @@ static class HelpShots
             bmp.Save(System.IO.Path.Combine(outDir, prefix + n + ".png"), System.Drawing.Imaging.ImageFormat.Png);
         }
         Console.WriteLine("shot " + prefix + n + " " + (r.R - r.L) + "x" + (r.B - r.T));
+    }
+
+    // Paste items as after copying an object in the editor, whatever the user's clipboard holds (deskrun's desktop
+    // shares it): Paste on, Paste as plain text off.
+    static void FixPaste(ToolStripDropDown menu)
+    {
+        var t = asm.GetType("QlLabels.Lang").GetMethod("T", All);
+        string paste = (string)t.Invoke(null, new object[] { "&Paste" }), plain = (string)t.Invoke(null, new object[] { "Paste as plain te&xt" });
+        foreach (ToolStripItem i in menu.Items)
+        {
+            if (i.Text == paste) i.Enabled = true;
+            if (i.Text == plain) i.Enabled = false;
+        }
+        menu.Refresh(); Pump(200);
+    }
+
+    // The window with a drop-down (a flyout) drawn over it where it is on the screen; the picture keeps the window's
+    // size and origin, so its crops use the same coordinates as Shot's.
+    static void ShotWith(Control extra, string n)
+    {
+        RECT r; GetWindowRect(form.Handle, out r);
+        using (var bmp = new Bitmap(r.R - r.L, r.B - r.T))
+        {
+            using (var g = Graphics.FromImage(bmp))
+                foreach (var c in new[] { (Control)form, extra })
+                {
+                    RECT cr; GetWindowRect(c.Handle, out cr);
+                    using (var part = new Bitmap(cr.R - cr.L, cr.B - cr.T))
+                    {
+                        using (var pg = Graphics.FromImage(part)) { var dc = pg.GetHdc(); PrintWindow(c.Handle, dc, 2); pg.ReleaseHdc(dc); }
+                        g.DrawImage(part, cr.L - r.L, cr.T - r.T);
+                    }
+                }
+            bmp.Save(System.IO.Path.Combine(outDir, prefix + n + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+        }
+        Console.WriteLine("shot " + prefix + n + " (with " + extra.GetType().Name + ")");
     }
 }

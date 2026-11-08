@@ -106,10 +106,10 @@ namespace QlLabels.Tests
             }
             data.Text = "200000000000"; Pump(600);
             // a valid code: no red problem line (a yellow hint such as "bars very narrow" may stand there)
-            Check("ean13-12-digits", !problem.Visible || problem.ForeColor != Brand.Error, "12 digits: problem line '" + (problem.Visible ? problem.Text : "") +
+            Check("ean13-12-digits", !problem.Visible || problem.ForeColor != Theme.Of(Role.ErrorText), "12 digits: problem line '" + (problem.Visible ? problem.Text : "") +
                   "', prints as " + code.Content(DateTime.Now));
             data.Text = "2000000000008"; Pump(600);
-            Check("ean13-ok", !problem.Visible || problem.ForeColor != Brand.Error, "problem line '" + (problem.Visible ? problem.Text : "") + "'");
+            Check("ean13-ok", !problem.Visible || problem.ForeColor != Theme.Of(Role.ErrorText), "problem line '" + (problem.Visible ? problem.Text : "") + "'");
             Shot("ui-ean13-ok");
             showText.Checked = false; Pump(600);
             Shot("ui-ean13-notext");
@@ -125,8 +125,8 @@ namespace QlLabels.Tests
             code.W = 56;   // wide enough for the text under the bars (narrower: a problem line asks for a wider code)
             data.Text = "(01)02000000000008(17){date:yyMMdd}(10)ABC123"; Pump(600);
             // the date field filled in; the panel shows "Prints now as …" unless a yellow hint takes the line
-            Check("gs1-ok-date", (!problem.Visible || problem.ForeColor != Brand.Error) && code.Content(DateTime.Now).Contains(DateTime.Now.ToString("yyMMdd")) &&
-                  (problem.Text.Contains(DateTime.Now.ToString("yyMMdd")) || problem.ForeColor == Brand.WarningText),
+            Check("gs1-ok-date", (!problem.Visible || problem.ForeColor != Theme.Of(Role.ErrorText)) && code.Content(DateTime.Now).Contains(DateTime.Now.ToString("yyMMdd")) &&
+                  (problem.Text.Contains(DateTime.Now.ToString("yyMMdd")) || problem.ForeColor == Theme.Of(Role.WarningText)),
                   "line '" + problem.Text + "', notation '" + notation.Text + "'");
             Shot("ui-gs1-ok");
             Tip(notation.Parent.Controls[1], "ui-tip-notation-gs1");

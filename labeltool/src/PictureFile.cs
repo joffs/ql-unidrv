@@ -98,7 +98,8 @@ namespace QlLabels
         {
             byte[] bytes = File.ReadAllBytes(path);
             // on a thread pool (MTA) thread: WinRT's asynchronous calls are waited for there, never on the window's thread
-            var task = Task.Run(() => RenderPdf(bytes));
+            var dpi = new double[1];
+            var task = Task.Run(() => RenderPdf(bytes, dpi));
             try { task.Wait(); }
             catch (AggregateException ex)
             {
@@ -107,10 +108,15 @@ namespace QlLabels
             }
             using (var ms = new MemoryStream(task.Result))
             using (var decoded = new Bitmap(ms))
-                return new Bitmap(decoded);   // a copy: a Bitmap read from a stream needs the stream open
+            {
+                var page = new Bitmap(decoded);   // a copy: a Bitmap read from a stream needs the stream open
+                if (dpi[0] > 0) page.SetResolution((float)dpi[0], (float)dpi[0]);   // the page's size (dropped 1:1)
+                return page;
+            }
         }
 
-        static byte[] RenderPdf(byte[] pdf)
+        // dpi[0]: the resolution the page was drawn at.
+        static byte[] RenderPdf(byte[] pdf, double[] dpi)
         {
             var rt = Assembly.Load("System.Runtime.WindowsRuntime, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
             Type streams = rt.GetType("System.IO.WindowsRuntimeStreamExtensions", true);
@@ -131,6 +137,7 @@ namespace QlLabels
                 object size = pageType.GetProperty("Size").GetValue(page);   // in 1/96 inch
                 double pw = (double)size.GetType().GetProperty("Width").GetValue(size), ph = (double)size.GetType().GetProperty("Height").GetValue(size);
                 double k = Math.Min((double)PdfDpi / 96, PdfMaxPixels / Math.Max(1, Math.Max(pw, ph)));
+                dpi[0] = 96 * k;
                 object opts = Activator.CreateInstance(options);
                 options.GetProperty("DestinationWidth").SetValue(opts, (uint)Math.Max(1, Math.Round(pw * k)));
                 options.GetProperty("DestinationHeight").SetValue(opts, (uint)Math.Max(1, Math.Round(ph * k)));

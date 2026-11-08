@@ -20,12 +20,12 @@ using Microsoft.Win32;
 
 namespace QlLabels
 {
-    sealed class SetupForm : Form
+    sealed partial class SetupForm : ScaledForm
     {
         static string AskPrinter { get { return Lang.T("(ask the printer)"); } }
         const string ReleasesUrl = "https://github.com/joffs/ql-unidrv/releases";
         static readonly string SetupDir = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "setup");
-        static readonly string PluginLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"QLUnidrv\log\plugin.log");
+        static readonly string PluginLog = Path.Combine(LabelStore.DataDir, @"log\plugin.log");
 
         readonly TextBox address = new TextBox();
         readonly ComboBox netModel = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -54,6 +54,7 @@ namespace QlLabels
         readonly Label reachText = new Label { AutoSize = true };
         readonly LinkLabel reachLink = new LinkLabel { AutoSize = true, Text = Lang.T("Open settings") };
         Label shareHint, printerLabel, nameLabel;
+        Control shareHintRow;
         FlowLayoutPanel sharePrinterRow, shareNameRow;
         readonly ComboBox shareList = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         readonly TextBox shareNameBox = new TextBox();
@@ -171,12 +172,12 @@ namespace QlLabels
             reachRow.Margin = new Padding(0, 0, 0, em / 3);
             Theme.Fore(reachText, Role.WarningText);
             reachText.Margin = new Padding(0, 1, em / 3, 0);
-            Brand.StyleLink(reachLink);
+            Theme.StyleLink(reachLink);
             reachLink.LinkClicked += delegate { OpenSharingSettings(); };
             reachRow.Controls.Add(reachText);
             reachRow.Controls.Add(reachLink);
             sp.Controls.Add(reachRow);
-            var shareHintRow = Hint(" ", wide, null);
+            shareHintRow = Hint(" ", wide, null);
             shareHint = (Label)shareHintRow.Controls[0];
             InfoTip.Attach(shareHintRow.Controls[1], () => ShareDetails(), hover: true);
             sp.Controls.Add(shareHintRow);
@@ -257,7 +258,7 @@ namespace QlLabels
             string page = Lang.T("download page");
             var link = new LinkLabel { AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 1, 0, 0), Text = Lang.F("New version: {0}", page) };
             link.LinkArea = new LinkArea(link.Text.LastIndexOf(page, StringComparison.Ordinal), page.Length);
-            Brand.StyleLink(link);
+            Theme.StyleLink(link);
             link.LinkClicked += delegate { Process.Start(ReleasesUrl); };
             var repairInfo = StatusForm.InfoIcon(em);
             InfoTip.Attach(repairInfo, () => Lang.T("To repair: start Setup.exe from the unzipped download again. It checks this PC and installs the driver and the programs anew; printers, settings and label formats stay."), hover: true);
@@ -265,7 +266,7 @@ namespace QlLabels
             update.Controls.Add(link);
             update.Controls.Add(repairInfo);
             var close = new Button { Text = Lang.T("Done"), AutoSize = true, MinimumSize = new Size(em * 7, em * 2), Anchor = AnchorStyles.Right };
-            Brand.StylePrimary(close);
+            Theme.Primary(close);
             close.Click += delegate { Close(); };  // DialogResult alone closes only a dialog, not the --setup window
             bottom.Controls.Add(uninstall, 0, 0);
             bottom.Controls.Add(update, 1, 0);
@@ -281,18 +282,12 @@ namespace QlLabels
             LoadState();
         }
 
-        // Opened directly on a second screen with other scaling: the handle exists early (the caption tint) and the window
-        // is placed on its screen only before it shows, without the message a move would bring; so the check runs here too
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            Brand.MatchScreenDpi(this);
-        }
+        // A second screen with other scaling: ScaledForm (MatchScreenDpi on handle and load, FollowFont on a DPI change).
+        // The widths fit between MatchScreenDpi and the load itself.
+        protected override void BeforeLoad() { FitWidths(); }
 
         protected override void OnLoad(EventArgs e)
         {
-            Brand.MatchScreenDpi(this);
-            FitWidths();
             base.OnLoad(e);
             SizeList();
             FitHeight();
@@ -302,7 +297,6 @@ namespace QlLabels
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
-            Brand.FollowFont(this, Font);
             FitWidths();
             SizeList();
             FitHeight();
@@ -432,7 +426,7 @@ namespace QlLabels
         int shareCheckRound;
 
         // The list's printers and their ports; tests replace them (setup_open.cs)
-        internal static Func<List<string>> ListPrinters = MainForm.OurPrinters;
+        internal static Func<List<string>> ListPrinters = QlPrinters.OurPrinters;
         internal static Func<string, string> PortOfPrinter = QlDevice.PortOf;
 
         // After the list is filled, once the window has its handle: the printer asked for chosen (once), shares checked
@@ -445,48 +439,6 @@ namespace QlLabels
                 if (i >= 0) { printerList.SelectedIndex = i; ActiveControl = printerList; }
             }
             CheckShares();
-        }
-
-        void CheckShares()
-        {
-            int round = ++shareCheckRound;
-            foreach (string printer in listed.ToList())
-            {
-                string port = PortOfPrinter(printer), host, share;
-                if (!PublishedStatus.IsShare(port, out host, out share)) continue;
-                Task.Run(() =>
-                {
-                    var state = ShareStateWithin(host, share, ShareCheckLimit);
-                    try { BeginInvoke((Action)(() => MarkShare(round, printer, port, state))); }
-                    catch (Exception) { }   // the window closed meanwhile
-                });
-            }
-        }
-
-        // The share's state, or Unreachable when the check takes longer than ms (it goes on alone and fills the cache)
-        internal static PublishedStatus.ShareState ShareStateWithin(string host, string share, int ms)
-        {
-            var check = Task.Run(() => { string error; return PublishedStatus.CheckShare(host, share, out error); });
-            try { return check.Wait(ms) ? check.Result : PublishedStatus.ShareState.Unreachable; }
-            catch (Exception) { return PublishedStatus.ShareState.Unknown; }
-        }
-
-        // The mark after the port, or null for none (shared, or not known: no guess)
-        internal static string ShareMark(PublishedStatus.ShareState state)
-        {
-            return state == PublishedStatus.ShareState.NotShared ? Lang.T("no longer shared")
-                 : state == PublishedStatus.ShareState.Unreachable ? Lang.T("not reachable") : null;
-        }
-
-        void MarkShare(int round, string printer, string port, PublishedStatus.ShareState state)
-        {
-            string mark = ShareMark(state);
-            int i = listed.IndexOf(printer);
-            if (IsDisposed || round != shareCheckRound || mark == null || i < 0) return;
-            int selected = printerList.SelectedIndex, top = printerList.TopIndex;
-            printerList.Items[i] = printer + "   (" + port + " \u2013 " + mark + ")";
-            if (printerList.SelectedIndex != selected) printerList.SelectedIndex = selected;
-            printerList.TopIndex = top;
         }
 
         // The last tab used, per user (HKCU\Software\QLUnidrv, SetupTab)
@@ -513,135 +465,6 @@ namespace QlLabels
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
-        }
-
-        // ---- Share a printer ----
-
-        // The printers that can be shared (ours on USB), the share names in use here and whether other PCs can reach
-        // this PC's shares; the tab follows. LoadState passes the real ones, the UI tests made-up ones.
-        internal void ShowSharePage(List<ShareablePrinter> printers, Dictionary<string, string> taken, SharingReach reachable)
-        {
-            bool was = loading;
-            loading = true;
-            string keep = SelectedShareable() != null ? SelectedShareable().Name : null;
-            shareables = printers;
-            takenNames = taken;
-            reach = reachable;
-            shareList.Items.Clear();
-            foreach (var p in printers)
-                shareList.Items.Add(p.Name + "   (" + p.Port + (p.ShareName != null ? ", " + Lang.F("shared as {0}", p.ShareName) : "") + ")");
-            int pick = printers.FindIndex(p => p.Name == keep);
-            if (pick < 0) pick = printers.FindIndex(p => p.ShareName == null);   // the first one not shared yet
-            if (pick < 0 && printers.Count > 0) pick = 0;
-            shareList.SelectedIndex = pick;
-            loading = was;
-            bool any = printers.Count > 0;
-            sharePrinterRow.Visible = shareNameRow.Visible = any;
-            noShareable.Visible = !any;
-            noShareable.Text = Lang.T("A QL printer connected to this PC by USB can be shared here. There is none right now.");
-            reachText.Text = reachable == SharingReach.FirewallOffPublic ? Lang.T("This network is set to public: other PCs can't reach the share.")
-                                                                         : Lang.T("Windows' file and printer sharing is off: other PCs can't reach the share.");
-            reachRow.Visible = any && reachable != SharingReach.Ok;
-            ShareChoiceChanged();
-        }
-
-        ShareablePrinter SelectedShareable()
-        {
-            int i = shareList.SelectedIndex;
-            return i >= 0 && i < shareables.Count ? shareables[i] : null;
-        }
-
-        void ShareChoiceChanged()
-        {
-            var p = SelectedShareable();
-            if (p != null) shareNameBox.Text = p.ShareName ?? Sharing.Suggest(p.Model != null ? p.Model.Name : "QL", p.Name, takenNames);
-            bool shared = p != null && p.ShareName != null;
-            shareHint.Text = shared ? Lang.F("Shared as \\\\{0}\\{1}.", Environment.MachineName, p.ShareName)
-                                    : Lang.F("Other PCs then print through \\\\{0}\\share name.", Environment.MachineName);
-            shareButton.Visible = !shared;
-            renameButton.Visible = unshareButton.Visible = shared;
-            UpdateShareButtons();
-            if (IsHandleCreated) { FitWidths(); FitHeight(); }
-        }
-
-        // Share / Rename only with a usable name (Rename: a different one); the reason below the row
-        void UpdateShareButtons()
-        {
-            var p = SelectedShareable();
-            string name = shareNameBox.Text.Trim();
-            string problem = p == null ? "" : Sharing.NameProblem(name, p.Name, takenNames);
-            shareButton.Enabled = p != null && problem == null;
-            renameButton.Enabled = p != null && problem == null && !string.Equals(name, p.ShareName, StringComparison.Ordinal);
-            bool show = !string.IsNullOrEmpty(problem);
-            shareProblem.Text = show ? problem : "";
-            if (shareProblem.Visible != show) { shareProblem.Visible = show; if (IsHandleCreated) FitHeight(); }
-        }
-
-        string ShareDetails()
-        {
-            var p = SelectedShareable();
-            string where = "\\\\" + Environment.MachineName + "\\" + (p != null && p.ShareName != null ? p.ShareName : shareNameBox.Text.Trim());
-            return Lang.F("On the other PC: \"QL Printer Setup\" > \"Another PC's printer\", enter {0}.", where) + " " +
-                   Lang.T("Windows' file and printer sharing must be on here (Settings > Network > Advanced network settings > Advanced sharing settings).") +
-                   "\r\n\r\n" + Lang.T("Network printers are better added by their address on every PC; shares of other PCs and output files can't be passed on.");
-        }
-
-        void OpenSharingSettings()
-        {
-            try
-            {
-                if (reach == SharingReach.FirewallOffPublic) Process.Start("ms-settings:network-status");
-                else Process.Start("control.exe", "/name Microsoft.NetworkAndSharingCenter /page Advanced");
-            }
-            catch (Exception ex) { Say(ex.Message); }
-        }
-
-        // The printer's and the share's names go to the elevated script as quoted arguments
-        static bool Quotable(string s) { return s.IndexOf('"') < 0; }
-
-        void SharePrinter()
-        {
-            var p = SelectedShareable();
-            string name = shareNameBox.Text.Trim();
-            if (p == null || Sharing.NameProblem(name, p.Name, takenNames) != null || !Quotable(p.Name)) return;
-            var r = RunSettings("-SharePrinter \"" + p.Name + "\" -ShareName \"" + name + "\"", Lang.T("Sharing the printer..."));
-            if (r == null) return;
-            ShowResult(ResultKind.Ok, Lang.T("Printer shared"),
-                       Fields(Lang.T("Name"), p.Name, Lang.T("Share"), "\\\\" + Environment.MachineName + "\\" + Get(r, "sharename")),
-                       Lang.F("On the other PC: \"QL Printer Setup\" > \"Another PC's printer\", enter {0}.", "\\\\" + Environment.MachineName + "\\" + Get(r, "sharename")) +
-                       (reach == SharingReach.Ok ? "" : " " + reachText.Text));
-        }
-
-        void RenameShare()
-        {
-            var p = SelectedShareable();
-            string name = shareNameBox.Text.Trim();
-            if (p == null || p.ShareName == null || Sharing.NameProblem(name, p.Name, takenNames) != null || !Quotable(p.Name)) return;
-            string pc = "\\\\" + Environment.MachineName + "\\";
-            if (QlMessage.Ask(this, Text, Lang.F("Rename the share {0}?", pc + p.ShareName),
-                              Lang.F("PCs that print through {0} no longer reach the printer afterwards; add it there again as {1}.", pc + p.ShareName, pc + name),
-                              MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
-            RunSettings("-SharePrinter \"" + p.Name + "\" -ShareName \"" + name + "\"", Lang.T("Renaming the share..."));
-        }
-
-        void StopSharing()
-        {
-            var p = SelectedShareable();
-            if (p == null || p.ShareName == null || !Quotable(p.Name)) return;
-            string pc = "\\\\" + Environment.MachineName + "\\";
-            if (QlMessage.Ask(this, Text, Lang.F("Stop sharing \"{0}\"?", p.Name),
-                              Lang.F("PCs that print through {0} no longer reach the printer afterwards.", pc + p.ShareName),
-                              MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
-            RunSettings("-UnsharePrinter \"" + p.Name + "\"", Lang.T("Stopping sharing..."));
-        }
-
-        // From the result of "Add printer" (USB): the share tab with that printer
-        void OfferShare(string printer)
-        {
-            tabs.Selected = 2;
-            int i = shareables.FindIndex(p => p.Name == printer);
-            if (i >= 0) shareList.SelectedIndex = i;
-            shareNameBox.Focus();
         }
 
         // A section: a hairline, its heading in petrol and its content (top to bottom), all on the window's left line.
@@ -755,123 +578,6 @@ namespace QlLabels
             SizeList();
             loading = false;
             FitHeight();
-        }
-
-        // The lines for connected USB printers without a printer of ours: printer symbol, text (Brother's own printer on
-        // the same port in grey below), "Add printer" on the right
-        internal void ShowUsbRows(List<UsbCandidate> candidates)
-        {
-            int em = Font.Height;
-            usbRows.SuspendLayout();
-            foreach (Control c in usbRows.Controls.Cast<Control>().ToList()) c.Dispose();
-            usbRows.Controls.Clear();
-            usbTexts.Clear();
-            // One line for all of them (two lines made the window too tall at 150 %; user's choice 2026-11-06): symbol |
-            // text + (i) | button on the list's right edge; with several printers the button opens a menu of them
-            if (candidates.Count > 0)
-            {
-                var row = new TableLayoutPanel { AutoSize = true, ColumnCount = 3, RowCount = 1, Margin = new Padding(0, em / 4, 0, 0), Padding = Padding.Empty };
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                var icon = Theme.Fore(new Label { Text = "\uE749", AutoSize = true, Font = new Font("Segoe MDL2 Assets", Font.SizeInPoints * 1.15f), Anchor = AnchorStyles.Left,
-                                                  Margin = new Padding(0, 2, em / 4, 0) }, Role.Text);
-                var text = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, em / 4, 0) };
-                var first = candidates[0];
-                var label = new Label { AutoSize = true, Anchor = AnchorStyles.Left, Margin = Padding.Empty,
-                                        Text = candidates.Count == 1 ? Lang.F("{0} on {1} is not set up here yet.", first.Model.Name, first.Port)
-                                                                     : Lang.F("{0} QL printers on USB are not set up here yet.", candidates.Count) };
-                var info = StatusForm.InfoIcon(em);
-                info.Cursor = Cursors.Hand;
-                info.Anchor = AnchorStyles.Left;
-                string details = UsbDetails(candidates);
-                InfoTip.Attach(info, () => details, hover: true);
-                text.Controls.Add(label);
-                text.Controls.Add(info);
-                var add = Action(Lang.T("Add printer"), () => { });
-                add.Anchor = AnchorStyles.Right;
-                add.Margin = Padding.Empty;
-                if (candidates.Count == 1) add.Click += delegate { AddUsbPrinter(first); };
-                else
-                {
-                    var menu = new ContextMenuStrip();
-                    foreach (var c in candidates) { var cand = c; menu.Items.Add(c.Model.Name + " (" + c.Port + ")", null, delegate { AddUsbPrinter(cand); }); }
-                    add.Click += delegate { menu.Show(add, new Point(0, add.Height)); };
-                    add.Disposed += delegate { menu.Dispose(); };
-                }
-                row.Controls.Add(icon, 0, 0);
-                row.Controls.Add(text, 1, 0);
-                row.Controls.Add(add, 2, 0);
-                usbRows.Controls.Add(row);
-                usbTexts.Add(new Control[] { text, icon, add });
-            }
-            usbRows.Visible = candidates.Count > 0;
-            usbRows.ResumeLayout();
-            FitUsbRows(printerList.Width);
-        }
-
-        // The text wraps so that the line is as wide as the list (the button on its right edge)
-        void FitUsbRows(int width)
-        {
-            foreach (var t in usbTexts)
-            {
-                // the symbol follows the text's size (a font set on a control isn't scaled at a DPI change)
-                float size = t[0].Controls[0].Font.SizeInPoints * 1.15f;
-                if (Math.Abs(t[1].Font.SizeInPoints - size) > 0.1f) t[1].Font = new Font("Segoe MDL2 Assets", size);
-                var info = t[0].Controls[1];
-                int room = Math.Max(Font.Height * 10, width - t[1].PreferredSize.Width - t[1].Margin.Horizontal - t[2].PreferredSize.Width - t[0].Margin.Horizontal
-                                                      - info.Width - info.Margin.Horizontal);
-                t[0].Controls[0].MaximumSize = new Size(room, 0);
-                t[0].Parent.MinimumSize = new Size(width, 0);
-            }
-        }
-
-        // The USB line's (i): why the printer isn't there, what "Add printer" does, Brother's own printers beside them
-        internal static string UsbDetails(List<UsbCandidate> candidates)
-        {
-            var lines = new List<string>();
-            if (candidates.Count > 1) lines.Add(string.Join(", ", candidates.Select(c => c.Model.Name + " (" + c.Port + ")")));
-            lines.Add(Lang.T("Windows doesn't set up a removed USB printer again by itself, not even after a restart. \"Add printer\" adds it with this driver, not shared."));
-            foreach (var c in candidates.Where(c => c.BrotherQueue != null))
-                lines.Add(Lang.F("Brother's own printer \"{0}\" stays alongside it.", c.BrotherQueue));
-            return string.Join("\r\n\r\n", lines);
-        }
-
-        // A QL printer plugged in, unplugged or switched off while the window is open: the USB line follows (Windows'
-        // WM_DEVICECHANGE / DBT_DEVNODES_CHANGED to every top-level window; one look a second after the last one)
-        Timer usbLook;
-        protected override void WndProc(ref Message m)
-        {
-            base.WndProc(ref m);
-            if (m.Msg != 0x0219 || (long)m.WParam != 0x0007 || loading) return;
-            if (usbLook == null)
-            {
-                usbLook = new Timer { Interval = 1000 };
-                usbLook.Tick += delegate { usbLook.Stop(); RefreshUsbRows(); };
-                Disposed += delegate { usbLook.Dispose(); };
-            }
-            usbLook.Stop();
-            usbLook.Start();
-        }
-
-        void RefreshUsbRows()
-        {
-            if (IsDisposed || Drivers().Length == 0) return;
-            ShowUsbRows(UsbPrinters.Unset());
-            FitHeight();
-        }
-
-        void AddUsbPrinter(UsbCandidate c)
-        {
-            // Unplugged or switched off since the line appeared: no printer for a device that isn't there
-            if (!UsbPrinters.Unset().Any(u => u.Port == c.Port))
-            {
-                Say(Lang.F("{0} on {1} is no longer connected.", c.Model.Name, c.Port));
-                RefreshUsbRows();
-                return;
-            }
-            var r = RunSettings("-UsbPrinter -UsbPort " + c.Port + " -UsbDriverName \"" + c.Model.DriverName + "\"", Lang.T("Adding the printer..."));
-            if (r != null) PrinterAdded(r);
         }
 
         void AddNetworkPrinter()
@@ -1100,6 +806,15 @@ namespace QlLabels
             return r.TryGetValue(key, out v) ? v : null;
         }
 
+        // "Show details" after a failed change: the tip, install.ps1's own message (English) once, then the end of the
+        // log without the transcript's copy of that message (FailureLines already unwrapped PS>TerminatingError), the log path.
+        internal static string FailureDetails(string tip, string error, List<string> lines, string logFile)
+        {
+            var tail = lines.Where(l => error == null || l.Trim() != error.Trim()).ToList();
+            return (tip != null ? tip + "\r\n\r\n" : "") + (error != null ? error + "\r\n\r\n" : "")
+                   + string.Join("\r\n", tail.Skip(Math.Max(0, tail.Count - 30))) + "\r\n\r\nLog: " + logFile;
+        }
+
         static List<KeyValuePair<string, string>> Fields(params string[] pairs)
         {
             var list = new List<KeyValuePair<string, string>>();
@@ -1157,13 +872,7 @@ namespace QlLabels
         // after showing why nothing changed.
         Dictionary<string, string> RunSettings(string arguments, string working)
         {
-            // UI tests (deskrun, QL_TEST_SILENT=1) never start the elevated script: what asked for it goes to
-            // %TEMP%\ql-unidrv-test-run.txt instead (2026-11-06)
-            if (Environment.GetEnvironmentVariable("QL_TEST_SILENT") == "1")
-            {
-                try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "ql-unidrv-test-run.txt"), DateTime.Now + " " + arguments + "\r\n" + Environment.StackTrace + "\r\n\r\n"); } catch (Exception) { }
-                return null;
-            }
+            if (ScriptRun.SkippedForTest(arguments)) return null;  // UI tests never start the elevated script
             string script = Path.Combine(SetupDir, "install.ps1");
             if (!File.Exists(script))
             {
@@ -1171,47 +880,38 @@ namespace QlLabels
                 LoadState();
                 return null;
             }
-            string temp = Path.GetTempPath(), logFile = Path.Combine(temp, "ql-unidrv-settings.log"), resultFile = Path.Combine(temp, "ql-unidrv-settings.txt");
-            foreach (var f in new[] { logFile, resultFile }) try { File.Delete(f); } catch (Exception) { }
-            var psi = new ProcessStartInfo(NativeTools.Path("powershell.exe", elevated: true),
-                "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\" -Settings " + arguments + " -Log \"" + logFile + "\" -ResultFile \"" + resultFile + "\"")
-            { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+            string logFile = ScriptRun.TempFile(ScriptRun.SettingsLog), resultFile = ScriptRun.TempFile(ScriptRun.SettingsResult);
+            ScriptRun.ClearFiles(logFile, resultFile);
             int code;
             try
             {
                 code = SetupProgress.Run(this, Text, working, Lang.T("Windows may ask for administrator permission first; then this takes a few seconds."),
-                                         () => { using (var p = Process.Start(psi)) { p.WaitForExit(); return p.ExitCode; } });
+                                         () => ScriptRun.RunElevated(script, " -Settings " + arguments, logFile, resultFile));
             }
             catch (Win32Exception ex)
             {
-                bool declined = ex.NativeErrorCode == 1223;
+                bool declined = Elevated.Declined(ex);
                 LoadState();
                 Done(Lang.T("Not changed"));
                 ShowResult(ResultKind.Warning, Lang.T("Not changed"), null,
-                           declined ? Lang.T("Administrator permission was declined, so nothing was changed.") : ex.Message);
+                           declined ? Lang.T("Nothing changed: the Windows prompt was answered No.") : ex.Message);
                 return null;
             }
-            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                foreach (var line in File.ReadAllLines(resultFile))
-                {
-                    int eq = line.IndexOf('=');
-                    if (eq > 0) result[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
-                }
-            }
-            catch (Exception) { }
+            var result = ScriptRun.ReadResultMap(resultFile, StringComparer.OrdinalIgnoreCase);
             LoadState();
             if (code != 0 || Get(result, "done") != "1")
             {
-                var lines = TranscriptBody(logFile);
-                string reason = Get(result, "error") ?? lines.LastOrDefault(l => !l.StartsWith(" ") && !l.StartsWith("+")) ?? Lang.T("It stopped without a message.");
+                var lines = ScriptRun.FailureLines(logFile);
+                string error = Get(result, "error");
+                string tip = null;
+                string reason = error != null ? SettingsReason(Get(result, "code"), error, out tip)
+                              : lines.LastOrDefault(l => !l.StartsWith(" ") && !l.StartsWith("+")) ?? Lang.T("It stopped without a message.");
                 Done(Lang.T("Did not finish"));
                 ShowResult(ResultKind.Error, Lang.T("The change did not finish"), Fields(Lang.T("Log"), logFile), reason,
-                           string.Join("\r\n", lines.Skip(Math.Max(0, lines.Count - 30))) + "\r\n\r\nLog: " + logFile);
+                           FailureDetails(tip, error, lines, logFile));
                 return null;
             }
-            DeleteRunFiles();  // kept only after a failure (debug pass X7)
+            ScriptRun.DeleteRunFiles();  // kept only after a failure (debug pass X7)
             Done(result.ContainsKey("removed") ? (Get(result, "pending") != null ? Lang.F("Printer '{0}' is being removed", result["removed"]) : Lang.F("Printer '{0}' removed", result["removed"]))
                  : result.ContainsKey("unshared") ? Lang.F("Printer '{0}' no longer shared", result["unshared"])
                  : result.ContainsKey("renamed-from") ? Lang.F("Share of '{0}' renamed to {1}", Get(result, "shared"), Get(result, "sharename"))
@@ -1223,25 +923,30 @@ namespace QlLabels
             return result;
         }
 
-        // The log and result files of setup and settings runs in %TEMP%, after a run that finished: also those an
-        // earlier run left (a failed one keeps them for Show details). Debug pass 2026-10-31 X7.
-        internal static readonly string[] RunFileNames = { "ql-unidrv-install.log", "ql-unidrv-setup.txt", "ql-unidrv-settings.log", "ql-unidrv-settings.txt" };
-        internal static void DeleteRunFiles()
+        // Why a change failed, in the window's language: install.ps1's code= for the failures Printer setup can run into
+        // (its own error= text is English). Short, one or two sentences (decided 2026-11-08); tip: a line for the top of
+        // Show details, where install.ps1's own message follows (backlog 2026-11-08, x64 Sandbox I1 run).
+        internal static string SettingsReason(string code, string message, out string tip)
         {
-            if (InstallForm.Preview) return;
-            foreach (string name in RunFileNames) try { File.Delete(Path.Combine(Path.GetTempPath(), name)); } catch (Exception) { }
-        }
-
-        // The script's own output from a transcript: without PowerShell's header and footer blocks (lines between
-        // "****" rulers, in the system's language) and empty lines.
-        internal static List<string> TranscriptBody(string file)
-        {
-            var all = new List<string>();
-            try { all = File.ReadAllLines(file).ToList(); } catch (Exception) { }
-            var rulers = all.Select((l, i) => new { l, i }).Where(x => x.l.StartsWith("*****")).Select(x => x.i).ToList();
-            int from = rulers.Count >= 2 ? rulers[1] + 1 : 0;
-            int to = rulers.Count >= 4 ? rulers[rulers.Count - 2] : all.Count;
-            return all.Skip(from).Take(Math.Max(0, to - from)).Where(l => l.Trim().Length > 1 && !l.StartsWith("*****")).ToList();
+            tip = null;
+            switch (code)
+            {
+                case "share-unreachable":
+                    var m = Regex.Match(message, @"as (\\\\([^\\]+)\\\S+?)\. ");
+                    string share = m.Success ? m.Groups[1].Value : "?", pc = m.Success ? m.Groups[2].Value : "?";
+                    tip = Lang.F("Tip: open \\\\{0} once in Explorer and choose \"Remember my credentials\".", pc);
+                    return Lang.F("No printer can be reached at {0}. Is the other PC on and the printer shared?", share);
+                case "no-driver": return Lang.T("The driver is missing on this PC. Run Setup.exe first.");
+                case "not-ours": return Lang.T("This printer no longer exists. Open Printer setup again.");
+                case "share-usb-only": return Lang.T("Only a printer on a USB port can be shared.");
+                case "remove-failed": return Lang.T("Windows refused to remove it. Close programs that are printing, then try again.");
+                case "busy": return Lang.T("Another setup is running. Try again after it.");
+                case "port":
+                    tip = Lang.T("If it still doesn't work, send these details to the project (see README).");
+                    return Lang.T("Windows didn't add the printer port. Try again.");
+                case "rdp-printer": return Lang.T("A Remote Desktop session is redirecting printers that use this driver. Close it, or connect without printers (Remote Desktop Connection > Local Resources > Printers), then try again.");
+                default: return Lang.T("The change was stopped.");
+            }
         }
 
         // The bottom line: the last change, briefly (the dialog showed the details).

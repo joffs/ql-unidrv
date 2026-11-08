@@ -66,9 +66,9 @@ data (seen 2026-11-03). So the kit pauses the service's USB reading while it tes
 
 ## Turn it on or off
 
-- **Printer setup window:** *QL Label Formats* > *Printer* > *Printer setup* > *Options* > **Printer status
-  service for shared printers** (German: *Drucker* > *Druckereinrichtung* > *Optionen* > *Druckerstatus-Dienst für
-  freigegebene Drucker*; one administrator prompt). `Setup.exe` offers it too when this PC shares a QL printer.
+- **Printer setup window:** *QL Label Formats* or *QL Label Maker* > *Printer* > *Printer setup* > tab *Share a
+  printer* > **Printer status service for shared printers** (German: *Drucker* > *Druckereinrichtung* > *Drucker
+  freigeben* > *Druckerstatus-Dienst für freigegebene Drucker*; one administrator prompt). `Setup.exe` offers it too when this PC shares a QL printer.
 - **Script** (administrator PowerShell; from the repository: `driver\install.ps1`):
 
   ```

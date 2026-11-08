@@ -131,7 +131,7 @@ namespace QlLabels
 
         // ---- the window ----
 
-        internal sealed class MessageForm : Form
+        internal sealed class MessageForm : ScaledForm
         {
             readonly Label head;
             readonly Panel scroller = new Panel { AutoScroll = true, Margin = Padding.Empty };
@@ -262,7 +262,7 @@ namespace QlLabels
                     // The default in the brand colour, unless it is the safe way out (No, Cancel): then no button is
                     // filled, as no answer is recommended (mockup: "Print anyway?" with No preselected)
                     if (b.DialogResult == DialogResult.No || b.DialogResult == DialogResult.Cancel) b.FlatStyle = FlatStyle.System;
-                    else { b.Font = new Font(Font, FontStyle.Bold); Brand.StylePrimary(b); }
+                    else { b.Font = new Font(Font, FontStyle.Bold); Theme.Primary(b); }
                 }
             }
 
@@ -295,7 +295,7 @@ namespace QlLabels
             LinkLabel Link(string text)
             {
                 var link = new LinkLabel { Text = text, AutoSize = true, LinkBehavior = LinkBehavior.HoverUnderline, Margin = new Padding(0, 0, em, em / 3) };
-                Brand.StyleLink(link);
+                Theme.StyleLink(link);
                 return link;
             }
 
@@ -320,16 +320,10 @@ namespace QlLabels
                 scroller.AutoScroll = true;
             }
 
-            // Opened on a second screen with other scaling: as SetupResult
-            protected override void OnHandleCreated(EventArgs e)
-            {
-                base.OnHandleCreated(e);
-                Brand.MatchScreenDpi(this);
-            }
-
+            // Opened on a second screen with other scaling: ScaledForm checks the screen before Load and lets bold fonts
+            // follow a DPI change.
             protected override void OnLoad(EventArgs e)
             {
-                Brand.MatchScreenDpi(this);
                 base.OnLoad(e);
                 FitText();
             }
@@ -337,7 +331,6 @@ namespace QlLabels
             protected override void OnDpiChanged(DpiChangedEventArgs e)
             {
                 base.OnDpiChanged(e);
-                Brand.FollowFont(this, Font);
                 head.Font = HeadFont(Font);
                 FitText();
             }

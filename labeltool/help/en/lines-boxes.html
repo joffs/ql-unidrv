@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lines and boxes – QL Label Maker Help</title>
+<title>Lines and shapes – QL Label Maker Help</title>
 <link rel="stylesheet" href="../help.css">
 </head>
 <body>
@@ -21,8 +21,8 @@
 <section class="page"><div class="wrap">
   <header>
     <span class="eyebrow">Objects</span>
-    <h1>Lines and boxes</h1>
-    <p class="lead">Lines divide the label, boxes frame something or become a black area.</p>
+    <h1>Lines and shapes</h1>
+    <p class="lead">Lines divide the label, shapes frame something, mark it or become a black area.</p>
   </header>
 
   <ul class="blocks">
@@ -54,18 +54,30 @@
 
     <li>
       <div class="step">
-        <h2 id="box">Box</h2>
-        <p>The <span class="ui">Box</span> tool or <span class="path">Insert &gt; Box</span>. On the right you set:</p>
+        <h2 id="shapes">Shapes</h2>
+        <p>The <span class="ui">Shapes</span> group in the tool palette or <span class="path">Insert</span>:
+          <span class="ui">Rectangle</span>, <span class="ui">Ellipse</span>, <span class="ui">Triangle</span>,
+          <span class="ui">Polygon</span> and <span class="ui">Star</span>. On the right you set:</p>
+        <figure class="frame" style="max-width:458px"><img src="../img/en/shapes-label.png" width="438" height="130" alt="A rectangle with round corners, an ellipse and a selected filled star"></figure>
         <ul>
-          <li><span class="ui">Line width (mm)</span></li>
-          <li><span class="ui">Filled</span>: a black area instead of a frame</li>
-          <li><span class="ui">Ellipse</span>: round instead of square</li>
+          <li><span class="ui">Shape</span>: another shape; size and position stay</li>
+          <li><span class="ui">Corners</span> (polygon) or <span class="ui">Points</span> (star): 3 to 20</li>
+          <li><span class="ui">Inner radius (%)</span> (star): 10 to 90; smaller = sharper points</li>
+          <li><span class="ui">Round corners (mm)</span> (rectangle): 0 = square corners</li>
+          <li><span class="ui">Line width (mm)</span>: the line lies inside the shape's edge</li>
+          <li><span class="ui">Filled</span>: a black area instead of a line (then without a line width)</li>
         </ul>
-        <p>A box turns to any angle, see <a href="rotate-arrange.html">Rotating and arranging</a>.</p>
+        <p>Hold <kbd>Shift</kbd> while dragging a corner handle and the shape becomes regular: a square, a circle, an
+          equilateral triangle, an even polygon or an even star.</p>
+        <figure class="frame" style="max-width:278px"><img src="../img/en/shapes-panel.png" width="258" height="248" alt="Settings of a star: Shape Star, Points 5, Inner radius 45 %, Filled, position and size"></figure>
+        <p>A shape turns to any angle, see <a href="rotate-arrange.html">Rotating and arranging</a>. Boxes from older
+          labels open as a rectangle or an ellipse.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
-        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>add a box</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>add a rectangle</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>E</kbd></span><span>add an ellipse</span></div>
+        <div><span><kbd>Shift</kbd> while dragging a corner</span><span>a regular shape</span></div>
       </aside>
     </li>
 
@@ -85,7 +97,7 @@
     </li>
   </ul>
 
-  <nav class="pager" aria-label="Pages"><a href="text.html">← Text and text frames</a><a href="pictures.html">Next: Pictures →</a></nav>
+  <nav class="pager" aria-label="Pages"><a href="text.html">← Artistic and paragraph text</a><a href="pictures.html">Next: Pictures →</a></nav>
 </div></section>
 </main>
 

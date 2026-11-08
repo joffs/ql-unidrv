@@ -25,7 +25,9 @@ host offers a driver for the client's architecture, which this package does not 
 
 ## Host (the PC the printer is plugged into)
 
-With the driver installed and the printer on USB (elevated PowerShell):
+With the driver installed and the printer on USB: *Printer setup* window (menu *Printer* in QL Label Formats or QL
+Label Maker), tab *Share a printer* (*Drucker freigeben*): printer and share name, one administrator prompt; it says
+when the firewall or the service *Server* keeps other PCs out ([setup.md](setup.md)). Or in an elevated PowerShell:
 
 ```powershell
 Set-Printer -Name "Brother QL-xxx (Unidrv)" -Shared $true -ShareName "QL-xxx"
@@ -47,7 +49,8 @@ password). A user without access gets "No printer status from HOST ... user name
 status window (whether that user's jobs still reach the host is not tested yet).
 
 - **Client with this driver (x64 or ARM64):** install the driver (release zip: `Setup.exe`), then add the
-  printer in the *Printer setup* window of QL Label Formats, *Add a QL printer shared by another PC* ([setup.md](setup.md));
+  printer in the *Printer setup* window (menu *Printer* in QL Label Formats or QL Label Maker), tab *Another PC's
+  printer* (*Drucker eines anderen PCs*): share and model ([setup.md](setup.md));
   by script, in an elevated PowerShell (from the repository: `driver\install.ps1`)
 
   ```powershell

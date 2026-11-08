@@ -227,7 +227,7 @@ namespace QlLabels
 
         static List<string> StatusPrinters()
         {
-            return QlLabels.MainForm.OurPrinters().Where(p => QlDevice.HasStatus(QlDevice.PortOf(p))).ToList();
+            return QlLabels.QlPrinters.OurPrinters().Where(p => QlDevice.HasStatus(QlDevice.PortOf(p))).ToList();
         }
 
         async void Poll()

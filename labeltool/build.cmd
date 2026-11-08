@@ -24,26 +24,28 @@ set "OBJ=%OUT%\obj\labeltool"
 if not exist "%OBJ%" mkdir "%OBJ%"
 powershell -NoProfile -ExecutionPolicy Bypass -File version\make-version.ps1 "%OBJ%\Version.g.cs" || goto :fail
 set VER=version\Common.cs "%OBJ%\Version.g.cs"
+rem The framework assemblies every build here references (programs and unit tests)
+set "REFS=/r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll"
 rem One source folder, one exe per program: each build picks its Main with /main and has its own icon.
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\QlLabelFormats.exe" ^
    /main:QlLabels.Program /win32icon:assets\qllabelformats.ico /win32manifest:app.manifest %RES% %TRAY% ^
-   /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs %VER% version\QlLabelFormats.cs || goto :fail
+   %REFS% src\*.cs %VER% version\QlLabelFormats.cs || goto :fail
 copy /y app.config "%TOOLS%\QlLabelFormats.exe.config" >nul
 rem The label editor "QL Label Maker" (.qllabel files open here)
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\QlLabelMaker.exe" ^
    /main:QlLabels.EditorProgram /win32icon:assets\qllabelmaker.ico /win32manifest:app.manifest %TRAY% ^
-   /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs %VER% version\QlLabelMaker.cs || goto :fail
+   %REFS% src\*.cs %VER% version\QlLabelMaker.cs || goto :fail
 copy /y app.config "%TOOLS%\QlLabelMaker.exe.config" >nul
 rem "QL Printer Status": status window, tray monitor, the service "QL printer status"
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\QlPrinterStatus.exe" ^
    /main:QlLabels.PrinterStatusProgram /win32icon:assets\qlstatus.ico /win32manifest:app.manifest %TRAY% ^
-   /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs %VER% version\QlPrinterStatus.cs || goto :fail
+   %REFS% src\*.cs %VER% version\QlPrinterStatus.cs || goto :fail
 copy /y app.config "%TOOLS%\QlPrinterStatus.exe.config" >nul
 rem The setup window of the release zip: the label tool's code (Program.cs opens the setup window when the exe is
 rem named Setup.exe) with the setup icon. Not installed; tools\make-release.ps1 puts it into the zip.
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\Setup.exe" ^
    /main:QlLabels.Program /win32icon:assets\qlsetup.ico /win32manifest:app.manifest %RES% %TRAY% ^
-   /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs %VER% version\Setup.cs || goto :fail
+   %REFS% src\*.cs %VER% version\Setup.cs || goto :fail
 copy /y app.config "%TOOLS%\Setup.exe.config" >nul
 rem Icons the install uses as files: the base mark (uninstall entry) and the .qllabel file icon
 copy /y assets\qlunidrv.ico "%TOOLS%\qlunidrv.ico" >nul
@@ -57,29 +59,61 @@ rem No colours of their own in the windows: all from src\Theme.cs (light, dark, 
 powershell -NoProfile -ExecutionPolicy Bypass -File test\check-colours.ps1 || goto :fail
 
 rem Unit tests: printer status decoding and diagnosis, label formats, UI languages (no printer needed)
-if not exist %OUT%\test mkdir %OUT%\test
-"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:%OUT%\test\labeltool_status_test.exe ^
-   /main:QlLabels.Tests.StatusTest /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+rem QL_TEST_OUT=<folder>: the test exes go there, not ..\out\test (sessions that build at the same time)
+set "TESTOUT=%OUT%\test"
+if defined QL_TEST_OUT set "TESTOUT=%QL_TEST_OUT%"
+if not exist "%TESTOUT%" mkdir "%TESTOUT%"
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_status_test.exe" ^
+   /main:QlLabels.Tests.StatusTest %REFS% ^
    src\*.cs test\status_test.cs test\format_test.cs test\lang_test.cs || goto :fail
-%OUT%\test\labeltool_status_test.exe || goto :fail
+"%TESTOUT%\labeltool_status_test.exe" || goto :fail
 
 rem Unit test: the setup window's helpers (result file, error messages, zip view)
-"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:%OUT%\test\labeltool_setup_test.exe ^
-   /main:QlLabels.Tests.SetupTest /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_setup_test.exe" ^
+   /main:QlLabels.Tests.SetupTest %REFS% ^
    src\*.cs test\setup_test.cs || goto :fail
-%OUT%\test\labeltool_setup_test.exe || goto :fail
+"%TESTOUT%\labeltool_setup_test.exe" || goto :fail
 
 rem Unit test: the label editor's model and 1-bit rendering (no printer needed)
-"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:%OUT%\test\labeltool_editor_test.exe ^
-   /main:QlLabels.Tests.EditorTest /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_editor_test.exe" ^
+   /main:QlLabels.Tests.EditorTest %REFS% ^
    src\*.cs test\editor_test.cs || goto :fail
-%OUT%\test\labeltool_editor_test.exe || goto :fail
+"%TESTOUT%\labeltool_editor_test.exe" || goto :fail
+
+rem Unit test: paste and drop in the label editor (format order, SVG, EMF, PNG/DIB, RTF; fixtures made by the test)
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_clipboard_test.exe" ^
+   /main:QlLabels.Tests.ClipboardTest %REFS% ^
+   src\*.cs test\clipboard_test.cs || goto :fail
+"%TESTOUT%\labeltool_clipboard_test.exe" || goto :fail
+
+rem Replay test: every clipboard dump in out\clipboard\<name> (saved from real programs, private, skipped when missing)
+rem goes through the paste decision as COM data and as bytes; the expected kind comes from the dump's name. On ARM64
+rem it runs natively and as x64 (the manifest lets the exe run as either).
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_clipboard_replay.exe" ^
+   /main:QlLabels.Tests.ClipboardReplay /win32manifest:app.manifest %REFS% ^
+   src\*.cs test\clipboard_replay.cs || goto :fail
+"%TESTOUT%\labeltool_clipboard_replay.exe" "%OUT%\clipboard" || goto :fail
+set "QL_ARM64="
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "QL_ARM64=1"
+if /i "%PROCESSOR_ARCHITEW6432%"=="ARM64" set "QL_ARM64=1"
+if defined QL_ARM64 (
+   rem (start sets ERRORLEVEL to the exit code but doesn't trigger ||)
+   start "" /MACHINE amd64 /B /WAIT "%TESTOUT%\labeltool_clipboard_replay.exe" "%OUT%\clipboard"
+   if errorlevel 1 goto :fail
+)
+
+rem Quick fuzz test of the paste, drop and file parsers (fixed seed, 200 inputs per kind; the full run with the
+rem hand-made worst cases: test\parser_fuzz.ps1)
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_parser_fuzz.exe" ^
+   /main:QlLabels.Tests.ParserFuzz %REFS% ^
+   src\*.cs test\parser_fuzz.cs || goto :fail
+"%TESTOUT%\labeltool_parser_fuzz.exe" 200 20261108 --quick || goto :fail
 
 rem Unit test: Code 128 sets A/B/C, Shift, FNC1 and GS1-128 element strings
-"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:%OUT%\test\labeltool_barcode_test.exe ^
-   /main:QlLabels.Tests.BarcodeTest /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_barcode_test.exe" ^
+   /main:QlLabels.Tests.BarcodeTest %REFS% ^
    src\*.cs test\barcode_test.cs || goto :fail
-%OUT%\test\labeltool_barcode_test.exe || goto :fail
+"%TESTOUT%\labeltool_barcode_test.exe" || goto :fail
 
 for %%i in ("%TOOLS%\QlLabelFormats.exe" "%TOOLS%\QlLabelMaker.exe" "%TOOLS%\QlPrinterStatus.exe" "%TOOLS%\Setup.exe") do echo Build OK: %%~fi
 popd

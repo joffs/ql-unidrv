@@ -10,7 +10,7 @@ using Microsoft.Win32;
 
 namespace QlLabels
 {
-    sealed class AboutForm : Form
+    sealed class AboutForm : ScaledForm
     {
         readonly ToolTip tips = new ToolTip();
         readonly List<Control> smallText = new List<Control>();   // the build line and Copy: 90 % of the window's font
@@ -89,7 +89,7 @@ namespace QlLabels
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             Theme.Use(this);
             Theme.Back(this, Role.Content);
-            Brand.TintCaption(this);
+            Theme.TintCaption(this);
 
             int em = Font.Height, width = em * 22;
 
@@ -138,7 +138,7 @@ namespace QlLabels
             var copy = new LinkLabel { AutoSize = true, Font = SmallFont, Text = Lang.T("Copy"), Margin = Padding.Empty };
             smallText.Add(buildLine);
             smallText.Add(copy);
-            Brand.StyleLink(copy);
+            Theme.StyleLink(copy);
             tips.SetToolTip(copy, Lang.T("Copies the versions, e.g. for a support request"));
             var copied = new Timer { Interval = 2000 };
             copied.Tick += delegate { copied.Stop(); copy.Text = Lang.T("Copy"); };
@@ -154,7 +154,7 @@ namespace QlLabels
                 Text = Lang.T("Free software under the MIT License")
             };
             var link = new LinkLabel { AutoSize = true, Text = ProjectUrl.Substring("https://".Length), Margin = new Padding(0, 0, 0, em * 2 / 3) };
-            Brand.StyleLink(link);
+            Theme.StyleLink(link);
             link.LinkClicked += delegate { try { Process.Start(ProjectUrl); } catch (Exception) { } };
             var note = Theme.Fore(new Label
             {
@@ -166,7 +166,7 @@ namespace QlLabels
 
             // Footer: OK.
             var ok = new Button { Text = "OK", AutoSize = true, DialogResult = DialogResult.OK, MinimumSize = new Size(em * 6, 0), Anchor = AnchorStyles.Right, Margin = Padding.Empty };
-            Brand.StylePrimary(ok);
+            Theme.Primary(ok);
             ok.Click += delegate { if (!Modal) Close(); };   // the tray's window is not modal: DialogResult doesn't close it
             AcceptButton = ok;
             CancelButton = ok;
@@ -181,16 +181,9 @@ namespace QlLabels
             Controls.Add(root);
         }
 
-        // Opened on a second screen with other scaling (Brand.MatchScreenDpi): the caption tint creates the handle early.
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            Brand.MatchScreenDpi(this);
-        }
-
+        // Opened on a second screen with other scaling (ScaledForm): the caption tint creates the handle early.
         protected override void OnLoad(EventArgs e)
         {
-            Brand.MatchScreenDpi(this);
             base.OnLoad(e);
             if (atTray) PlaceAtTray();
         }
@@ -198,7 +191,6 @@ namespace QlLabels
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
-            Brand.FollowFont(this, Font);
             foreach (var c in smallText) c.Font = SmallFont;   // FollowFont scales only bold ones
         }
     }

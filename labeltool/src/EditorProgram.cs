@@ -17,6 +17,7 @@ namespace QlLabels
         [STAThread]
         static int Main(string[] args)
         {
+            StartupTrace.Mark("Main");
             Lang.WindowApp();   // every start is a window, also with a file as the first argument
             Run(args, 0);
             return 0;
@@ -35,7 +36,10 @@ namespace QlLabels
                 else if (args[i] == "--lang" && i + 1 < args.Length) i++;   // Lang.cs reads it
                 else file = args[i];
             }
-            Application.Run(new EditorForm(file, printerName, formName));
+            StartupTrace.Mark("arguments read");
+            var form = new EditorForm(file, printerName, formName);
+            StartupTrace.Mark("window built");
+            Application.Run(form);
         }
 
         // QlLabelMaker.exe next to the running exe, or null (a build without it).

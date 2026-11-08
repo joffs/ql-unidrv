@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ansicht, Richtung und Zoom – QL Label Maker Hilfe</title>
+<title>Werkzeuge, Richtung und Zoom – QL Label Maker Hilfe</title>
 <link rel="stylesheet" href="../help.css">
 </head>
 <body>
@@ -21,12 +21,45 @@
 <section class="page"><div class="wrap">
   <header>
     <span class="eyebrow">Gestalten</span>
-    <h1>Ansicht, Richtung und Zoom</h1>
+    <h1>Werkzeuge, Richtung und Zoom</h1>
     <p class="lead">Die Richtung legt fest, wie der Inhalt auf dem Band liegt. Der Zoom ändert nur die Größe auf dem
       Bildschirm, nicht den Druck.</p>
   </header>
 
   <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="tools">Werkzeugleiste</h2>
+        <p>Links stehen die Werkzeuge in fünf Gruppen: <span class="ui">Text</span>, <span class="ui">Formen</span>,
+          <span class="ui">Linie</span>, <span class="ui">Bild</span> und <span class="ui">Code</span>. Ein Klick fügt das
+          Werkzeug ein, dessen Symbol die Gruppe gerade zeigt.</p>
+        <p>Ein kleines Dreieck unten rechts heißt: Die Gruppe hat mehrere Werkzeuge. Ein Klick auf das Dreieck oder
+          langes Drücken öffnet die Liste, ebenso <kbd>→</kbd>, wenn die Gruppe gewählt ist. Die Gruppe zeigt danach das
+          zuletzt benutzte Werkzeug, auch wenn Sie es über das Menü oder seine Taste eingefügt haben, und auch beim
+          nächsten Start.</p>
+        <figure class="frame" style="max-width:94px"><img src="../img/de/view-tools.png" width="74" height="294" alt="Werkzeugleiste mit Namen: Text, Formen, Linie, Bild, Code; ein Dreieck unten rechts an Text, Formen und Code"></figure>
+        <figure class="frame" style="max-width:284px"><img src="../img/de/view-tools-flyout.png" width="264" height="172" alt="Die Liste der Gruppe Formen: Rechteck (Strg+B), Ellipse (Strg+E), Dreieck, Polygon, Stern"></figure>
+        <dl class="terms">
+          <dt>Text</dt><dd>Grafiktext (eine Zeile) und Mengentext (bricht im Rahmen um), siehe
+            <a href="text.html">Grafiktext und Mengentext</a></dd>
+          <dt>Formen</dt><dd>Rechteck, Ellipse, Dreieck, Polygon, Stern, siehe <a href="lines-boxes.html#shapes">Formen</a></dd>
+          <dt>Code</dt><dd>Barcode und QR-Code, siehe <a href="codes.html">Barcodes und QR-Codes</a></dd>
+        </dl>
+        <p>Alle Werkzeuge stehen auch im Menü <span class="path">Einfügen</span>. Mit weniger Platz kommt die Leiste ohne
+          Namen aus: <span class="path">Ansicht &gt; Werkzeugnamen anzeigen</span> oder ein Rechtsklick auf die Leiste.
+          Ist das Fenster zu niedrig, bekommt die Leiste eine zweite Spalte.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>T</kbd></span><span>Grafiktext</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>T</kbd></span><span>Mengentext</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>B</kbd> / <kbd>E</kbd></span><span>Rechteck / Ellipse</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>L</kbd></span><span>Linie</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>I</kbd></span><span>Bild</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>K</kbd> / <kbd>Q</kbd></span><span>Barcode / QR-Code</span></div>
+      </aside>
+    </li>
+
     <li>
       <div class="step">
         <h2 id="direction">Richtung</h2>
@@ -54,9 +87,10 @@
         <p>Unten rechts in der Statusleiste:</p>
         <figure class="frame" style="max-width:298px"><img src="../img/de/view-zoom.png" width="278" height="21" alt="Statusleiste: Einpassen, Minus, Schieberegler, Plus und 96 %"></figure>
         <p><span class="ui">Einpassen</span> passt das Etikett ins Fenster und hält es dort, auch wenn Sie das Fenster
-          größer oder kleiner machen. Minus, Schieberegler und Plus zoomen von 25 % bis 800 %, ebenso
-          <kbd>Strg</kbd> + Mausrad (um die Mausposition). Über der Statusleiste zoomt das Mausrad auch ohne
-          <kbd>Strg</kbd>.</p>
+          größer oder kleiner machen. Minus, Schieberegler und Plus zoomen von 25 % bis 800 %, ebenso das Mausrad
+          über dem Etikett und der grauen Fläche darum (um die Mausposition, mit oder ohne <kbd>Strg</kbd>) und über
+          der Statusleiste. <kbd>Umschalt</kbd> + Mausrad verschiebt die Ansicht nach links und rechts, nach oben und
+          unten die Bildlaufleisten.</p>
         <p>Ein Klick auf die Prozentzahl öffnet dieses Menü; es steht auch unter <span class="path">Ansicht</span>:</p>
         <dl class="terms">
           <dt>Einpassen</dt><dd>das Etikett passt ins Fenster</dd>
@@ -72,6 +106,8 @@
         <div><span><kbd>Strg</kbd> + <kbd>1</kbd></span><span>100 %</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>2</kbd> / <kbd>4</kbd></span><span>punktgenau</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>Plus</kbd> / <kbd>Minus</kbd></span><span>vergrößern / verkleinern</span></div>
+        <div><span>Mausrad</span><span>zoomen um die Mausposition</span></div>
+        <div><span><kbd>Umschalt</kbd> + Mausrad</span><span>nach links / rechts verschieben</span></div>
       </aside>
     </li>
   </ul>

@@ -19,6 +19,9 @@
     <windowsSettings>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+      <!-- Windows 11 24H2+: started from an ARM64 program (Explorer, Start menu) the exes run natively on ARM64 PCs, not
+           under x64 emulation (about twice as fast to start); older Windows ignores it. Without it an AnyCPU exe runs as x64 there. -->
+      <supportedArchitectures xmlns="http://schemas.microsoft.com/SMI/2024/WindowsSettings">amd64 arm64</supportedArchitectures>
     </windowsSettings>
   </application>
   <dependency>

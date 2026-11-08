@@ -33,6 +33,7 @@ namespace QlLabels
         [STAThread]
         static int Main(string[] args)
         {
+            StartupTrace.Mark("main");
             // The release zip's Setup.exe is this exe: started without arguments it is the setup window.
             bool setupExe = string.Equals(Path.GetFileNameWithoutExtension(Application.ExecutablePath), "Setup", StringComparison.OrdinalIgnoreCase);
             if ((args.Length == 0 && setupExe) || (args.Length > 0 && args[0] == "--install"))
@@ -54,7 +55,9 @@ namespace QlLabels
             {
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new MainForm());
+                var form = new MainForm();
+                StartupTrace.Mark("window built");
+                Application.Run(form);
                 return 0;
             }
 

@@ -5,7 +5,7 @@ There are three ways in. They all use the same script underneath (`driver\instal
 | Where | What it is for |
 |---|---|
 | **`Setup.exe`** in the release zip (x64 and ARM64) | First install, update, repair in one window, with a test label |
-| **Printer setup** window in QL Label Formats | Everyday changes without the zip: add printers, options, uninstall |
+| **Printer setup** window (menu *Printer* in QL Label Formats and QL Label Maker) | Everyday changes without the zip: add, share and remove printers, options, uninstall |
 | Windows **Installed apps** (*Installierte Apps*) | "QL Unidrv printer driver": *Modify* opens the Printer setup window, *Uninstall* the uninstall window |
 
 The zip's top level holds only `Setup.exe` (with its `.config`), `README.txt`, `LICENSE` and
@@ -132,9 +132,9 @@ Installed: programs 0.18.1, driver 0.18   This zip: programs 0.18.2, driver 0.18
 
 `setup.ps1 -Uninstall` goes straight to the uninstall.
 
-## Printer setup window (QL Label Formats)
+## Printer setup window
 
-*QL Label Formats* > *Printer status* (drop-down arrow) > **Printer setup** (German: *Druckerstatus* >
+*QL Label Formats* or *QL Label Maker* > menu *Printer* > **Printer setup** (German: *Drucker* >
 *Druckereinrichtung*), or *Installed apps* > *QL Unidrv printer driver* > *Modify*, or `QlLabelFormats.exe --setup [--select "<printer>"]` (`--select`: that printer chosen in the list; the status
 window's card for a printer on a gone share opens it so, for *Remove printer*).
 
@@ -240,7 +240,8 @@ per-user settings; shortcuts users made to the programs (desktops, taskbar pins;
 log source; the copies of this PC's signing root among the user's intermediate certificates. The logs in `%TEMP%`
 are deleted after every run that finished, also those earlier runs left (kept after a failure, which names them). Nothing is left behind.
 Started from the Printer setup window inside QL Label Formats, *Uninstall* first closes QL Label Formats (it asks
-about unsaved changes).
+about unsaved changes). Started from QL Label Maker, or with either program open elsewhere, the uninstall window asks
+to save and close it first ("QL Label Maker" is open. Save your changes and close it, then click OK.).
 
 ## How it fits together
 

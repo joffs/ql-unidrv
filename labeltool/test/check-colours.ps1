@@ -11,12 +11,12 @@
 #   powershell -ExecutionPolicy Bypass -File labeltool\test\check-colours.ps1
 param([string]$Src = (Join-Path $PSScriptRoot '..\src'))
 
-$allowedFiles = @(
-    'Theme.cs',         # the colours themselves
+$allowedFiles = @(          # names or wildcards
+    'Theme*.cs',        # the colours themselves (Theme.cs, Theme.Apply.cs, ThemeRenderer.cs)
     'EditorRender.cs',  # the label's bitmap as it prints: white paper, black print
     'EditorModel.cs',   # pictures flattened onto white paper for printing
     'TestLabel.cs',     # the test label's print
-    'Strings.de.cs'     # texts only
+    'Strings.de*.cs'    # texts only (Strings.de.cs and its parts per area)
 )
 $patterns = @(
     @{ re = '\bSystem(Colors|Brushes|Pens)\.'; why = 'SystemColors / SystemBrushes / SystemPens (use a Theme role)' },
@@ -27,7 +27,7 @@ $patterns = @(
 
 $failures = 0
 foreach ($file in Get-ChildItem -Path $Src -Filter *.cs) {
-    if ($allowedFiles -contains $file.Name) { continue }
+    if (@($allowedFiles | Where-Object { $file.Name -like $_ }).Count) { continue }
     $inFixed = $false
     $n = 0
     foreach ($line in [IO.File]::ReadAllLines($file.FullName)) {

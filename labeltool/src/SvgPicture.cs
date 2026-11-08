@@ -119,10 +119,34 @@ namespace QlLabels
                 ParseCss(style.InnerText, rules, kept);
                 style.ParentNode.RemoveChild(style);
             }
+            // Rules indexed by their id, else their first class, else their element (thousands of rules and elements
+            // would otherwise be matched each against each); only the candidates are matched.
+            var byId = new Dictionary<string, List<Rule>>();
+            var byClass = new Dictionary<string, List<Rule>>();
+            var byElement = new Dictionary<string, List<Rule>>();
+            var everyElement = new List<Rule>();
+            Action<Dictionary<string, List<Rule>>, string, Rule> add = (d, k, r) =>
+            {
+                List<Rule> l;
+                if (!d.TryGetValue(k, out l)) d[k] = l = new List<Rule>();
+                l.Add(r);
+            };
+            foreach (var r in rules)
+                if (r.Id != null) add(byId, r.Id, r);
+                else if (r.Classes.Length > 0) add(byClass, r.Classes[0], r);
+                else if (r.Element != null && r.Element != "*") add(byElement, r.Element, r);
+                else everyElement.Add(r);
+            var none = new List<Rule>();
+            Func<Dictionary<string, List<Rule>>, string, List<Rule>> get = (d, k) => { List<Rule> l; return d.TryGetValue(k, out l) ? l : none; };
             foreach (var el in root.SelectNodes("descendant-or-self::*").OfType<XmlElement>())
             {
                 var set = new Dictionary<string, string>();
-                foreach (var rule in rules.Where(r => r.Matches(el)).OrderBy(r => r.Specificity).ThenBy(r => r.Order))
+                var candidates = new HashSet<Rule>(everyElement);
+                candidates.UnionWith(get(byElement, el.LocalName));
+                if (el.HasAttribute("id")) candidates.UnionWith(get(byId, el.GetAttribute("id")));
+                foreach (var c in el.GetAttribute("class").Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    candidates.UnionWith(get(byClass, c));
+                foreach (var rule in candidates.Where(r => r.Matches(el)).OrderBy(r => r.Specificity).ThenBy(r => r.Order))
                     foreach (var d in rule.Declarations) set[d.Key] = d.Value;
                 if (el.HasAttribute("style"))
                 {
@@ -272,28 +296,43 @@ namespace QlLabels
             public double Dx, Dy;
         }
 
+        // A piece of text as outlines at Em px, its top left at 0,0, and its advance (GDI+ is slow: a picture may have
+        // thousands of texts with the same words).
+        sealed class Outline
+        {
+            public PointF[] Points;   // null: no outline (spaces)
+            public byte[] Types;
+            public float Width;
+            public FontStyle Style;   // the entries for a face (key starting with \0): the style found, its ascent in Width
+        }
+
         static void TextToPaths(XmlElement root)
         {
             using (var bmp = new Bitmap(1, 1))
             using (var g = Graphics.FromImage(bmp))
             using (var format = (StringFormat)StringFormat.GenericTypographic.Clone())
             {
+                // font-family lists already looked up (a FontFamily takes a while; a picture may have thousands of texts)
+                var families = new Dictionary<string, KeyValuePair<FontFamily, string>>();
+                var outlines = new Dictionary<string, Outline>();   // by font-family list, style and text
                 g.PageUnit = GraphicsUnit.Pixel;
                 format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
                 foreach (var text in root.SelectNodes("descendant::*[local-name()='text']").OfType<XmlElement>().ToList())
                 {
                     if (text.ParentNode == null) continue;
                     XmlElement group;
-                    try { group = TextGroup(text, g, format); }
+                    try { group = TextGroup(text, g, format, families, outlines); }
                     catch (ArgumentException) { group = null; }
                     catch (ExternalException) { group = null; }   // GDI+
                     if (group != null) text.ParentNode.ReplaceChild(group, text);
                 }
+                foreach (var f in families.Values) f.Key.Dispose();
             }
         }
 
         // The text as a group of paths; null: something we don't convert.
-        static XmlElement TextGroup(XmlElement text, Graphics g, StringFormat format)
+        static XmlElement TextGroup(XmlElement text, Graphics g, StringFormat format, Dictionary<string, KeyValuePair<FontFamily, string>> families,
+                                    Dictionary<string, Outline> outlines)
         {
             if (Inherited(text, "writing-mode") != null) return null;
             var runs = new List<Run> { new Run { Text = "", Owners = new List<XmlElement>(), Style = text } };   // the text's own position
@@ -335,11 +374,27 @@ namespace QlLabels
                 if (run.Text.Length == 0) continue;
 
                 double size = FontSize(run.Style);
-                string missing;
-                using (var family = Family(Inherited(run.Style, "font-family") ?? "serif", out missing))
+                string list = Inherited(run.Style, "font-family") ?? "serif", missing;
+                KeyValuePair<FontFamily, string> known;
+                if (!families.TryGetValue(list, out known))
                 {
-                    var style = Style(family, Inherited(run.Style, "font-weight"), Inherited(run.Style, "font-style"));
-                    double k = size / Em, ascent = family.GetCellAscent(style) * (double)Em / family.GetEmHeight(style);
+                    var found = Family(list, out missing);
+                    families[list] = known = new KeyValuePair<FontFamily, string>(found, missing);
+                }
+                var family = known.Key;
+                missing = known.Value;
+                {
+                    // the style and its ascent per font-family list and weight/style (GDI+ calls; looked up once)
+                    string weight = Inherited(run.Style, "font-weight"), slant = Inherited(run.Style, "font-style");
+                    string faceKey = "\0" + list + "\0" + weight + "\0" + slant;
+                    Outline face;
+                    if (!outlines.TryGetValue(faceKey, out face))
+                    {
+                        var found = Style(family, weight, slant);
+                        outlines[faceKey] = face = new Outline { Style = found, Width = (float)(family.GetCellAscent(found) * (double)Em / family.GetEmHeight(found)) };
+                    }
+                    var style = face.Style;
+                    double k = size / Em, ascent = face.Width;
                     double spacing = Length(Inherited(run.Style, "letter-spacing") ?? "", 0);
                     var path = doc.CreateElement(text.Prefix, "path", text.NamespaceURI);
                     foreach (var owner in run.Owners)
@@ -349,29 +404,41 @@ namespace QlLabels
                     group.AppendChild(path);
                     var points = new List<PointF[]>();
                     var types = new List<byte[]>();
-                    using (var font = new Font(family, Em, style, GraphicsUnit.Pixel))
+                    // whole runs (GDI+ spacing), or glyph by glyph with letter-spacing
+                    var pieces = new List<string>();
+                    if (spacing == 0) pieces.Add(run.Text);
+                    else { var e = StringInfo.GetTextElementEnumerator(run.Text); while (e.MoveNext()) pieces.Add((string)e.Current); }
+                    Font font = null;
+                    try
                     {
-                        // whole runs (GDI+ spacing), or glyph by glyph with letter-spacing
-                        var pieces = new List<string>();
-                        if (spacing == 0) pieces.Add(run.Text);
-                        else { var e = StringInfo.GetTextElementEnumerator(run.Text); while (e.MoveNext()) pieces.Add((string)e.Current); }
                         foreach (var piece in pieces)
                         {
-                            using (var gp = new GraphicsPath(FillMode.Winding))
+                            string key = list + "\0" + (int)style + "\0" + piece;
+                            Outline o;
+                            if (!outlines.TryGetValue(key, out o))
                             {
-                                gp.AddString(piece, family, (int)style, Em, PointF.Empty, format);
-                                if (gp.PointCount > 0)
+                                o = new Outline();
+                                if (font == null) font = new Font(family, Em, style, GraphicsUnit.Pixel);
+                                using (var gp = new GraphicsPath(FillMode.Winding))
                                 {
-                                    var pts = gp.PathPoints;
-                                    for (int i = 0; i < pts.Length; i++)
-                                        pts[i] = new PointF((float)(x + pts[i].X * k), (float)(y + (pts[i].Y - ascent) * k));
-                                    points.Add(pts);
-                                    types.Add(gp.PathTypes);
+                                    gp.AddString(piece, family, (int)style, Em, PointF.Empty, format);
+                                    if (gp.PointCount > 0) { o.Points = gp.PathPoints; o.Types = gp.PathTypes; }
                                 }
+                                o.Width = g.MeasureString(piece, font, PointF.Empty, format).Width;
+                                outlines[key] = o;
                             }
-                            x += g.MeasureString(piece, font, PointF.Empty, format).Width * k + spacing;
+                            if (o.Points != null)
+                            {
+                                var pts = new PointF[o.Points.Length];
+                                for (int i = 0; i < pts.Length; i++)
+                                    pts[i] = new PointF((float)(x + o.Points[i].X * k), (float)(y + (o.Points[i].Y - ascent) * k));
+                                points.Add(pts);
+                                types.Add(o.Types);
+                            }
+                            x += o.Width * k + spacing;
                         }
                     }
+                    finally { if (font != null) font.Dispose(); }
                     chunk.Add(new KeyValuePair<XmlElement, List<PointF[]>>(path, points));
                     chunkTypes.Add(types);
                 }
@@ -516,16 +583,55 @@ namespace QlLabels
         // GDI+ path points (0 start, 1 line, 3 Bezier; 0x80 closes) as SVG path data, shifted by dx.
         static void PathData(StringBuilder d, PointF[] pts, byte[] types, double dx)
         {
-            Func<PointF, string> p = q => Math.Round(q.X + dx, 2).ToString("0.##", CultureInfo.InvariantCulture) + " " +
-                                          Math.Round(q.Y, 2).ToString("0.##", CultureInfo.InvariantCulture);
+            Action<PointF> p = q => { Coordinate(d, q.X + dx); d.Append(' '); Coordinate(d, q.Y); };
             for (int i = 0; i < pts.Length; i++)
             {
                 int t = types[i] & 7;
-                if (t == 0) d.Append("M" + p(pts[i]) + " ");
-                else if (t == 3 && i + 2 < pts.Length) { d.Append("C" + p(pts[i]) + " " + p(pts[i + 1]) + " " + p(pts[i + 2]) + " "); i += 2; }
-                else d.Append("L" + p(pts[i]) + " ");
+                if (t == 0) { d.Append('M'); p(pts[i]); d.Append(' '); }
+                else if (t == 3 && i + 2 < pts.Length) { d.Append('C'); p(pts[i]); d.Append(' '); p(pts[i + 1]); d.Append(' '); p(pts[i + 2]); d.Append(' '); i += 2; }
+                else { d.Append('L'); p(pts[i]); d.Append(' '); }
                 if ((types[i] & 0x80) != 0) d.Append("Z ");
             }
+        }
+
+        // A coordinate with up to two decimals, as Math.Round(v, 2).ToString("0.##") writes it, without its cost (a
+        // picture with thousands of texts has a million of them).
+        static void Coordinate(StringBuilder d, double v)
+        {
+            double r = Math.Round(v, 2);
+            if (double.IsNaN(r) || double.IsInfinity(r) || Math.Abs(r) >= 1e13) { d.Append(r.ToString("0.##", CultureInfo.InvariantCulture)); return; }
+            long n = (long)Math.Round(r * 100);
+            if (n == 0) { d.Append('0'); return; }
+            if (n < 0) { d.Append('-'); n = -n; }
+            d.Append(n / 100);
+            int f = (int)(n % 100);
+            if (f == 0) return;
+            d.Append('.').Append((char)('0' + f / 10));
+            if (f % 10 != 0) d.Append((char)('0' + f % 10));
+        }
+
+        // The picture's own size in mm, read from the source before Clean: width and height as a browser takes them
+        // (mm, cm, in, pt, pc; px or no unit = 1/96 inch), else the viewBox in px; null when that gives nothing or it
+        // can't be read.
+        public static SizeF? SizeMm(byte[] source)
+        {
+            if (source == null) return null;
+            try
+            {
+                int start = 0;
+                while (start < source.Length && (source[start] == ' ' || source[start] == '\t' || source[start] == '\r' || source[start] == '\n')) start++;
+                using (var ms = new MemoryStream(source, start, source.Length - start))
+                using (var reader = XmlReader.Create(ms, new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore, XmlResolver = null }))
+                {
+                    if (reader.MoveToContent() != XmlNodeType.Element || reader.LocalName != "svg") return null;
+                    var box = ViewBox(reader.GetAttribute("viewBox") ?? "");
+                    double w = Length(reader.GetAttribute("width") ?? "", box != null ? box[2] : 0);
+                    double h = Length(reader.GetAttribute("height") ?? "", box != null ? box[3] : 0);
+                    if (w <= 0 || h <= 0) return null;
+                    return new SizeF((float)(w * 25.4 / 96), (float)(h * 25.4 / 96));
+                }
+            }
+            catch (Exception) { return null; }
         }
 
         // Width and height of a cleaned picture (its viewBox), for its aspect ratio.

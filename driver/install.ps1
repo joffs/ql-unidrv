@@ -112,6 +112,8 @@ param(
     [string]$DriverName
 )
 $ErrorActionPreference = "Stop"
+# The script's own parameters: inside a function $PSBoundParameters holds that function's (Invoke-PrinterActions)
+$scriptParameters = $PSBoundParameters
 # Started as 32-bit PowerShell on a 64-bit Windows (from a 32-bit program): run again in the native PowerShell, so
 # System32, the registry and the driver tools are the real ones. Only strings and switches here.
 if ([IntPtr]::Size -eq 4 -and $env:PROCESSOR_ARCHITEW6432) {
@@ -144,6 +146,12 @@ function Get-ErrorCode([string]$message) {
         "No USB port of a" { return "no-printer" }
         "^Printers redirected by a Remote Desktop session" { return "rdp-printer" }
         "^Could not add the port" { return "port" }   # Add-LocalPort
+        # -Settings (QL Printer setup)
+        "^No printer can be reached as" { return "share-unreachable" }
+        "^Driver '.*' is not installed here|^The driver and the programs are not installed here" { return "no-driver" }
+        "is not a QL printer with this driver on this PC" { return "not-ours" }
+        "^Only a printer on a USB port is shared here" { return "share-usb-only" }
+        "^Could not remove the printer" { return "remove-failed" }
     }
     return "other"
 }
@@ -496,6 +504,7 @@ try {
     # are the build stamp), the programs' product version "0.18.1 (build 305.700)" -> "0.18.1" (a build from before the
     # split: "0.18.304.1157" -> "0.18"). Installed apps shows the programs' release (every run updates them, -AppOnly
     # too); the driver's is the value DriverVersion next to it.
+    # The same two functions are in setup.ps1 (each script is copied alone): change both.
     function Get-Release([string]$version) {
         if ($version -match "^(\d+)\.(\d+)") { "$($Matches[1]).$($Matches[2])" }
     }
@@ -870,7 +879,10 @@ public static class QlForms {
         $script:usbAdded = @{ Name = $name; Port = $port; Existed = [bool]($existing -and $existing.PortName -eq $port -and $existing.DriverName -eq $model.Name) }
     }
 
-    if ($Uninstall) {
+    # ---------- the modes: install / update, programs only (-AppOnly), settings (-Settings), uninstall ----------
+
+    # -Uninstall: printers, ports, drivers, packages, programs, forms, certificates, the data folder
+    function Invoke-Uninstall {
         Assert-LabelToolClosed
         Assert-NoRedirectedPrinters
         # The monitor and the status service keep printers open: stop them before the printers go.
@@ -949,60 +961,33 @@ public static class QlForms {
         if ($driversLeft) { throw "Uninstalled except these printer drivers, which Windows didn't let go: $($driversLeft -join ', '). Restart the PC and run the uninstall again." }
         "Uninstalled. " + $(if ($KeepLabels) { "Your label list was kept ($data\labels.json)." } else { "$data was deleted." })
         Add-Result "done" "1"
-        return
     }
 
     # Data folder: administrators write, users read (labels.tsv steers what the driver prints); also
     # log\, which the plug-in writes with the spooler's rights (a folder users can change would let them
     # redirect those writes with a junction; docs/architecture.md section 7): /reset gives it and its files the data
     # folder's rights.
-    # -Settings: only settings of an installed setup (service, log, added printers); driver, label tool files and
-    # label formats stay as they are, so it runs from the installed copy (C:\Program Files\QLUnidrv\setup) and
-    # while the label tool is open (its setup window starts it; docs/setup.md).
-    if ($Settings) {
-        if (-not (Test-Path $app)) { throw "The driver and the programs are not installed here: run Setup.exe from the release zip." }
-        $AppOnly = $true
-    } else {
-        Assert-LabelToolClosed   # before the driver is touched, so a refusal changes nothing
+    function Initialize-DataFolder {
+        New-SafeDirectory $data
+        icacls $data /setowner "*S-1-5-32-544" /T /C /Q | Out-Null   # a folder a user made beforehand stays theirs otherwise
+        icacls $data /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" | Out-Null
+        $logDir = Join-Path $data "log"
+        New-SafeDirectory $logDir
+        icacls $logDir /reset /T /C /Q | Out-Null
+        # The driver's diagnostic log is off unless asked for: the plug-in writes only while plugin.log exists
+        # (without -Logging an existing one stays). printer-status.log there holds the messages the driver
+        # read from a printer (roll check); the label tool reads it next to its own in status\.
+        $pluginLog = Join-Path $logDir "plugin.log"
+        if ($Logging -eq "on" -and -not (Test-Path $pluginLog)) { New-Item -ItemType File $pluginLog | Out-Null }
+        if ($Logging -eq "off") { Remove-Item $pluginLog, (Join-Path $logDir "plugin.old.log") -Force -ErrorAction SilentlyContinue }
+        if ($Logging) { "Driver log ${Logging}: $pluginLog"; Add-Result "logging" $Logging; Add-Result "logfile" $pluginLog }
+        # status\: the label tool's and the printer monitor's printer-status.log, written as the signed-in user.
+        # The driver never writes there, so a link users might put there gains them nothing.
+        Set-UserFilesFolder (Join-Path $data "status")
     }
-    if ($NetworkPrinter -and $NetworkPrinter -notmatch "^[A-Za-z0-9][A-Za-z0-9.:-]*$") {
-        throw "-NetworkPrinter must be the printer's IP address or host name (e.g. 192.0.2.50)."
-    }
-    if ($SharePort) {
-        if ($SharePort -notmatch "^\\\\[^\\]+\\[^\\]+$") { throw "-SharePort must look like \\host\share (e.g. \\PC\QL-800)." }
-        if (-not $DriverName) { throw "-SharePort needs -DriverName (the shared printer's model, e.g. `"Brother QL-570 (Unidrv)`")." }
-        if ($AppOnly -and -not (Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue)) {
-            throw "Driver '$DriverName' is not installed here: install the driver first (Setup.exe, or this script without -AppOnly)."
-        }
-    }
-    # The download mark (Mark of the Web) of a zip unpacked with Explorer stays on copies (Copy-Item keeps the stream):
-    # removed from what is installed from here, as Setup.exe does
-    if (-not $Settings) {
-        foreach ($d in "out\tools", "out\package", "labels", "driver") {
-            Get-ChildItem (Join-Path $repo $d) -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
-        }
-    }
-    New-SafeDirectory $data
-    icacls $data /setowner "*S-1-5-32-544" /T /C /Q | Out-Null   # a folder a user made beforehand stays theirs otherwise
-    icacls $data /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" | Out-Null
-    $logDir = Join-Path $data "log"
-    New-SafeDirectory $logDir
-    icacls $logDir /reset /T /C /Q | Out-Null
-    # The driver's diagnostic log is off unless asked for: the plug-in writes only while plugin.log exists
-    # (without -Logging an existing one stays). printer-status.log there holds the messages the driver
-    # read from a printer (roll check); the label tool reads it next to its own in status\.
-    $pluginLog = Join-Path $logDir "plugin.log"
-    if ($Logging -eq "on" -and -not (Test-Path $pluginLog)) { New-Item -ItemType File $pluginLog | Out-Null }
-    if ($Logging -eq "off") { Remove-Item $pluginLog, (Join-Path $logDir "plugin.old.log") -Force -ErrorAction SilentlyContinue }
-    if ($Logging) { "Driver log ${Logging}: $pluginLog"; Add-Result "logging" $Logging; Add-Result "logfile" $pluginLog }
-    # status\: the label tool's and the printer monitor's printer-status.log, written as the signed-in user.
-    # The driver never writes there, so a link users might put there gains them nothing.
-    Set-UserFilesFolder (Join-Path $data "status")
 
-    if ($Settings) {
-    } elseif ($AppOnly) {
-        "Programs only: driver, package and certificates unchanged."
-    } else {
+    # The driver package: certificates, pnputil, the drivers, the USB devices; then older packages and certificates
+    function Install-DriverPackage {
         if (-not (Test-Path (Join-Path $pkg "$storeArch\QLUnidrv.dll"))) {
             throw "out\package has no driver for this PC ($storeArch). Run build.cmd (this PC, or both) and driver\package.ps1 first."
         }
@@ -1188,11 +1173,14 @@ public static class QlForms {
             ForEach-Object { Remove-Item $_.PSPath; "Removed old signing certificate $($_.Subject) ($($_.Thumbprint))." }
     }
 
-    if ($Settings) {
-        "Settings only: driver, programs and label formats unchanged."
+    # -Settings -StatusService on|off
+    function Set-StatusServiceSetting {
         if ($StatusService -eq "on") { Install-StatusService } elseif ($StatusService -eq "off") { Remove-StatusService }
         if ($StatusService) { Add-Result "service" $StatusService }
-    } else {
+    }
+
+    # The programs, help, Start menu, file type, Installed apps entry and the label formats
+    function Install-Programs {
         # Label tool and the label formats (Windows forms + C:\ProgramData\QLUnidrv\labels.tsv)
         Set-Step "app"
         New-Item -ItemType Directory -Force $appDir | Out-Null
@@ -1249,210 +1237,259 @@ public static class QlForms {
         if ($script:monitorStopped) { Start-Monitor }
     }
 
-    # The printer queues asked for (test printer, USB, share, network) are their own step in the setup window, so a
-    # failure here isn't reported as one of the steps before
-    if ($TestPrinter -or $UsbPrinter -or $SharePort -or $NetworkPrinter -or $RemovePrinter -or $SharePrinter -or $UnsharePrinter) { Set-Step "printers" }
+    # The printer queues asked for: share/unshare, remove, test printer, USB, another PC's share, network
+    function Invoke-PrinterActions {
+        # The printer queues asked for (test printer, USB, share, network) are their own step in the setup window, so a
+        # failure here isn't reported as one of the steps before
+        if ($TestPrinter -or $UsbPrinter -or $SharePort -or $NetworkPrinter -or $RemovePrinter -or $SharePrinter -or $UnsharePrinter) { Set-Step "printers" }
 
-    if ($SharePrinter -or $UnsharePrinter) {
-        # Share one of our printers on a USB port for other PCs, rename its share, or stop sharing it (the Printer setup
-        # window's "Share a printer" tab, 2026-11-06). Other PCs add it with -SharePort \\<this PC>\<name>.
-        $target = if ($SharePrinter) { $SharePrinter } else { $UnsharePrinter }
-        $p = Get-OurPrinters | Where-Object { $_.Name -eq $target } | Select-Object -First 1
-        if (-not $p) { throw "'$target' is not a QL printer with this driver on this PC." }
-        if ($UnsharePrinter) {
-            if ($p.Shared) { Set-Printer -Name $p.Name -Shared $false -ErrorAction Stop; "Stopped sharing '$($p.Name)' (was $($p.ShareName))." }
-            else { "'$($p.Name)' was not shared." }
-            Add-Result "unshared" $p.Name
-        } else {
-            if ($p.PortName -notmatch "^USB\d{3}$") {
-                throw "Only a printer on a USB port is shared here; '$($p.Name)' uses $($p.PortName) (other PCs add a network printer by its address)."
+        if ($SharePrinter -or $UnsharePrinter) {
+            # Share one of our printers on a USB port for other PCs, rename its share, or stop sharing it (the Printer setup
+            # window's "Share a printer" tab, 2026-11-06). Other PCs add it with -SharePort \\<this PC>\<name>.
+            $target = if ($SharePrinter) { $SharePrinter } else { $UnsharePrinter }
+            $p = Get-OurPrinters | Where-Object { $_.Name -eq $target } | Select-Object -First 1
+            if (-not $p) { throw "'$target' is not a QL printer with this driver on this PC." }
+            if ($UnsharePrinter) {
+                if ($p.Shared) { Set-Printer -Name $p.Name -Shared $false -ErrorAction Stop; "Stopped sharing '$($p.Name)' (was $($p.ShareName))." }
+                else { "'$($p.Name)' was not shared." }
+                Add-Result "unshared" $p.Name
+            } else {
+                if ($p.PortName -notmatch "^USB\d{3}$") {
+                    throw "Only a printer on a USB port is shared here; '$($p.Name)' uses $($p.PortName) (other PCs add a network printer by its address)."
+                }
+                $name = "$ShareName".Trim()
+                $why = Test-ShareName $name $p.Name
+                if ($why) { throw $why }
+                $old = if ($p.Shared) { $p.ShareName } else { $null }
+                if ($old -eq $name) { "'$($p.Name)' is shared as $name already." }
+                else {
+                    Set-Printer -Name $p.Name -Shared $true -ShareName $name -ErrorAction Stop
+                    if ($old) { "Renamed the share of '$($p.Name)' from $old to $name."; Add-Result "renamed-from" $old }
+                    else { "Shared '$($p.Name)' as ${name}; other PCs reach it as \\$env:COMPUTERNAME\$name." }
+                }
+                Add-Result "shared" $p.Name; Add-Result "sharename" $name
             }
-            $name = "$ShareName".Trim()
-            $why = Test-ShareName $name $p.Name
-            if ($why) { throw $why }
-            $old = if ($p.Shared) { $p.ShareName } else { $null }
-            if ($old -eq $name) { "'$($p.Name)' is shared as $name already." }
-            else {
-                Set-Printer -Name $p.Name -Shared $true -ShareName $name -ErrorAction Stop
-                if ($old) { "Renamed the share of '$($p.Name)' from $old to $name."; Add-Result "renamed-from" $old }
-                else { "Shared '$($p.Name)' as ${name}; other PCs reach it as \\$env:COMPUTERNAME\$name." }
+        }
+
+        if ($RemovePrinter) {
+            # One of our printers (our driver, not redirected by Remote Desktop) with its waiting jobs; its port too when
+            # no other printer uses it and it is one we add (IP_..., \\host\share, a file). USB ports belong to Windows.
+            # The driver package stays, also for the last printer of a model.
+            $p = Get-OurPrinters | Where-Object { $_.Name -eq $RemovePrinter } | Select-Object -First 1
+            if (-not $p) { throw "'$RemovePrinter' is not a QL printer with this driver on this PC." }
+            $jobs = @(Get-PrintJob -PrinterName $p.Name -ErrorAction SilentlyContinue)
+            foreach ($j in $jobs) { Remove-PrintJob -InputObject $j -ErrorAction SilentlyContinue }
+            if ($jobs.Count) { "Deleted $($jobs.Count) waiting print job(s)." }
+            # A printer that something still holds open when it is removed stays "pending deletion" (registry key
+            # "<name>,N", hidden from Windows' lists) until the spooler restarts, with its port and share (USB remove
+            # tests 2026-11-06, ARM and x64). So nothing of ours may hold it: the status service is stopped meanwhile,
+            # and the share goes first, so other PCs (their status readers, their print jobs) can't open it again.
+            $printersKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Print\Printers"
+            $pendingPattern = "^" + [regex]::Escape($p.Name) + ",\d+$"
+            $pendingBefore = @(Get-ChildItem $printersKey -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName } | Where-Object { $_ -match $pendingPattern })
+            $svc = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+            $restartService = $svc -and $svc.Status -eq "Running"
+            if ($restartService) { Stop-StatusService }
+            try {
+                if ($p.Shared) {
+                    try { Set-Printer -Name $p.Name -Shared $false -ErrorAction Stop; "Stopped sharing '$($p.Name)'." }
+                    catch { "Could not stop sharing '$($p.Name)' first: $($_.Exception.Message)" }
+                }
+                try { Remove-Printer -Name $p.Name -ErrorAction Stop } catch { throw "Could not remove the printer '$($p.Name)': $($_.Exception.Message)" }
+                "Removed printer '$($p.Name)'."
+                Add-Result "removed" $p.Name
+                # Gone for good, or still pending? Handles of other programs may close within seconds.
+                $pending = $null
+                for ($i = 0; $i -lt 10; $i++) {
+                    $pending = @(Get-ChildItem $printersKey -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName } |
+                        Where-Object { $_ -match $pendingPattern -and $pendingBefore -notcontains $_ }) | Select-Object -First 1
+                    if (-not $pending -and -not (Test-Path -LiteralPath "$printersKey\$($p.Name)")) { break }
+                    Start-Sleep -Seconds 1
+                }
+                if ($pending) {
+                    "Windows keeps the printer as '$pending' until the print spooler restarts (another program, or a PC printing to its share, still had it open); it no longer appears anywhere."
+                    Add-Result "pending" $pending
+                    # Shared: as a rule a PC printing to the share holds it (its spooler's remote handle cache, 2026-11-06)
+                    if ($p.Shared) { Add-Result "was-shared" "1" }
+                }
+            } finally {
+                if ($restartService) { try { Start-Service -Name $serviceName -ErrorAction Stop; "Service 'QL printer status' running again." } catch { "Could not start the service 'QL printer status' again: $($_.Exception.Message)" } }
             }
-            Add-Result "shared" $p.Name; Add-Result "sharename" $name
+            $port = $p.PortName
+            $ours = $port -match "^IP_" -or $port -match "^\\\\[^\\]+\\[^\\]+$" -or $port -match "^[A-Za-z]:\\"
+            if ($ours -and $pending) {
+                # The pending printer still uses it, so Windows refuses ("general failure"; x64 Sandbox 2026-11-06). It stays,
+                # unused, also once the printer is gone; no failure.
+                "The port $port stays: the printer Windows still keeps uses it. Unused afterwards, it does no harm."
+                Add-Result "pending-port" $port
+            } elseif ($ours -and -not @(Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.PortName -eq $port })) {
+                # The spooler can hold the port for a moment after the printer went
+                $err = $null
+                for ($i = 0; $i -lt 3; $i++) {
+                    if ($i) { Start-Sleep -Seconds 1 }
+                    try {
+                        # Remove-PrinterPort fails for Standard TCP/IP ports (0x80070709); WMI removes them, as the uninstall does
+                        if ($port -match "^IP_") {
+                            Get-CimInstance Win32_TCPIPPrinterPort -Filter "Name='$($port.Replace("'", "\'"))'" | Remove-CimInstance -ErrorAction Stop
+                        } else { Remove-FilePort $port | Out-Null }
+                        if (Get-PrinterPort -Name $port -ErrorAction SilentlyContinue) { throw "it is still there" }
+                        $err = $null; break
+                    } catch { $err = $_.Exception.Message }
+                }
+                if ($err) { "Could not remove the port ${port}: $err"; Add-Result "left-port" $port }
+                else { "Removed the port $port."; Add-Result "port" $port }
+            }
+        }
+
+        if ($TestPrinter) {
+            # Local file port: every job overwrites this file (used by compare.ps1). The spooler opens a file
+            # port as the user who printed (not as SYSTEM), so users need to create,
+            # change and delete files here; a link in this folder gains them nothing. Its own folder keeps that
+            # away from the rest of the data folder (log\ and labels.tsv stay read-only for users).
+            $name = $captureName
+            Set-UserFilesFolder (Split-Path $capturePort)
+            Add-LocalPort $capturePort
+            if (-not (Get-Printer -Name $name -ErrorAction SilentlyContinue)) {
+                Add-Printer -Name $name -DriverName "Brother QL-800 (Unidrv)" -PortName $capturePort -ErrorAction Stop
+            } else {
+                Set-Printer -Name $name -DriverName "Brother QL-800 (Unidrv)" -PortName $capturePort -ErrorAction Stop
+            }
+            "Test printer '$name' ready (prints to $capturePort)."
+        }
+
+        if ($UsbPrinter) {
+            # -UsbDriverName: the USB printer's model when -DriverName is the network printer's (both in one run). Several
+            # printers: -UsbPort USB003,USB004 -UsbDriverName "Brother QL-700 (Unidrv),Brother QL-1100 (Unidrv)" (pairs in
+            # order; commas, as powershell -File passes one string)
+            $ports = @(if ($UsbPort) { $UsbPort -split "," | ForEach-Object { $_.Trim() } } else { "" })
+            $drivers = @(if ($UsbDriverName) { $UsbDriverName -split "," | ForEach-Object { $_.Trim() } })
+            for ($i = 0; $i -lt $ports.Count; $i++) {
+                $d = if ($drivers.Count) { $drivers[[Math]::Min($i, $drivers.Count - 1)] } else { $null }
+                if (-not $d -and -not $mainModel) { throw "-UsbPrinter needs -UsbDriverName (or -DriverName): the printer's model." }
+                $usbModel = if ($d) { $models | Where-Object { $_.Name -eq $d } | Select-Object -First 1 } else { $mainModel }
+                if (-not $usbModel) { throw "Unknown -UsbDriverName '$d'." }
+                Add-UsbPrinter $usbModel $ports[$i]
+                # The Printer setup window's "Add printer" for a connected USB printer without a queue of ours: not shared
+                # (user's choice 2026-11-06; sharing goes through Printer properties)
+                Add-Result "printer" $script:usbAdded.Name; Add-Result "driver" $usbModel.Name; Add-Result "usb" $script:usbAdded.Port
+                if ($script:usbAdded.Existed) { Add-Result "existed" "1" }
+            }
+        }
+
+        if ($SharePort) {
+            # A QL printer shared by another PC (docs/sharing.md): a Local Port named after the share, which
+            # passes our driver's output on RAW; Point and Print is not used. The port may already exist
+            # (e.g. for Brother's own printer on the same share).
+            if (-not (Test-PrinterShare $SharePort)) {
+                throw ("No printer can be reached as $SharePort. Check the name, that the other PC is on and shares the printer, and " +
+                       "open \\$($SharePort.Split('\')[2]) in Explorer once with 'Remember my credentials' (docs/sharing.md on the project page).")
+            }
+            Add-LocalPort $SharePort
+            # A printer of that name on another port (its USB printer, or another host's share) stays where it is.
+            $name = $DriverName
+            $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+            if ($existing -and $existing.PortName -ne $SharePort) {
+                $name = "$DriverName on $($SharePort.Split('\')[2])"
+                $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+            }
+            Add-Result "existed" $(if ($existing -and $existing.DriverName -eq $DriverName) { "1" } else { "0" })
+            if (-not $existing) {
+                Add-Printer -Name $name -DriverName $DriverName -PortName $SharePort -ErrorAction Stop
+            } else {
+                Set-Printer -Name $name -DriverName $DriverName -PortName $SharePort -ErrorAction Stop
+            }
+            Clear-WorkOffline $name
+            "Printer '$name' ready on $SharePort."
+            Add-Result "printer" $name; Add-Result "driver" $DriverName; Add-Result "share" $SharePort
+        }
+
+        if ($NetworkPrinter) {
+            # A QL printer on the network: the model from the printer itself unless -DriverName was given.
+            $netDriver = $DriverName
+            if (-not $scriptParameters.ContainsKey("DriverName")) {
+                $result = Join-Path $env:TEMP "qlunidrv-identify.txt"
+                Remove-Item $result -Force -ErrorAction SilentlyContinue
+                Start-Process $app -ArgumentList "--identify", $NetworkPrinter, "--result", "`"$result`"" -Wait -WindowStyle Hidden
+                $lines = @(Get-Content $result -ErrorAction SilentlyContinue)
+                Remove-Item $result -Force -ErrorAction SilentlyContinue
+                if ($lines.Count -lt 3 -or $lines[0] -ne "OK") {
+                    throw ("The printer at $NetworkPrinter could not be identified: $(($lines | Select-Object -Skip 1) -join ' ')" +
+                           " Give the model with -DriverName `"Brother QL-xxx (Unidrv)`".")
+                }
+                $netDriver = $lines[1]
+                "Printer at ${NetworkPrinter}: $($lines[2]), $($lines[3]) loaded."
+                Add-Result "roll" $lines[3]
+            }
+            if (-not (Get-PrinterDriver -Name $netDriver -ErrorAction SilentlyContinue)) {
+                throw "Driver '$netDriver' is not installed here: install the driver first (Setup.exe, or this script without -AppOnly)."
+            }
+            $netPort = "IP_$NetworkPrinter"
+            if (-not (Get-PrinterPort -Name $netPort -ErrorAction SilentlyContinue)) {
+                Add-PrinterPort -Name $netPort -PrinterHostAddress $NetworkPrinter -PortNumber 9100
+            }
+            $name = $netDriver
+            $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+            if ($existing -and $existing.PortName -ne $netPort) {
+                $name = "$netDriver on $NetworkPrinter"
+                $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+            }
+            Add-Result "existed" $(if ($existing -and $existing.DriverName -eq $netDriver) { "1" } else { "0" })
+            if (-not $existing) {
+                Add-Printer -Name $name -DriverName $netDriver -PortName $netPort -ErrorAction Stop
+            } else {
+                Set-Printer -Name $name -DriverName $netDriver -PortName $netPort -ErrorAction Stop
+            }
+            Clear-WorkOffline $name
+            "Printer '$name' ready on $netPort ($NetworkPrinter, port 9100)."
+            Add-Result "printer" $name; Add-Result "driver" $netDriver; Add-Result "address" $NetworkPrinter; Add-Result "port" $netPort
         }
     }
 
-    if ($RemovePrinter) {
-        # One of our printers (our driver, not redirected by Remote Desktop) with its waiting jobs; its port too when
-        # no other printer uses it and it is one we add (IP_..., \\host\share, a file). USB ports belong to Windows.
-        # The driver package stays, also for the last printer of a model.
-        $p = Get-OurPrinters | Where-Object { $_.Name -eq $RemovePrinter } | Select-Object -First 1
-        if (-not $p) { throw "'$RemovePrinter' is not a QL printer with this driver on this PC." }
-        $jobs = @(Get-PrintJob -PrinterName $p.Name -ErrorAction SilentlyContinue)
-        foreach ($j in $jobs) { Remove-PrintJob -InputObject $j -ErrorAction SilentlyContinue }
-        if ($jobs.Count) { "Deleted $($jobs.Count) waiting print job(s)." }
-        # A printer that something still holds open when it is removed stays "pending deletion" (registry key
-        # "<name>,N", hidden from Windows' lists) until the spooler restarts, with its port and share (USB remove
-        # tests 2026-11-06, ARM and x64). So nothing of ours may hold it: the status service is stopped meanwhile,
-        # and the share goes first, so other PCs (their status readers, their print jobs) can't open it again.
-        $printersKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Print\Printers"
-        $pendingPattern = "^" + [regex]::Escape($p.Name) + ",\d+$"
-        $pendingBefore = @(Get-ChildItem $printersKey -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName } | Where-Object { $_ -match $pendingPattern })
-        $svc = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-        $restartService = $svc -and $svc.Status -eq "Running"
-        if ($restartService) { Stop-StatusService }
-        try {
-            if ($p.Shared) {
-                try { Set-Printer -Name $p.Name -Shared $false -ErrorAction Stop; "Stopped sharing '$($p.Name)'." }
-                catch { "Could not stop sharing '$($p.Name)' first: $($_.Exception.Message)" }
-            }
-            try { Remove-Printer -Name $p.Name -ErrorAction Stop } catch { throw "Could not remove the printer '$($p.Name)': $($_.Exception.Message)" }
-            "Removed printer '$($p.Name)'."
-            Add-Result "removed" $p.Name
-            # Gone for good, or still pending? Handles of other programs may close within seconds.
-            $pending = $null
-            for ($i = 0; $i -lt 10; $i++) {
-                $pending = @(Get-ChildItem $printersKey -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName } |
-                    Where-Object { $_ -match $pendingPattern -and $pendingBefore -notcontains $_ }) | Select-Object -First 1
-                if (-not $pending -and -not (Test-Path -LiteralPath "$printersKey\$($p.Name)")) { break }
-                Start-Sleep -Seconds 1
-            }
-            if ($pending) {
-                "Windows keeps the printer as '$pending' until the print spooler restarts (another program, or a PC printing to its share, still had it open); it no longer appears anywhere."
-                Add-Result "pending" $pending
-                # Shared: as a rule a PC printing to the share holds it (its spooler's remote handle cache, 2026-11-06)
-                if ($p.Shared) { Add-Result "was-shared" "1" }
-            }
-        } finally {
-            if ($restartService) { try { Start-Service -Name $serviceName -ErrorAction Stop; "Service 'QL printer status' running again." } catch { "Could not start the service 'QL printer status' again: $($_.Exception.Message)" } }
-        }
-        $port = $p.PortName
-        $ours = $port -match "^IP_" -or $port -match "^\\\\[^\\]+\\[^\\]+$" -or $port -match "^[A-Za-z]:\\"
-        if ($ours -and $pending) {
-            # The pending printer still uses it, so Windows refuses ("general failure"; x64 Sandbox 2026-11-06). It stays,
-            # unused, also once the printer is gone; no failure.
-            "The port $port stays: the printer Windows still keeps uses it. Unused afterwards, it does no harm."
-            Add-Result "pending-port" $port
-        } elseif ($ours -and -not @(Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.PortName -eq $port })) {
-            # The spooler can hold the port for a moment after the printer went
-            $err = $null
-            for ($i = 0; $i -lt 3; $i++) {
-                if ($i) { Start-Sleep -Seconds 1 }
-                try {
-                    # Remove-PrinterPort fails for Standard TCP/IP ports (0x80070709); WMI removes them, as the uninstall does
-                    if ($port -match "^IP_") {
-                        Get-CimInstance Win32_TCPIPPrinterPort -Filter "Name='$($port.Replace("'", "\'"))'" | Remove-CimInstance -ErrorAction Stop
-                    } else { Remove-FilePort $port | Out-Null }
-                    if (Get-PrinterPort -Name $port -ErrorAction SilentlyContinue) { throw "it is still there" }
-                    $err = $null; break
-                } catch { $err = $_.Exception.Message }
-            }
-            if ($err) { "Could not remove the port ${port}: $err"; Add-Result "left-port" $port }
-            else { "Removed the port $port."; Add-Result "port" $port }
-        }
+    if ($Uninstall) {
+        Invoke-Uninstall
+        return
     }
 
-    if ($TestPrinter) {
-        # Local file port: every job overwrites this file (used by compare.ps1). The spooler opens a file
-        # port as the user who printed (not as SYSTEM), so users need to create,
-        # change and delete files here; a link in this folder gains them nothing. Its own folder keeps that
-        # away from the rest of the data folder (log\ and labels.tsv stay read-only for users).
-        $name = $captureName
-        Set-UserFilesFolder (Split-Path $capturePort)
-        Add-LocalPort $capturePort
-        if (-not (Get-Printer -Name $name -ErrorAction SilentlyContinue)) {
-            Add-Printer -Name $name -DriverName "Brother QL-800 (Unidrv)" -PortName $capturePort -ErrorAction Stop
-        } else {
-            Set-Printer -Name $name -DriverName "Brother QL-800 (Unidrv)" -PortName $capturePort -ErrorAction Stop
-        }
-        "Test printer '$name' ready (prints to $capturePort)."
+    # -Settings: only settings of an installed setup (service, log, added printers); driver, label tool files and
+    # label formats stay as they are, so it runs from the installed copy (C:\Program Files\QLUnidrv\setup) and
+    # while the label tool is open (its setup window starts it; docs/setup.md).
+    if ($Settings) {
+        if (-not (Test-Path $app)) { throw "The driver and the programs are not installed here: run Setup.exe from the release zip." }
+        $AppOnly = $true
+    } else {
+        Assert-LabelToolClosed   # before the driver is touched, so a refusal changes nothing
     }
-
-    if ($UsbPrinter) {
-        # -UsbDriverName: the USB printer's model when -DriverName is the network printer's (both in one run). Several
-        # printers: -UsbPort USB003,USB004 -UsbDriverName "Brother QL-700 (Unidrv),Brother QL-1100 (Unidrv)" (pairs in
-        # order; commas, as powershell -File passes one string)
-        $ports = @(if ($UsbPort) { $UsbPort -split "," | ForEach-Object { $_.Trim() } } else { "" })
-        $drivers = @(if ($UsbDriverName) { $UsbDriverName -split "," | ForEach-Object { $_.Trim() } })
-        for ($i = 0; $i -lt $ports.Count; $i++) {
-            $d = if ($drivers.Count) { $drivers[[Math]::Min($i, $drivers.Count - 1)] } else { $null }
-            if (-not $d -and -not $mainModel) { throw "-UsbPrinter needs -UsbDriverName (or -DriverName): the printer's model." }
-            $usbModel = if ($d) { $models | Where-Object { $_.Name -eq $d } | Select-Object -First 1 } else { $mainModel }
-            if (-not $usbModel) { throw "Unknown -UsbDriverName '$d'." }
-            Add-UsbPrinter $usbModel $ports[$i]
-            # The Printer setup window's "Add printer" for a connected USB printer without a queue of ours: not shared
-            # (user's choice 2026-11-06; sharing goes through Printer properties)
-            Add-Result "printer" $script:usbAdded.Name; Add-Result "driver" $usbModel.Name; Add-Result "usb" $script:usbAdded.Port
-            if ($script:usbAdded.Existed) { Add-Result "existed" "1" }
-        }
+    if ($NetworkPrinter -and $NetworkPrinter -notmatch "^[A-Za-z0-9][A-Za-z0-9.:-]*$") {
+        throw "-NetworkPrinter must be the printer's IP address or host name (e.g. 192.0.2.50)."
     }
-
     if ($SharePort) {
-        # A QL printer shared by another PC (docs/sharing.md): a Local Port named after the share, which
-        # passes our driver's output on RAW; Point and Print is not used. The port may already exist
-        # (e.g. for Brother's own printer on the same share).
-        if (-not (Test-PrinterShare $SharePort)) {
-            throw ("No printer can be reached as $SharePort. Check the name, that the other PC is on and shares the printer, and " +
-                   "open \\$($SharePort.Split('\')[2]) in Explorer once with 'Remember my credentials' (docs/sharing.md on the project page).")
+        if ($SharePort -notmatch "^\\\\[^\\]+\\[^\\]+$") { throw "-SharePort must look like \\host\share (e.g. \\PC\QL-800)." }
+        if (-not $DriverName) { throw "-SharePort needs -DriverName (the shared printer's model, e.g. `"Brother QL-570 (Unidrv)`")." }
+        if ($AppOnly -and -not (Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue)) {
+            throw "Driver '$DriverName' is not installed here: install the driver first (Setup.exe, or this script without -AppOnly)."
         }
-        Add-LocalPort $SharePort
-        # A printer of that name on another port (its USB printer, or another host's share) stays where it is.
-        $name = $DriverName
-        $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
-        if ($existing -and $existing.PortName -ne $SharePort) {
-            $name = "$DriverName on $($SharePort.Split('\')[2])"
-            $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
-        }
-        Add-Result "existed" $(if ($existing -and $existing.DriverName -eq $DriverName) { "1" } else { "0" })
-        if (-not $existing) {
-            Add-Printer -Name $name -DriverName $DriverName -PortName $SharePort -ErrorAction Stop
-        } else {
-            Set-Printer -Name $name -DriverName $DriverName -PortName $SharePort -ErrorAction Stop
-        }
-        Clear-WorkOffline $name
-        "Printer '$name' ready on $SharePort."
-        Add-Result "printer" $name; Add-Result "driver" $DriverName; Add-Result "share" $SharePort
     }
-
-    if ($NetworkPrinter) {
-        # A QL printer on the network: the model from the printer itself unless -DriverName was given.
-        $netDriver = $DriverName
-        if (-not $PSBoundParameters.ContainsKey("DriverName")) {
-            $result = Join-Path $env:TEMP "qlunidrv-identify.txt"
-            Remove-Item $result -Force -ErrorAction SilentlyContinue
-            Start-Process $app -ArgumentList "--identify", $NetworkPrinter, "--result", "`"$result`"" -Wait -WindowStyle Hidden
-            $lines = @(Get-Content $result -ErrorAction SilentlyContinue)
-            Remove-Item $result -Force -ErrorAction SilentlyContinue
-            if ($lines.Count -lt 3 -or $lines[0] -ne "OK") {
-                throw ("The printer at $NetworkPrinter could not be identified: $(($lines | Select-Object -Skip 1) -join ' ')" +
-                       " Give the model with -DriverName `"Brother QL-xxx (Unidrv)`".")
-            }
-            $netDriver = $lines[1]
-            "Printer at ${NetworkPrinter}: $($lines[2]), $($lines[3]) loaded."
-            Add-Result "roll" $lines[3]
+    # The download mark (Mark of the Web) of a zip unpacked with Explorer stays on copies (Copy-Item keeps the stream):
+    # removed from what is installed from here, as Setup.exe does
+    if (-not $Settings) {
+        foreach ($d in "out\tools", "out\package", "labels", "driver") {
+            Get-ChildItem (Join-Path $repo $d) -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
         }
-        if (-not (Get-PrinterDriver -Name $netDriver -ErrorAction SilentlyContinue)) {
-            throw "Driver '$netDriver' is not installed here: install the driver first (Setup.exe, or this script without -AppOnly)."
-        }
-        $netPort = "IP_$NetworkPrinter"
-        if (-not (Get-PrinterPort -Name $netPort -ErrorAction SilentlyContinue)) {
-            Add-PrinterPort -Name $netPort -PrinterHostAddress $NetworkPrinter -PortNumber 9100
-        }
-        $name = $netDriver
-        $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
-        if ($existing -and $existing.PortName -ne $netPort) {
-            $name = "$netDriver on $NetworkPrinter"
-            $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
-        }
-        Add-Result "existed" $(if ($existing -and $existing.DriverName -eq $netDriver) { "1" } else { "0" })
-        if (-not $existing) {
-            Add-Printer -Name $name -DriverName $netDriver -PortName $netPort -ErrorAction Stop
-        } else {
-            Set-Printer -Name $name -DriverName $netDriver -PortName $netPort -ErrorAction Stop
-        }
-        Clear-WorkOffline $name
-        "Printer '$name' ready on $netPort ($NetworkPrinter, port 9100)."
-        Add-Result "printer" $name; Add-Result "driver" $netDriver; Add-Result "address" $NetworkPrinter; Add-Result "port" $netPort
     }
+    Initialize-DataFolder
+    if ($Settings) {
+    } elseif ($AppOnly) {
+        "Programs only: driver, package and certificates unchanged."
+    } else {
+        Install-DriverPackage
+    }
+    if ($Settings) {
+        "Settings only: driver, programs and label formats unchanged."
+        Set-StatusServiceSetting
+    } else {
+        Install-Programs
+    }
+    Invoke-PrinterActions
     "Done."
     Add-Result "done" "1"
 } catch {

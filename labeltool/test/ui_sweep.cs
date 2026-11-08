@@ -131,8 +131,8 @@ namespace QlLabels.Tests
             if (t != null) return t.Kind == TextKind.Frame ? "text-frame" : "text-line";
             var l = o as LineObject;
             if (l != null) return l.H == 0 ? "line-level" : l.W == 0 ? "line-upright" : "line-diagonal";
-            var x = o as BoxObject;
-            if (x != null) return x.Ellipse ? "ellipse" : "box";
+            var x = o as ShapeObject;   // rectangle and ellipse keep the names of the box shots
+            if (x != null) return x.Kind == ShapeKind.Rectangle ? "box" : x.Kind.ToString().ToLowerInvariant();
             return o.Type;
         }
 

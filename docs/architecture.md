@@ -20,7 +20,7 @@ The same sources build for ARM64 and x64.
 | Render plug-in | `QLUnidrv.dll` (`driver/src/plugin.cpp`, `ql_raster.*`, `labels.*`, `usb_status.*`) | `IPrintOemUni` plug-in loaded by Unidrv in the spooler: collects the rendered page and writes the QL stream |
 | Encoder | `driver/src/ql_raster.*` | Pure C++ (no Windows headers): media table, per-model traits, page geometry, raster lines, PackBits, job/page commands. Unit- and replay-tested |
 | Generator | `driver/gen/media.py` | Brother's paper tables (`docs/data/*.json`) + `MODELS` → all GPDs, `src/media_table.inc`, `src/media_info.inc` (Brother's `ESC i U w` media blocks per model and paper, from the captures), `labeltool/src/MediaTable.g.cs` |
-| Label tool | `labeltool/` → `QlLabelFormats.exe`, `QlLabelMaker.exe`, `QlPrinterStatus.exe` (one source folder, three programs) | `QlLabelFormats.exe`: user label formats, default format, Printer setup window (`--setup`, [setup.md](setup.md)); `QlLabelMaker.exe`: label editor, `.qllabel` files ([label-editor.md](label-editor.md)); `QlPrinterStatus.exe`: printer status window and tray monitor |
+| Label tool | `labeltool/` → `QlLabelFormats.exe`, `QlLabelMaker.exe`, `QlPrinterStatus.exe` (one source folder, three programs) | `QlLabelFormats.exe`: user label formats, default format, Printer setup window (`--setup`, [setup.md](setup.md)); `QlLabelMaker.exe`: label editor, `.qllabel` files ([label-editor.md](label-editor.md)), the same Printer setup window in its *Printer* menu; `QlPrinterStatus.exe`: printer status window and tray monitor |
 | Status service (optional) | `QlPrinterStatus.exe --service` (`labeltool/src/StatusService.cs`, `PublishedStatus.cs`) | Windows service "QL printer status": reads the USB printers, publishes their status in the print queues' printer data for every user and for PCs printing through a share ([status-service.md](status-service.md)) |
 | Scripts | `driver/*.ps1`, `driver/build.cmd` | Build, package and sign, install, verify (§6) |
 
@@ -88,6 +88,13 @@ warns. `--remove-forms` removes the placeholder too.
 ## 5. Label tool and printer status
 
 `QlLabelFormats.exe` (Start menu "QL Label Formats"; .NET Framework 4.8, AnyCPU):
+
+All four exes (QL Label Formats, QL Label Maker, QL Printer Status with its tray monitor and service, Setup.exe) declare
+`supportedArchitectures` "amd64 arm64" in `labeltool/app.manifest`. On ARM64 Windows 11 24H2 and later they then run
+natively as ARM64 when an ARM64 program starts them (Explorer, the Start menu, the service manager); without it an
+AnyCPU .NET Framework exe runs under x64 emulation there, with about twice the start time. Started from an x64
+program they still run as x64. Prints are byte-identical either way, and the driver's printing preferences open in
+the program's own process instead of through splwow64 (`labeltool/test/arch-check.ps1`).
 
 - edit, order and test-print label formats; formats a model or the loaded roll can't print are greyed and
   explained; "Use as default label format" sets the per-user default paper (no administrator rights);

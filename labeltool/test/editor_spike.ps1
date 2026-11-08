@@ -7,7 +7,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$out = Join-Path $root "out\editor-spike"
+$out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } else { Join-Path $root "out" }) "editor-spike"   # QL_TEST_OUT: a folder per session
 New-Item -ItemType Directory -Force $out | Out-Null
 
 $csc = Join-Path $env:WINDIR "Microsoft.NET\FrameworkArm64\v4.0.30319\csc.exe"

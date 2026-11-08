@@ -5,7 +5,7 @@
 # Needs: out\tools\uitest\deskrun.exe (tools\uitest\build.cmd), labeltool\build.cmd run once (Version.g.cs)
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$out = Join-Path $root "out\status-window"
+$out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } else { Join-Path $root "out" }) "status-window"   # QL_TEST_OUT: a folder per session
 New-Item -ItemType Directory -Force $out | Out-Null
 $deskrun = Join-Path $root "out\tools\uitest\deskrun.exe"
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }
@@ -19,5 +19,5 @@ try {
     if ($LASTEXITCODE) { throw "statuswindow build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }
-& $deskrun $exe
+& $deskrun --lock instances $exe
 exit $LASTEXITCODE

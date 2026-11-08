@@ -22,6 +22,9 @@ README next to the programs (`out\tools\help`), and the install puts it into `C:
   German and English.
 
   To replace a picture, write a new file with the same name; the pages need no change.
+  Per release: `labeltool\test\help-shots.ps1` takes all pictures of both manuals again (a fixed 62 mm roll, so they
+  compare) into `out\help-shots\<name>` and lists what changed (`index.html`: old, new, difference); `-Apply` copies
+  the changed ones here. `formats/img/*/setup-sections.png` is made by hand.
 - `formats/`: the user manual of **QL Label Formats** in the same style and layout (`formats/de/`, `formats/en/`,
   `formats/img/`; the pages use `../../help.css`). Its pictures: `formats/img/shots/make-shots.ps1` (the program with
   the sample formats of `labels-de.json` / `labels-en.json` and one printer, the QL-800 on USB as test printer;

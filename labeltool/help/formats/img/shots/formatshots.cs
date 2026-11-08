@@ -1,9 +1,11 @@
 // Window screenshots of the real QL Label Formats for its manual, taken by make-shots.ps1. The program runs in this
 // process (its window classes through reflection) on a screen with the given scaling. It shows the sample label
-// formats of labels-<lang>.json in place of this PC's, and this PC's "Brother QL-800 (Unidrv)" as the only printer in the
+// formats of labels-<lang>.json in place of this PC's, and this PC's "Brother QL-800 (Unidrv)" (or the printer given) as the only printer in the
 // status bar; nothing is saved or printed. Runs only on deskrun's own desktop (tools\uitest): it never takes the user's
 // mouse or focus. Screenshots with PrintWindow.
-//   formatshots.exe <QlLabelFormats.exe> <out folder> <de|en> <100|150> <shots folder>
+// The loaded roll is always the same (FixedCheck: ready, 62 mm continuous), whatever the printer has loaded, so the
+// pictures can be compared from release to release.
+//   formatshots.exe <QlLabelFormats.exe> <out folder> <de|en> <100|150> <shots folder> [printer]
 // -> <out folder>\<scale>-<lang>\<scale>-<lang>-<shot>.png
 using System;
 using System.Collections;
@@ -28,7 +30,7 @@ static class FormatShots
 
     static Assembly asm;
     static Form form;
-    static string outDir, prefix, samples;
+    static string outDir, prefix, samples, printer = "Brother QL-800 (Unidrv)";
     static Screen target;
     const BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
@@ -44,6 +46,7 @@ static class FormatShots
         outDir = System.IO.Path.Combine(a[1], scale + "-" + lang);
         System.IO.Directory.CreateDirectory(outDir);
         samples = System.IO.Path.Combine(a[4], "labels-" + lang + ".json");
+        if (a.Length > 5) printer = a[5];
         asm.GetType("QlLabels.Lang").GetMethod("Force", All).Invoke(null, new object[] { lang });
         // the manual shows the light scheme, whatever this PC's Appearance setting is
         asm.GetType("QlLabels.Theme").GetMethod("Force", All).Invoke(null, new[] { Enum.Parse(asm.GetType("QlLabels.Scheme"), "Light") });
@@ -74,8 +77,14 @@ static class FormatShots
         // the QL-800 on USB as the test printer (its roll is read; a shared printer would show the other PC's address)
         var box = (ToolStripComboBox)Field("printerBox");
         for (int i = 0; i < box.Items.Count; i++)
-            if (box.Items[i].ToString() == "Brother QL-800 (Unidrv)") { box.SelectedIndex = i; break; }
+            if (box.Items[i].ToString() == printer) { box.SelectedIndex = i; break; }
         Pump(4000);
+        // the fixed roll in place of the printer's, and no further checks
+        ((System.Windows.Forms.Timer)Field("printerTimer")).Stop();
+        form.GetType().GetField("checking", All).SetValue(form, true);
+        form.GetType().GetField("printerCheck", All).SetValue(form, FixedCheck(printer));
+        form.GetType().GetMethod("ShowPrinterCheck", All).Invoke(form, null);
+        Pump(400);
         Samples();
         var list = (ListView)Field("list");
         Console.WriteLine("formats: " + string.Join(" | ", list.Items.Cast<ListViewItem>().Select(i => i.Text + (i.ForeColor == Dim() ? " (grey)" : ""))));
@@ -97,8 +106,13 @@ static class FormatShots
         form.GetType().GetMethod("NewFormat", All, null, Type.EmptyTypes, null).Invoke(form, null); Pump(800);
         Shot(form, "new");
         // the printer status window
-        var status = (Form)Activator.CreateInstance(asm.GetType("QlLabels.StatusForm"), new object[] { new List<string> { "Brother QL-800 (Unidrv)" } });
-        Place(status); status.Show(form); Pump(5000); Shot(status, "status"); status.Close(); Pump(300);
+        var status = (Form)Activator.CreateInstance(asm.GetType("QlLabels.StatusForm"), new object[] { new List<string> { printer }, null });
+        Place(status); status.Show(form); Pump(5000);
+        ((System.Windows.Forms.Timer)status.GetType().GetField("timer", All).GetValue(status)).Stop();
+        status.GetType().GetField("running", All).SetValue(status, true);
+        foreach (var card in (IEnumerable)status.GetType().GetField("cards", All).GetValue(status))
+            card.GetType().GetMethod("Display", All).Invoke(card, new[] { FixedCheck(printer) });
+        Pump(800); Shot(status, "status"); status.Close(); Pump(300);
         // the printer setup window
         var setup = (Form)Activator.CreateInstance(asm.GetType("QlLabels.SetupForm"));
         Place(setup); setup.Show(form); Pump(4000); Shot(setup, "setup"); setup.Close(); Pump(300);
@@ -129,7 +143,7 @@ static class FormatShots
         var lang = asm.GetType("QlLabels.Lang");
         string version = (string)asm.GetType("QlLabels.AboutForm").GetMethod("DriverVersion", All).Invoke(null, null);
         ((ToolStripItem)Field("printerStatus")).Text = (string)lang.GetMethod("F", All).Invoke(null,
-            new object[] { "QL Unidrv {0} · {1}", new object[] { version, "Brother QL-800 (Unidrv)" } });
+            new object[] { "QL Unidrv {0} · {1}", new object[] { version, printer } });
         ((ToolStripItem)Field("syncStatus")).Text = (string)lang.GetMethod("T", All).Invoke(null, new object[] { "Windows paper sizes in sync" });
         Pump(300);
     }
@@ -152,6 +166,20 @@ static class FormatShots
         uint x, y;
         var m = MonitorFromPoint(new Point(s.Bounds.Left + 10, s.Bounds.Top + 10), 2);
         return GetDpiForMonitor(m, 0, out x, out y) == 0 ? (int)x : 96;
+    }
+
+    // Ready, 62 mm continuous loaded (a QL-800's status reply), as the test printer's check.
+    const string Ready62 = "80 20 42 34 38 30 00 00 00 00 3E 0A 00 00 15 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00";
+    static object FixedCheck(string name)
+    {
+        var device = Activator.CreateInstance(asm.GetType("QlLabels.DeviceResult"));
+        Action<string, object> set = (n, v) => device.GetType().GetField(n, All).SetValue(device, v);
+        set("Printer", name);
+        set("Port", "USB001");
+        set("State", Enum.Parse(asm.GetType("QlLabels.DeviceState"), "Open"));
+        set("Reply", asm.GetType("QlLabels.QlStatus").GetMethod("FromHex", All).Invoke(null, new object[] { Ready62, DateTime.Now }));
+        var jobs = Activator.CreateInstance(typeof(List<>).MakeGenericType(asm.GetType("QlLabels.JobInfo")));
+        return asm.GetType("QlLabels.PrinterCheck").GetMethod("From", All).Invoke(null, new object[] { name, device, jobs, null });
     }
 
     static object Field(string n) { return form.GetType().GetField(n, All).GetValue(form); }

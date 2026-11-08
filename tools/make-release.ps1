@@ -18,15 +18,36 @@
     advanced\labels\default-labels.json, default-labels-en.json, default-labels-en-us.json (the seeds: German, UK, US)
   advanced\ keeps the repository layout, so install.ps1 and package.ps1 run unchanged; Setup.exe finds it there.
   Nothing here needs administrator rights; nothing is signed or installed.
+  -HelpCheck: first takes the help pictures again (labeltool\test\help-shots.ps1 -Name <version> -Scales 100,150,
+  a deskrun desktop of its own, nothing printed or saved) and only warns when pictures changed or are missing (exit 1)
+  or a step failed (exit 2); the zip is made either way. Without a 150 % screen help-shots leaves those pictures out
+  with a warning: that warning says the monitor for them is missing. Needs the printer "Brother QL-800 (Unidrv)"
+  installed, else -HelpPrinter <an installed QL printer>; report in out\help-shots\<version>\ (or under QL_TEST_OUT).
 #>
-param([ValidateSet("both", "x64", "arm64")][string]$Arch = "both")
+param([ValidateSet("both", "x64", "arm64")][string]$Arch = "both", [switch]$HelpCheck, [string]$HelpPrinter)
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 # A driver change needs its version recorded first (driver\gen\version.py set, with the next minor release)
 & python -I (Join-Path $repo "driver\gen\version.py") check
 if ($LASTEXITCODE) { throw "Driver sources changed: see the line above." }
+# Every model of driver\gen\media.py in the INF and in install.ps1's $models (a new model is easy to forget)
+& python -I (Join-Path $repo "driver\test\check_models.py")
+if ($LASTEXITCODE) { throw "Model lists differ: see the lines above." }
 $recorded = (& python -I (Join-Path $repo "driver\gen\version.py") show) -split " "
 $version = (Get-Content (Join-Path $repo "labeltool\version\VERSION") -TotalCount 1).Trim()
+# The help pictures against the programs as built (only a warning: the zip is made anyway)
+if ($HelpCheck) {
+    # -Command, not -File: -File would hand "100,150" over as one string, not as the two scales
+    $quote = { param($s) "'" + $s.Replace("'", "''") + "'" }
+    $call = "& " + (& $quote (Join-Path $repo "labeltool\test\help-shots.ps1")) + " -Name " + (& $quote $version) + " -Scales 100,150"
+    if ($HelpPrinter) { $call += " -Printer " + (& $quote $HelpPrinter) }
+    & powershell -NoProfile -ExecutionPolicy Bypass -Command "$call; exit `$LASTEXITCODE" | ForEach-Object { "  $_" }
+    switch ($LASTEXITCODE) {
+        0 { "Help pictures: unchanged." }
+        1 { Write-Warning "Help pictures changed or missing: see the help-shots report for $version (help-shots.ps1 -Apply takes them over)." }
+        default { Write-Warning "The help picture check did not finish (help-shots.ps1 exit $LASTEXITCODE); the zip is made anyway." }
+    }
+}
 $releaseDir = Join-Path $repo "out\release"
 $stageRoot = Join-Path $releaseDir "stage"
 if (Test-Path $stageRoot) { Remove-Item $stageRoot -Recurse -Force }

@@ -10,7 +10,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$out = Join-Path $root "out\barcode-test"
+$out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } else { Join-Path $root "out" }) "barcode-test"   # QL_TEST_OUT: a folder per session
 New-Item -ItemType Directory -Force $out | Out-Null
 $deskrun = Join-Path $root "out\tools\uitest\deskrun.exe"
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }
@@ -36,7 +36,7 @@ if (-not $NoPrint) {
     foreach ($c in $cases) {
         if ($Only -and ($Only -split "," | ForEach-Object { $_.Trim() }) -notcontains $c.name) { continue }
         if (Test-Path $portFile) { [IO.File]::Delete($portFile) }
-        & $deskrun $exe (Join-Path $out "$($c.name).qllabel") $Printer "$($c.dpi)" | Out-Host
+        & $deskrun --lock capture $exe (Join-Path $out "$($c.name).qllabel") $Printer "$($c.dpi)" | Out-Host
         if ($LASTEXITCODE) { Write-Warning "$($c.name): exit code $LASTEXITCODE"; continue }
         $deadline = (Get-Date).AddSeconds(60)
         while ((Get-PrintJob -PrinterName $Printer -ErrorAction SilentlyContinue) -or -not (Test-Path $portFile)) {

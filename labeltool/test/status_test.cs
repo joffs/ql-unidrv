@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using WF = System.Windows.Forms;
 
 namespace QlLabels.Tests
 {
@@ -52,6 +53,7 @@ namespace QlLabels.Tests
             ShareMatrix();
             PrintingGuard();
             ShareDeadline();
+            ReadyQuestions();
             SnmpEncoding();
             ServicePause();
             HelpFolder();
@@ -275,11 +277,9 @@ namespace QlLabels.Tests
 
             // The counter: the first reading only remembers it; a change is seen at the next reading.
             long count = 5;
-            var saved = QlDevice.JobsPrinted;
-            QlDevice.JobsPrinted = p => count;
-            QlDevice.ForgetQueues();
-            try
+            using (StatusState.Saved())
             {
+                QlDevice.JobsPrinted = p => count;
                 Check(QlDevice.QueueDone("Q", t0) == null, "queue: first reading");
                 Check(QlDevice.QueueDone("Q", t0.AddSeconds(3)) == null, "queue: unchanged");
                 count = 6;
@@ -291,7 +291,6 @@ namespace QlLabels.Tests
                 Check(QlDevice.QueueDone("Q", t0.AddSeconds(15)) == t0.AddSeconds(15), "queue: counter reset counts as a change");
                 Check(QlDevice.QueueDone(null, t0) == null, "queue: no printer name (USB scan)");
             }
-            finally { QlDevice.JobsPrinted = saved; QlDevice.ForgetQueues(); }
 
             // "No answer" only from the second miss in a row (one miss right before the printer goes away, 2026-11-07).
             QlDevice.ForgetMisses();
@@ -329,7 +328,8 @@ namespace QlLabels.Tests
         static void ShareDeadline()
         {
             const string Port = @"\\PRINTHOST\QL-570", Printer = "Brother QL-570 (Unidrv)";
-            var saved = new object[] { PublishedStatus.NetShare, PublishedStatus.Queue, PublishedStatus.ReadValue, PublishedStatus.UtcNow, PublishedStatus.ShareDeadline, PublishedStatus.HostAnswers };
+            var realDeadline = PublishedStatus.ShareDeadline;
+            var restore = StatusState.Saved();   // the readers back, and what was seen forgotten, at the end
             var cable = new System.Threading.ManualResetEventSlim(true);   // reset: the host's network cable is out
             PublishedStatus.HostAnswers = x => cable.IsSet;
             int netCalls = 0, reads = 0;
@@ -346,7 +346,7 @@ namespace QlLabels.Tests
             Func<PrinterCheck> ask = () => PrinterCheck.From(Printer, PublishedStatus.QueryShare(Printer, Port, "PRINTHOST", "QL-570"), new List<JobInfo>(), null);
             try
             {
-                Check(PublishedStatus.ShareDeadline.TotalSeconds < 1 && ((TimeSpan)saved[4]).TotalSeconds >= 15, "slow host: the real deadline leaves 15 s for a slow OpenPrinter");
+                Check(PublishedStatus.ShareDeadline.TotalSeconds < 1 && realDeadline.TotalSeconds >= 15, "slow host: the real deadline leaves 15 s for a slow OpenPrinter");
                 Check(ask().Health == Health.Ok, "13b: ready while the host answers");
                 // Slow but running (2026-11-07: OpenPrinter 0.8-4.9 s on every call; scaled to the 300 ms deadline here).
                 delay = 200;
@@ -387,13 +387,7 @@ namespace QlLabels.Tests
             finally
             {
                 cable.Set();
-                PublishedStatus.NetShare = (Func<string, string, int[]>)saved[0];
-                PublishedStatus.Queue = (Func<string, PublishedStatus.QueueFacts>)saved[1];
-                PublishedStatus.ReadValue = (Func<string, string>)saved[2];
-                PublishedStatus.UtcNow = (Func<DateTime>)saved[3];
-                PublishedStatus.ShareDeadline = (TimeSpan)saved[4];
-                PublishedStatus.HostAnswers = (Func<string, bool>)saved[5];
-                PublishedStatus.ForgetShareChecks();
+                restore.Dispose();
             }
         }
 
@@ -402,7 +396,7 @@ namespace QlLabels.Tests
             const string Port = @"\\PRINTHOST\QL-800", Printer = "Brother QL-800 (Unidrv)";
             var h = new FakeHost();
             var clock = new DateTime(2026, 11, 6, 12, 0, 0, DateTimeKind.Utc);
-            var saved = new object[] { PublishedStatus.NetShare, PublishedStatus.Queue, PublishedStatus.ReadValue, PublishedStatus.UtcNow, PublishedStatus.HostAnswers };
+            var restore = StatusState.Saved();   // the readers back, and what was seen forgotten, at the end
             PublishedStatus.HostAnswers = x => h.Reachable;
             PublishedStatus.NetShare = h.NetShare;
             PublishedStatus.Queue = h.Queue;
@@ -530,12 +524,7 @@ namespace QlLabels.Tests
             }
             finally
             {
-                PublishedStatus.NetShare = (Func<string, string, int[]>)saved[0];
-                PublishedStatus.Queue = (Func<string, PublishedStatus.QueueFacts>)saved[1];
-                PublishedStatus.ReadValue = (Func<string, string>)saved[2];
-                PublishedStatus.UtcNow = (Func<DateTime>)saved[3];
-                PublishedStatus.HostAnswers = (Func<string, bool>)saved[4];
-                PublishedStatus.ForgetShareChecks();
+                restore.Dispose();
                 Lang.Force("en");
             }
         }
@@ -701,6 +690,90 @@ namespace QlLabels.Tests
             Check(QlStatus.FromHex(Idle.Replace("80 20", "81 20"), DateTime.Now) == null, "wrong header rejected");
             Check(QlStatus.FromHex("zz", DateTime.Now) == null, "garbage rejected");
             Check(Msg(Idle).Hex == Idle, "hex round trip");
+        }
+
+        // PrintReadiness (refactor R5): the questions before a print, with the texts, buttons, icons and default buttons
+        // QL Label Formats' test print had before (MainForm.ConfirmPrinterReady until 2026-11-08), and QL Label Maker's
+        // "No" to the offline question (goes on to the roll check).
+        static void ReadyQuestions()
+        {
+            const string P = "Brother QL-800 (Unidrv)";
+            var saved = new object[] { PrintReadiness.WorkOffline, PrintReadiness.HasStatus, PrintReadiness.Check, PrintReadiness.Show, PrintReadiness.Online };
+            var shown = new List<string>();
+            var answers = new Queue<WF.DialogResult>();
+            bool offline = false, asked = false, onlineTried = false, onlineWorks = true;
+            PrinterCheck next = null, got = null;
+            string busy = "start";
+            PrintReadiness.WorkOffline = p => offline;
+            PrintReadiness.HasStatus = p => true;
+            PrintReadiness.Check = p => { asked = true; return next; };
+            PrintReadiness.Show = (owner, text, title, buttons, icon, def) =>
+            {
+                shown.Add(title + "|" + text + "|" + buttons + "|" + icon + "|" + def);
+                return answers.Count > 0 ? answers.Dequeue() : WF.DialogResult.Cancel;
+            };
+            PrintReadiness.Online = (owner, printers) => { onlineTried = true; return System.Threading.Tasks.Task.FromResult(onlineWorks); };
+            var media62 = MediaTable.All.First(m => Msg(Idle).Fits(m) == true);
+            var other = MediaTable.All.First(m => Msg(Idle).Fits(m) == false);
+            Func<bool, PrinterCheck, Media, bool> confirm = (noPrintsNow, last, media) =>
+            {
+                shown.Clear(); asked = false; onlineTried = false; got = null;
+                return PrintReadiness.Confirm(new PrintReadiness.Request
+                {
+                    Title = "QL Label Formats", Printer = P, Last = last, NoPrintsNow = noPrintsNow,
+                    OfflineQuestion = Lang.F("{0} is set to 'Use Printer Offline': the test label would wait on this PC and not print.\n\n" +
+                                             "Use the printer online now? Windows may ask for administrator permission.", P),
+                    Media = media, LabelName = "Test 62", Busy = t => busy = t, Checked = c => got = c,
+                }).GetAwaiter().GetResult();
+            };
+            string offlineQuestion = "QL Label Formats|" + P + " is set to 'Use Printer Offline': the test label would wait on this PC and not print.\n\n" +
+                                     "Use the printer online now? Windows may ask for administrator permission.|YesNoCancel|Warning|Button1";
+            try
+            {
+                next = PrinterCheck.From(P, Open(Msg(Idle), true), new List<JobInfo>(), null);
+                Check(confirm(true, null, media62) && shown.Count == 0 && asked && got == next && busy == null, "ready: ready and the roll fits: print, no question");
+                offline = true;
+                answers.Enqueue(WF.DialogResult.Cancel);
+                Check(!confirm(true, null, media62) && shown.Count == 1 && shown[0] == offlineQuestion && !asked, "ready: offline question as before, Cancel stops (" + shown.FirstOrDefault() + ")");
+                answers.Enqueue(WF.DialogResult.No);
+                Check(confirm(true, null, media62) && !asked && !onlineTried, "ready: QL Label Formats' No prints at once (the job waits)");
+                answers.Enqueue(WF.DialogResult.No);
+                Check(confirm(false, null, media62) && asked && !onlineTried, "ready: QL Label Maker's No goes on to the roll check");
+                answers.Enqueue(WF.DialogResult.Yes);
+                Check(confirm(true, null, media62) && onlineTried && asked, "ready: Yes: online, then the roll check");
+                onlineWorks = false;
+                answers.Enqueue(WF.DialogResult.Yes);
+                Check(!confirm(true, null, media62) && onlineTried && !asked, "ready: online failed: no print");
+                onlineWorks = true;
+                var off = PrinterCheck.From(P, new DeviceResult { Printer = P, Port = "USB001", State = DeviceState.NotConnected }, new List<JobInfo>(), null);
+                Check(confirm(true, off, media62) && shown.Count == 0, "ready: switched off (offline not the cause): no offline question");
+                offline = false;
+
+                answers.Enqueue(WF.DialogResult.No);
+                Check(!confirm(true, null, other) && shown.Count == 1 &&
+                      shown[0] == "QL Label Formats|The printer has " + Msg(Idle).LoadedText + " loaded, but 'Test 62' needs " + other.Display +
+                                  ".\n\nThe printer would stop with a 'wrong media' error (red LED). Load the matching roll first.\n\nPrint anyway?|YesNo|Warning|Button2",
+                      "ready: wrong roll: the warning as before, No stops (" + shown.FirstOrDefault() + ")");
+                answers.Enqueue(WF.DialogResult.Yes);
+                Check(confirm(true, null, other), "ready: wrong roll, Print anyway: print");
+                next = PrinterCheck.From(P, Open(Msg(WrongMedia), true), new List<JobInfo>(), null);
+                answers.Enqueue(WF.DialogResult.No);
+                Check(!confirm(true, null, media62) && shown.Count == 1 &&
+                      shown[0] == "QL Label Formats|" + P + ": " + (next.Detail ?? next.Headline) + "\n\n" + string.Join("\n", next.Advice) + "\n\nPrint anyway?|YesNo|Warning|Button2",
+                      "ready: printer error: the warning as before (" + shown.FirstOrDefault() + ")");
+                next = null;
+                Check(confirm(true, null, other) && shown.Count == 0, "ready: printer can't be asked: print as before the check existed");
+                PrintReadiness.HasStatus = p => false;
+                Check(confirm(true, null, other) && !asked, "ready: a printer without a status: print, not asked");
+            }
+            finally
+            {
+                PrintReadiness.WorkOffline = (Func<string, bool>)saved[0];
+                PrintReadiness.HasStatus = (Func<string, bool>)saved[1];
+                PrintReadiness.Check = (Func<string, PrinterCheck>)saved[2];
+                PrintReadiness.Show = (Func<WF.IWin32Window, string, string, WF.MessageBoxButtons, WF.MessageBoxIcon, WF.MessageBoxDefaultButton, WF.DialogResult>)saved[3];
+                PrintReadiness.Online = (Func<WF.IWin32Window, IList<string>, System.Threading.Tasks.Task<bool>>)saved[4];
+            }
         }
 
         static DeviceResult Open(QlStatus reply, bool requestSent, params QlStatus[] messages)

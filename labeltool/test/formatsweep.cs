@@ -83,6 +83,7 @@ static class FormatSweep
         Place(main, 20);
         main.Show();
         Pump(4000);
+        NoPrinterCheck(main);
         Samples(main);
         Shot(main, "formats");
         Offline(main);
@@ -93,7 +94,7 @@ static class FormatSweep
         Place(setup, 60); setup.Show(main); Pump(4000); Shot(setup, "setup");
         foreach (var d in SetupDialogs()) { Place(d.Value, 120); d.Value.Show(setup); Pump(1200); Shot(d.Value, d.Key); d.Value.Close(); d.Value.Dispose(); Pump(200); }
 
-        var status = (Form)Activator.CreateInstance(T("StatusForm"), new object[] { new List<string> { "Brother QL-800 (Unidrv)", "Brother QL-570 (Unidrv)" } });
+        var status = (Form)Activator.CreateInstance(T("StatusForm"), new object[] { new List<string> { "Brother QL-800 (Unidrv)", "Brother QL-570 (Unidrv)" }, null });
         Place(status, 80); status.Show(main); Pump(4000);
         Cards(status);
         Shot(status, "status-cards");
@@ -114,6 +115,10 @@ static class FormatSweep
         foreach (var s in order)
         {
             Switch(s);
+            // The switch may activate the main window on the test desktop: its ChangedElsewhere() then reloads the real
+            // labels.json over the samples (148k pixels between runs). The samples and the offline bar again, as above.
+            Samples(main);
+            Offline(main);
             step++;
             string tag = "live" + step + "-" + s + "-";
             Shot(main, tag + "formats");
@@ -195,6 +200,11 @@ static class FormatSweep
     // Card 1: wrong media, advice open, "Use Printer Offline" (the online link); card 2: ready.
     static void Cards(Form status)
     {
+        // No real poll over the samples: the window's timer stopped, a refresh in flight (a slow printer share: up to
+        // 15 s) finished first. Otherwise its result replaced the samples in some runs (card sizes changed between runs).
+        ((System.Windows.Forms.Timer)Field(status, "timer")).Stop();
+        var wait = DateTime.Now.AddSeconds(40);
+        while ((bool)Field(status, "running") && DateTime.Now < wait) Pump(100);
         var cards = (IList)Field(status, "cards");
         var pc = T("PrinterCheck");
         var health = T("Health");
@@ -239,6 +249,21 @@ static class FormatSweep
         Shot(menu, "tray-menu" + tag);
         menu.Close();
         menu.Dispose();
+        Pump(200);
+    }
+
+    // The real printer's roll check doesn't reach the shots: it greyed the formats that don't fit the loaded roll and
+    // filled the status bar in some runs only (a printer share's check finished before the shot or after it). The
+    // window's printer timer stopped, a check in flight finished, then no check at all, as with a non-QL printer. The
+    // status bar shows the printer's name only.
+    static void NoPrinterCheck(Form main)
+    {
+        ((System.Windows.Forms.Timer)Field(main, "printerTimer")).Stop();
+        var wait = DateTime.Now.AddSeconds(40);
+        while ((bool)Field(main, "checking") && DateTime.Now < wait) Pump(100);
+        main.GetType().GetField("lastCheck", All).SetValue(main, DateTime.MaxValue);   // Activated: no new check either
+        main.GetType().GetField("printerCheck", All).SetValue(main, null);
+        main.GetType().GetMethod("ShowPrinterCheck", All).Invoke(main, null);
         Pump(200);
     }
 

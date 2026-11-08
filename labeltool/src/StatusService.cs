@@ -127,7 +127,7 @@ namespace QlLabels
 
         void PollAll()
         {
-            var printers = MainForm.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
+            var printers = QlPrinters.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
             foreach (var gone in states.Keys.Where(k => !printers.Contains(k, StringComparer.OrdinalIgnoreCase)).ToList())
             {
                 states.Remove(gone);

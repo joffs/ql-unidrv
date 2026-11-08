@@ -33,21 +33,50 @@ namespace QlLabels.Tests
                 File.WriteAllText(result, "step=certificates\r\nstep=package\r\n", new UTF8Encoding(true));
                 using (var writer = new FileStream(result, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
                 {
-                    var r = InstallForm.ReadResult(result);
+                    var r = ScriptRun.ReadResult(result);
                     Check(r.Count == 2 && r[0].Key == "step" && r[0].Value == "certificates" && r[1].Value == "package", "result file read while open, BOM skipped");
                 }
                 File.AppendAllText(result, "error=pnputil failed (5)\r\ncode=pnputil\r\nno equals sign\r\n");
-                var all = InstallForm.ReadResult(result);
+                var all = ScriptRun.ReadResult(result);
                 Check(all.Count == 4 && all.Last().Key == "code" && all.Last().Value == "pnputil", "error and code lines, other lines ignored");
-                Check(InstallForm.ReadResult(Path.Combine(dir, "missing.txt")).Count == 0, "missing result file = nothing yet");
+                Check(ScriptRun.ReadResult(Path.Combine(dir, "missing.txt")).Count == 0, "missing result file = nothing yet");
 
                 // package.ps1's failure as powershell.exe -File prints it (German Windows)
                 string err = "No package in C:\\x to sign.\r\nIn X:\\driver\\package.ps1:97 Zeichen:57\r\n+ ... throw \"No package in $pkg to sign.\" }\r\n" +
                              "    + CategoryInfo          : OperationStopped: (No package...:String) [], RuntimeException\r\n";
-                Check(InstallForm.ErrorMessage("Created root CA certificate AB\r\n", err) == "No package in C:\\x to sign.", "error message = first line of the error output");
-                Check(InstallForm.ErrorMessage("one\r\nlast line\r\n\r\n", "") == "last line", "no error output: last output line");
-                Check(InstallForm.ErrorMessage("", "") == "no message", "nothing at all");
+                Check(ScriptRun.ErrorMessage("Created root CA certificate AB\r\n", err) == "No package in C:\\x to sign.", "error message = first line of the error output");
+                Check(ScriptRun.ErrorMessage("one\r\nlast line\r\n\r\n", "") == "last line", "no error output: last output line");
+                Check(ScriptRun.ErrorMessage("", "") == "no message", "nothing at all");
 
+                // Printer setup: install.ps1's English reasons in the window's language
+                string tip;
+                string sandbox = "No printer can be reached as \\\\192.0.2.1\\QL-800. Check the name, that the other PC is on and shares the printer, and open \\\\192.0.2.1 in Explorer";
+                string unreachable = SetupForm.SettingsReason("share-unreachable", sandbox, out tip);
+                Check(unreachable == "No printer can be reached at \\\\192.0.2.1\\QL-800. Is the other PC on and the printer shared?" &&
+                      tip == "Tip: open \\\\192.0.2.1 once in Explorer and choose \"Remember my credentials\".", "share not reachable: share in the text, PC in the tip (" + unreachable + " | " + tip + ")");
+                Check(SetupForm.SettingsReason("other", "Something broke.", out tip) == "The change was stopped." && tip == null, "Printer setup: an unknown reason, its message in the details");
+                Check(SetupForm.SettingsReason(null, "Something broke.", out tip) == "The change was stopped.", "Printer setup: no code");
+                SetupForm.SettingsReason("port", "x", out tip);
+                Check(tip != null && tip.Contains("README"), "Printer setup: port refused, the details say where to send them");
+                // details: the message once (the transcript's unwrapped TerminatingError line is left out), the tip first
+                string details = SetupForm.FailureDetails("TIP", sandbox, new List<string> { "Settings only.", sandbox }, @"C:\t\x.log");
+                Check(details.StartsWith("TIP\r\n\r\n" + sandbox) && details.IndexOf(sandbox) == details.LastIndexOf(sandbox)
+                      && details.Contains("Settings only.") && details.EndsWith("Log: C:\\t\\x.log"), "Printer setup details: the message once (" + details + ")");
+                // every code install.ps1 gives in -Settings has its own short text (one or two sentences), in both languages
+                foreach (string lang in new[] { "en", "de" })
+                {
+                    Lang.Force(lang);
+                    foreach (string c in new[] { "share-unreachable", "no-driver", "not-ours", "share-usb-only", "remove-failed", "busy", "port", "rdp-printer" })
+                    {
+                        string t = SetupForm.SettingsReason(c, "ENGLISH MESSAGE", out tip);
+                        Check(t.Length > 20 && !t.Contains("ENGLISH MESSAGE") && (c == "rdp-printer" || t.Length <= 120), "Printer setup reason " + c + " (" + lang + "): " + t);
+                    }
+                }
+                Lang.Force("de");
+                Check(SetupForm.SettingsReason("share-unreachable", sandbox, out tip) == "Unter \\\\192.0.2.1\\QL-800 ist kein Drucker erreichbar. Ist der andere PC eingeschaltet und der Drucker freigegeben?" &&
+                      tip == "Tipp: \\\\192.0.2.1 einmal im Explorer öffnen und „Anmeldedaten speichern“ wählen.", "the x64 Sandbox case in German");
+                Check(SetupForm.SettingsReason("other", "x", out tip) == "Die Änderung wurde abgebrochen.", "unknown reason in German");
+                Lang.Force("en");
                 Check(InstallForm.Explain("label-tool-open", "x").Contains("Close it"), "label tool open explained");
                 Check(InstallForm.Explain("other", "Something broke.").EndsWith("Something broke."), "unknown code keeps the message");
                 Check(InstallForm.Explain(null, "Something broke.").EndsWith("Something broke."), "no code keeps the message");
@@ -73,11 +102,11 @@ namespace QlLabels.Tests
                 // Printers pending deletion ("<name>,0" in the registry until the spooler restarts) are left out
                 var registry = new[] { "Brother QL-800 (Unidrv),0", "Brother QL-570 (Unidrv)", "QL-800 Capture" };
                 var windows = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "brother ql-570 (unidrv)", "QL-800 Capture", "Microsoft Print to PDF" };
-                Check(string.Join("|", MainForm.Listed(registry, windows)) == "Brother QL-570 (Unidrv)|QL-800 Capture", "pending deletion left out, case ignored");
-                Check(MainForm.Listed(registry, null).Count() == 3, "Windows not asked: all registry printers");
+                Check(string.Join("|", QlPrinters.Listed(registry, windows)) == "Brother QL-570 (Unidrv)|QL-800 Capture", "pending deletion left out, case ignored");
+                Check(QlPrinters.Listed(registry, null).Count() == 3, "Windows not asked: all registry printers");
                 var listedNow = Spooler.ListedPrinters();
                 Check(listedNow != null && listedNow.Count > 0, "EnumPrinters lists this PC's printers");
-                Check(listedNow == null || MainForm.OurPrinters().All(listedNow.Contains), "our printers are all ones Windows lists");
+                Check(listedNow == null || QlPrinters.OurPrinters().All(listedNow.Contains), "our printers are all ones Windows lists");
 
                 // ARM64 special start: code integrity options and the boot's start options
                 string normal = " NOEXECUTE=OPTIN  HYPERVISORLAUNCHTYPE=AUTO  FVEBOOT=1074806784  NOVGA";
@@ -148,7 +177,18 @@ namespace QlLabels.Tests
                         "(Get-ErrorCode 'QL Label Formats or QL Label Maker is open (pid 12): save your changes'), (Get-ErrorCode 'Another setup is running on this PC: wait'), " +
                         "(Get-ErrorCode 'pnputil failed (-2146762495, 0x800B0109)'), (Get-ErrorCode 'Something else') -join ' '", Path.Combine(dir, "install-copy.ps1"));
                     Check(codes == "label-tool-open busy enforcement-on other", "install.ps1 error classes (" + codes + ")");
-                    Check(install.Contains("\"Global\\QLUnidrvInstall\"") && File.ReadAllText(Path.Combine(repo, @"labeltool\src\InstallForm.cs")).Contains("@\"Global\\QLUnidrvInstall\""),
+                    // -Settings failures (Printer setup): install.ps1's own texts, as thrown
+                    string settings = RunPowerShell(dir, FunctionFrom("Get-ErrorCode") +
+                        "@('No printer can be reached as \\\\PC\\QL-800. Check the name', \"Driver 'Brother QL-800 (Unidrv)' is not installed here: install\", " +
+                        "'The driver and the programs are not installed here: run Setup.exe', \"'X' is not a QL printer with this driver on this PC.\", " +
+                        "\"Only a printer on a USB port is shared here; 'X' uses IP_1\", \"Could not remove the printer 'X': busy\") | ForEach-Object { Get-ErrorCode $_ } | Out-String",
+                        Path.Combine(dir, "install-copy.ps1")).Replace("\r\n", " ").Trim();
+                    Check(settings == "share-unreachable no-driver no-driver not-ours share-usb-only remove-failed", "install.ps1 Printer setup error classes (" + settings + ")");
+                    Check(install.Contains("throw (\"No printer can be reached as $SharePort. Check"), "install.ps1: the share message SettingsReason reads the share from");
+                    // The setup window's sources are partial files (InstallForm.cs, InstallForm.Checks.cs, ...; SetupForm.cs, ...)
+                    string src = Path.Combine(repo, @"labeltool\src");
+                    var windowFiles = Directory.GetFiles(src, "InstallForm*.cs").Concat(Directory.GetFiles(src, "SetupForm*.cs")).ToList();
+                    Check(install.Contains("\"Global\\QLUnidrvInstall\"") && windowFiles.Any(f => File.ReadAllText(f).Contains("@\"Global\\QLUnidrvInstall\"")),
                           "install.ps1 and the setup window use the same one-run-at-a-time name");
                     Check(install.Contains("foreach ($c in $script:addedCerts)") && install.IndexOf("Get-StoreSigningThumbprints) -notcontains", StringComparison.Ordinal) > 0,
                           "install.ps1: certificates a failed run added are removed unless a stored package uses them");
@@ -171,13 +211,15 @@ namespace QlLabels.Tests
                           Regex.IsMatch(generated, "AssemblyInformationalVersion\\(\"" + Regex.Escape(release) + " \\(build \\d+\\.\\d+\\)\"\\)"),
                           "the exes' file and product version from labeltool\\version\\VERSION");
                     string setupScript = File.ReadAllText(Path.Combine(repo, @"tools\release\setup.ps1"));
-                    Check(SetupForm.RunFileNames.All(n => setupScript.Contains("\"" + n + "\"")), "setup.ps1 removes the same run files as the setup window");
+                    Check(ScriptRun.RunFileNames.All(n => setupScript.Contains("\"" + n + "\"")), "setup.ps1 removes the same run files as the setup window");
                     // Screenshot tools set InstallForm.Preview: every method that changes the PC either starts with the guard or
                     // only runs after the user clicked (install, uninstall, settings); a harness once left a RunOnce entry
                     var acting = new[] { "RunInstall", "RunUninstall", "RunSettings", "Uninstall", "StartUninstall", "RemoveTempCopy" };
-                    foreach (string file in new[] { "InstallForm.cs", "SetupForm.cs" })
+                    Check(windowFiles.Count >= 2, "the setup windows' source files found (" + windowFiles.Count + ")");
+                    foreach (string path in windowFiles)
                     {
-                        string[] lines = File.ReadAllLines(Path.Combine(repo, @"labeltool\src\" + file));
+                        string file = Path.GetFileName(path);
+                        string[] lines = File.ReadAllLines(path);
                         for (int i = 0; i < lines.Length; i++)
                         {
                             if (!System.Text.RegularExpressions.Regex.IsMatch(lines[i], @"SetValue\(|DeleteValue\(|store\.Remove\(|shutdown\.exe|File\.Delete\(|DeleteFileW\(\w") || lines[i].TrimStart().StartsWith("//") || lines[i].Contains(" extern ")) continue;
@@ -305,9 +347,7 @@ namespace QlLabels.Tests
         // answer, slow host (the window never waits longer than its limit)
         static void GoneShares()
         {
-            var oldNet = PublishedStatus.NetShare;
-            var oldQueue = PublishedStatus.Queue;
-            var oldHost = PublishedStatus.HostAnswers;
+            var restore = StatusState.Saved();   // the status readers back, and what was seen forgotten, at the end
             try
             {
                 Lang.Force("en");
@@ -339,10 +379,7 @@ namespace QlLabels.Tests
             }
             finally
             {
-                PublishedStatus.NetShare = oldNet;
-                PublishedStatus.Queue = oldQueue;
-                PublishedStatus.HostAnswers = oldHost;
-                PublishedStatus.ForgetShareChecks();
+                restore.Dispose();
                 Lang.Force("en");
             }
         }

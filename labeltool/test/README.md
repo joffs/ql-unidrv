@@ -1,20 +1,45 @@
 # Label tool tests
 
-`labeltool\build.cmd` runs the unit tests (`status_test`, `format_test`, `lang_test`, `setup_test`, `editor_test`,
-`barcode_test`) on every build. The scripts below open windows or print to a capture printer, so they run on their own:
+`labeltool\build.cmd` runs the unit tests (`status_test`, `format_test`, `lang_test`, `setup_test`, `editor_test`, `clipboard_test`,
+`barcode_test`, `parser_fuzz` quick: 200 mutated inputs per kind, about 4 s; `clipboard_replay`: every saved clipboard dump in `out\clipboard\<name>` through the paste decision, expected kind from the name, as COM data and as bytes, on ARM64 natively and as x64; skipped without dumps) and `check-colours.ps1` (every window colour comes from Theme) on every build. The scripts below open windows or print to a capture printer, so they run on their own:
 always through `out\tools\uitest\deskrun.exe` (a desktop of its own; your mouse and focus stay untouched; build it
 with `tools\uitest\build.cmd`).
+
+Several sessions at once: set `QL_TEST_OUT=<folder>` per session. It puts every script's test exe and output (and
+`build.cmd`'s unit test exes) into `<folder>\<test name>` instead of `out\<test name>`, so one session's running exe
+never blocks another's build, and deskrun gives each such folder a desktop of its own, so the sessions' UI tests run
+in parallel (runs on the same desktop take turns; a waiting run says who holds it). `QL_TOOLS_OUT` does the same for
+the programs. `refactor-snapshot.ps1` sets both to `<snapshot>\work` itself. What desktops still share is queued by
+locks a script names on its deskrun call (`--lock capture,clipboard,instances,settings`, see `tools\uitest\deskrun.cs`):
+`barcode_print.ps1` prints (`capture`), `status-window.ps1` tests the single status window (`instances`); a test of
+the clipboard takes `clipboard`, one that lets a program save its settings `settings`.
 
 | Command | What it checks |
 |---|---|
 | `powershell -File labeltool\test\ui_sweep.ps1` | UI sweep of QL Label Maker, below |
+| `powershell -File labeltool\test\shapes-ui.ps1` | QL Label Maker's tool groups, flyouts and shape panels, with and without tool names, the palette wrapped in a short window; German and English at 96 and 144 dpi through deskrun; nothing saved, no registry values; pictures in `out\shapes-ui` |
+| `powershell -File labeltool\test\setup-details.ps1 -Transcript <file> [-Ref <commit> -Tag before]` | QL Printer Setup's failure result for an unreachable share, closed and with "Show details", from a kept install.ps1 -Settings transcript; German and English at 96 and 144 dpi through deskrun; `-Ref` builds against that commit's sources (before/after shots); pictures in `out\mockups\setup-details` |
+| `powershell -File labeltool\test\help-shots.ps1 [-Name 0.20.0] [-Scales 100] [-Apply]` | The help pictures of both manuals taken again (the two `help\...\shots\make-shots.ps1`, a fixed 62 mm roll) and compared with the help's: `report.txt` and `index.html` (old, new, difference) in `out\help-shots\<name>`; with `-Apply` changed pictures are copied into the help (commit them yourself); `-CropOnly` cuts again from the last screenshots. Per release, before the zip |
 | `powershell -File labeltool\test\setup_states.ps1` | Setup.exe's finish views (ARM64 normal and key-7 start, app-only and driver update, after the restart, x64): restart note, key-7 step, buttons, the Uninstall link; nothing on the PC changes; pictures in `out\setup-states` |
 | `powershell -File labeltool\test\setup_open.ps1` | Printer setup opened with `--select` on 18 fake printers: the printer chosen (buttons on), a gone share marked whether the check answers at once or late (net 0, queue not SHARED); nothing on the PC changes; pictures in `out\setup-open` |
 | `powershell -File labeltool\test\status-window.ps1` | One status window per user session: F6 from two other programs brings one window to the front, F6 with no status program running starts QlPrinterStatus.exe, F6 puts the status window of another process above a maximised window; an event name of its own, nothing changes |
 | `powershell -File labeltool\test\formats-sweep.ps1` | QL Label Formats and QL Printer Status in light, dark and High Contrast, German and English, with live switches through the other schemes and back: main window, Printer setup and its dialogs, status cards (error, offline, OK), About, tray menu; pictures and `report.tsv` (heights over 690 px, solid black/white blocks) in `out\formats-sweep` |
-| `powershell -File labeltool\test\barcode_print.ps1` | Barcodes printed through the editor on "QL-800 Capture", decoded and measured; the barcode panel |
+| `powershell -File labeltool\test\setup_theme.ps1` | Setup.exe's pages in light, dark and High Contrast, German and English (preview mode, nothing changes); pictures in `out\setup-theme` |
+| `powershell -File labeltool\test\theme-shots.ps1` | Every program window in light and dark, German and English, plus shots after a live switch; scheme and language forced inside the test, nothing saved; pictures in `out\theme-shots` |
+| `powershell -File labeltool\test\dpi_move.ps1 [-Src <labeltool folder>] [-Mode same\|close]` | Real mixed DPI (needs a second screen with other scaling): every window moved 100 % ↔ other screen and opened directly on each; `states.txt` (dpi, sizes, font) and a picture per step, to compare two builds; a step that hangs is named. `-Mode same` tests the run on one screen |
+| `powershell -File labeltool\test\parser_fuzz.ps1 [-Count 3000] [-Seed 20261108]` | Fuzz test of the paste, drop and file parsers (EMF, EMF text and repair, RTF, SVG, DIB): mutated fixtures from a fixed seed plus hand-made worst cases; fails on any exception other than InvalidDataException or a call over 1 s; inputs of findings in `out\test\parser-fuzz\inputs` |
+| `powershell -File labeltool\test\runs-ui.ps1 [-Lang de,en]` | Words with their own format in QL Label Maker's text panel: `CHECK` lines and screenshots in German and English at 96 and 144 dpi through deskrun (`--lock clipboard`); needs the printer "QL-800 Capture"; pictures in `out\runs-ui` |
+| `powershell -File labeltool\test\wheel-ui.ps1 [-Src <folder>]` | Mouse-wheel zoom in QL Label Maker through deskrun: zooming around the pointer, with a panel number field focused, over the panel, and the tilt wheel, in German and English; changes nothing |
+| `powershell -File labeltool\test\fit-ui.ps1 [-Lang de,en] [-Src <folder>]` | "Larger than the label" bar and *Fit to label* in QL Label Maker through deskrun: a 10000 × 10000 px paste, fit, undo, ×, the next edit, a small picture, the object menu, a 680 px window, in German and English; changes nothing |
+| `out\test\labeltool_clipboard_replay.exe [<dumps folder>]` or `... --live` | The replay from the build on its own; `--live` reads the real clipboard read-only (each picture format's QueryGetData/GetData result, then the paste decision); for x64 start it with `cmd /c start "" /MACHINE amd64 /B /WAIT ...` |
+| `deskrun.exe settingchange_test.exe <QlLabelFormats.exe>` | Hang test of the status window while colour and High Contrast switches arrive (simulated; `--real-hc` only in Windows Sandbox); exit 3 = hang, 4 = a SystemEvents subscriber on the wrong thread |
+| `powershell -File labeltool\test\word-paste.ps1 [-Machine arm64\|amd64]` | **Overwrites the user's clipboard (only with their OK).** The installed QL Label Maker copies a text, a box and a QR code (its own Copy, through deskrun with `--lock clipboard`), Word via COM (invisible, own instance; stops if Word is already running) pastes it: type, image part (EMF or PNG), size (reported, not checked); the page as PDF, rendered at 600 dpi (`out\word-paste\copy-out-600dpi.png`), QR decoded, the label's font in the PDF; Word saves nothing |
+| `powershell -File labeltool\test\arch-check.ps1` | ARM64 PC: the architecture-dependent paths both as x64 and natively as ARM64 (the manifest's `supportedArchitectures`): QL Label Formats' test print and a QL Label Maker print on "QL-800 Capture" byte-identical (`--lock capture`), the printing preferences window (natively only: as x64 it opens through splwow64 on the user's desktop), the printer status read |
+| `powershell -File labeltool\test\barcode_print.ps1` | Barcodes printed through the editor on "QL-800 Capture", decoded and measured (`--lock capture`); the barcode panel and stale paint while moving codes (`barcode_ui.cs`) |
 | `powershell -File labeltool\test\editor_spike.ps1` | The editor's print path dot for dot |
 | `powershell -File labeltool\test\custom_length_spike.ps1` | Custom lengths through the driver |
+| `powershell -File labeltool\test\refactor-snapshot.ps1 [-Out <folder>]` | For refactoring: builds with a fixed build stamp and saves unit test output, every type and member (signature, IL size), the German texts and the pictures and .prn files of the tests above in one folder (about 25 minutes) |
+| `powershell -File labeltool\test\refactor-compare.ps1 -After <folder>` | Compares two snapshots: member list, texts, pictures pixel by pixel, .prn files byte by byte; exit code = differences |
 
 Needs for the barcode checks: Python with `zxing-cpp` and `numpy` (`pip install --user zxing-cpp`), the printer
 "QL-800 Capture" (`driver\install.ps1 -TestPrinter`; nothing comes out of a real printer).

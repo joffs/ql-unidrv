@@ -35,8 +35,8 @@
         <dl class="terms">
           <dt>Supported</dt><dd>PNG (also with transparency), JPG/JPEG, BMP, GIF (an animation: its first frame),
             TIF/TIFF (the first page), WebP (an animation: its first frame), HEIC/HEIF (phone photos), PDF (the first
-            page), SVG (stays sharp at any size); with <span class="ui">All files</span> also ICO and EMF/WMF (turned
-            into pixels)</dd>
+            page), SVG (stays sharp at any size); with <span class="ui">All files</span> also ICO, WMF (turned
+            into pixels) and EMF (stays a drawing)</dd>
           <dt>Not in SVG</dt><dd>text along a line and vertical text (convert it to paths in your drawing
             program first), filters, masks, links to other files</dd>
         </dl>
@@ -63,9 +63,10 @@
     <li>
       <div class="step">
         <h2 id="black-and-white">Black and white</h2>
-        <figure class="frame" style="max-width:368px"><img src="../img/en/pictures-panel.png" width="348" height="285" alt="Picture settings: Black and white Dither, Invert, Replace, Original proportions, position, size and rotation"></figure>
+        <figure class="frame" style="max-width:368px"><img src="../img/en/pictures-panel.png" width="348" height="320" alt="Picture settings: Black and white Dither, Invert, Replace, Original proportions, Fit to label, position, size and rotation"></figure>
         <dl class="terms">
-          <dt>Dither (photos, shades)</dt><dd>Grey areas become fine dot patterns. Good for photos and gradients.</dd>
+          <dt>Dither (photos, shades)</dt><dd>Grey areas become fine dot patterns. Good for photos and gradients.
+            Almost black (90 % or more) prints solid black, almost white (under 10 %) stays white.</dd>
           <dt>Threshold (logos, drawings)</dt><dd>Everything darker than the slider becomes black, the rest white. Good
             for sharp edges.</dd>
           <dt>Invert (white on black)</dt><dd>swaps black and white.</dd>
@@ -78,8 +79,38 @@
       <div class="step">
         <h2 id="replace-and-proportions">Replace and proportions</h2>
         <p><span class="ui">Replace...</span> swaps the picture for another file. <span class="ui">Original
-          proportions</span> restores the proportions of the picture file.</p>
+          proportions</span> restores the proportions of the picture file. <span class="ui">Fit to label</span> makes
+          the picture as large as the label's printable area, in proportion, and centres it (also in the right-click
+          menu, there for several selected pictures together).</p>
       </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="paste-and-drop">Paste and drag in</h2>
+        <p>Copy a picture in another program and paste it with <span class="path">Edit &gt; Paste</span>, or drag
+          picture files from Explorer onto the label. Drawings from CorelDRAW, Affinity, Word and other programs stay
+          drawings (SVG or EMF) and print sharp at any size; photos and screenshots come in as pictures. Pasted and
+          dragged-in pictures keep their size (1:1), even when they are bigger than the label; then a bar over the label
+          says <span class="ui">Larger than the label.</span> and offers <span class="ui">Fit to label</span>. A pasted picture goes
+          into the middle of the label; dragged files land where you drop them, several side by side. A
+          dragged .qllabel file opens.</p>
+        <p>Objects you copy here paste into Word, Affinity, Inkscape and other programs as a drawing (EMF): text stays
+          text with its font, lines and shapes stay sharp; pictures and barcodes come as they print.</p>
+        <p>Copied text becomes a text object (several lines: a paragraph text). Text from CorelDRAW keeps its font, size,
+          bold, italic and place, also words in another format (then it is a paragraph text); if a font isn't installed here, a substitute is used and
+          the status bar names the font. Text from Word, WordPad, Outlook and other programs that copy formatted text keeps its fonts, sizes, bold, italic
+          and underline (not its colours). From other programs only the text comes in, without its fonts. A drawing with
+          text in it stays a drawing (its text in the right place, also from CorelDRAW) and the status bar says so; <span class="path">Edit &gt; Paste as plain text</span>
+          takes the text instead.</p>
+        <figure class="frame" style="max-width:314px"><img src="../img/en/edit-menu.png" width="294" height="220" alt="Edit menu: Undo, Redo, Cut, Copy, Paste, Paste as plain text, Duplicate, Delete, Select all"></figure>
+        <p>Web addresses are never opened: from a browser only a picture that is on the clipboard itself is used.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>V</kbd></span><span>paste</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd></span><span>paste as plain text</span></div>
+      </aside>
     </li>
   </ul>
 
@@ -92,7 +123,7 @@
     </div>
   </aside>
 
-  <nav class="pager" aria-label="Pages"><a href="lines-boxes.html">← Lines and boxes</a><a href="codes.html">Next: Barcodes and QR codes →</a></nav>
+  <nav class="pager" aria-label="Pages"><a href="lines-boxes.html">← Lines and shapes</a><a href="codes.html">Next: Barcodes and QR codes →</a></nav>
 </div></section>
 </main>
 

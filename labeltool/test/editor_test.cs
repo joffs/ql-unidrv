@@ -25,6 +25,7 @@ namespace QlLabels.Tests
         {
             Lang.Force("en");
             RoundTrip();
+            Shapes();
             Rotation();
             Tilt();
             Render();
@@ -51,6 +52,7 @@ namespace QlLabels.Tests
             LineSnap();
             Gs1Ui();
             LineAngleLength();
+            TextRuns();
             Console.WriteLine(failures == 0 ? "editor_test: all OK" : "editor_test: " + failures + " failure(s)");
             return failures == 0 ? 0 : 1;
         }
@@ -125,16 +127,16 @@ namespace QlLabels.Tests
             Check(f1(new LabelObject[] { new TextObject(), new TextObject() }) == "text.html", "F1: texts");
             Check(f1(new LabelObject[] { new ImageObject() }) == "pictures.html", "F1: picture");
             Check(f1(new LabelObject[] { new BarcodeObject() }) == "codes.html", "F1: code");
-            Check(f1(new LabelObject[] { new LineObject(), new BoxObject() }) == "lines-boxes.html", "F1: line and box");
-            Check(f1(new LabelObject[] { new TextObject(), new BoxObject() }) == "index.html", "F1: several kinds: contents");
+            Check(f1(new LabelObject[] { new LineObject(), new ShapeObject() }) == "lines-boxes.html", "F1: line and box");
+            Check(f1(new LabelObject[] { new TextObject(), new ShapeObject() }) == "index.html", "F1: several kinds: contents");
 
             // the printer preselected: Windows' default when it is a QL printer, else the first by name
             var qls = new[] { "QL-800 b", "Brother QL-570 (Unidrv)", "QL-800 Capture" };
-            Check(string.Join("|", MainForm.InOrder(qls, "QL-800 Capture")) == "QL-800 Capture|Brother QL-570 (Unidrv)|QL-800 b",
-                  "printers: Windows' default first: " + string.Join("|", MainForm.InOrder(qls, "QL-800 Capture")));
-            Check(string.Join("|", MainForm.InOrder(qls, "Microsoft Print to PDF")) == "Brother QL-570 (Unidrv)|QL-800 b|QL-800 Capture",
+            Check(string.Join("|", QlPrinters.InOrder(qls, "QL-800 Capture")) == "QL-800 Capture|Brother QL-570 (Unidrv)|QL-800 b",
+                  "printers: Windows' default first: " + string.Join("|", QlPrinters.InOrder(qls, "QL-800 Capture")));
+            Check(string.Join("|", QlPrinters.InOrder(qls, "Microsoft Print to PDF")) == "Brother QL-570 (Unidrv)|QL-800 b|QL-800 Capture",
                   "printers: another default: by name");
-            Check(MainForm.InOrder(qls, null).First() == "Brother QL-570 (Unidrv)", "printers: no default: by name");
+            Check(QlPrinters.InOrder(qls, null).First() == "Brother QL-570 (Unidrv)", "printers: no default: by name");
 
             // 40 stripes across 20 mm (0.5 mm each = 6 dots): the vector shows them; its preview here is a single grey pixel.
             var svg = new System.Text.StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 10\">");
@@ -201,6 +203,99 @@ namespace QlLabels.Tests
         }
 
         // A dragged line end: 45° steps within 5°, Shift every 15°, the distance along the step kept; the angle shown.
+        // Step 4: words with their own format. Runs keep only what differs, join to the text, survive the file and Clone;
+        // a text changed without them (an older program) drops them; SetRuns takes the most frequent format as the object's.
+        static void TextRuns()
+        {
+            var t = new TextObject { Font = "Arial", Size = 10, Kind = TextKind.Frame };
+            t.SetRuns(new[] { new TextRun("Schrauben "), new TextRun("M4", bold: true), new TextRun(" verzinkt\n"), new TextRun("100 Stück", size: 8) });
+            Check(t.Text == "Schrauben M4 verzinkt\n100 Stück" && t.Font == "Arial" && t.Size == 10 && !t.Bold, "runs: text joined, object format kept: " + t.Size);
+            Check(t.Runs != null && t.Runs.Count == 4 && t.Runs[1].Bold == true && t.Runs[1].Font == null && t.Runs[0].Plain && t.Runs[3].Size == 8,
+                  "runs: only the differences: " + (t.Runs == null ? "null" : t.Runs.Count.ToString()));
+            var doc = new LabelDoc();
+            doc.Objects.Add(t);
+            string json = doc.ToJson();
+            Check(json.Contains("\"runs\":[{\"t\":\"Schrauben \"},{\"t\":\"M4\",\"bold\":true}"), "runs: JSON: " + json);
+            var back = (TextObject)LabelDoc.FromJson(json).Objects[0];
+            Check(back.Runs != null && back.Runs.Count == 4 && back.Text == t.Text && LabelDoc.FromJson(json).ToJson() == json, "runs: round trip");
+            var copy = (TextObject)t.Clone();
+            copy.SetRuns(new[] { new TextRun("other") });
+            Check(t.Runs.Count == 4 && copy.Runs == null && copy.Text == "other", "runs: a clone changes its own runs only");
+
+            // An older program changed the text and kept the runs: they no longer fit and are dropped.
+            var stale = LabelDoc.FromJson(json.Replace("\"text\":\"Schrauben M4", "\"text\":\"Muttern M4"));
+            Check(((TextObject)stale.Objects[0]).Runs == null, "runs: stale runs dropped on opening");
+            t.Text = "typed over";
+            Check(t.FormatRuns == null && !doc.ToJson().Contains("\"runs\""), "runs: a changed text writes no runs");
+
+            // SetRuns with filled runs (EMF text): the most frequent format becomes the object's; one format, no runs.
+            var e = new TextObject();
+            e.SetRuns(new[] { new TextRun("Kopf ", "Arial", 14, true, false, false), new TextRun("langer Rest der Zeile", "Arial", 9, false, false, false) });
+            Check(e.Font == "Arial" && e.Size == 9 && !e.Bold && e.Runs.Count == 2 && e.Runs[0].Size == 14 && e.Runs[0].Bold == true && e.Runs[1].Plain,
+                  "runs: SetRuns picks the main format: " + e.Size);
+            e.SetRuns(new[] { new TextRun("a", "Arial", 9, false, false, false), new TextRun("b", "Arial", 9, false, false, false), new TextRun("") });
+            Check(e.Runs == null && e.Text == "ab", "runs: one format, no runs");
+            var full = new TextObject { Font = "Arial", Size = 9 };
+            full.SetRuns(new[] { new TextRun("x "), new TextRun("y", italic: true) });
+            var f = full.FullRuns();
+            Check(f.Count == 2 && f[1].Italic == true && f[1].Font == "Arial" && f[1].Size == 9 && f[0].Italic == false, "runs: FullRuns fills every field");
+            Check(TextRunFromBadJson(), "runs: damaged runs dropped");
+
+            // Editing as the text box does it: typing takes the format before it, a range gets a format, mixed is null.
+            var ed = new TextObject { Font = "Arial", Size = 10, Kind = TextKind.Frame };
+            ed.SetRuns(new[] { new TextRun("ab "), new TextRun("CD", bold: true), new TextRun(" ef") });
+            var fr = ed.FullRuns();
+            ed.SetRuns(RunEdit.Splice(fr, 5, 0, "X", RunEdit.Common(fr, 5, 0)));   // typed right after "CD"
+            Check(ed.Text == "ab CDX ef" && ed.Runs.Count == 3 && ed.Runs[1].Text == "CDX", "runs edit: typing continues the bold word");
+            fr = ed.FullRuns();
+            ed.SetRuns(RunEdit.Splice(fr, 2, 4, "", null));   // " CDX" deleted
+            Check(ed.Text == "ab ef" && ed.Runs == null, "runs edit: deleting the bold word leaves one format");
+            fr = ed.FullRuns();
+            ed.SetRuns(RunEdit.Restyle(fr, 3, 2, r => new TextRun(r.Text, r.Font, 14, r.Bold, r.Italic, r.Underline)));
+            Check(ed.Runs != null && ed.Runs.Count == 2 && ed.Runs[1].Text == "ef" && ed.Runs[1].Size == 14 && ed.Size == 10, "runs edit: a range gets a size");
+            var mixed = RunEdit.Common(ed.FullRuns(), 0, 5);
+            Check(mixed.Size == null && mixed.Bold == false && mixed.Font == "Arial", "runs edit: mixed size is null, the shared values stay");
+            var crlf = new TextObject { Text = "a\r\nb" };
+            Check(string.Concat(RunEdit.Normalized(crlf.FullRuns()).Select(r => r.Text)) == "a\nb", "runs edit: an older text's CR LF as the text box's LF");
+            Check(RunEdit.Common(new List<TextRun>(), 0, 0) == null && RunEdit.Common(ed.FullRuns(), 0, 0).Size == 10, "runs edit: at the start the first character's format");
+
+            // Drawn: a bold word adds ink, a larger run makes a single line taller, wrapping keeps "M4," together.
+            var layout = LabelLayout.Estimate(Continuous62(30), false, false);
+            Func<TextObject, int> ink = o =>
+            {
+                var d = new LabelDoc();
+                d.Objects.Add(o);
+                int n = 0;
+                using (var bmp = EditorRender.Render(d, layout))
+                    for (int y = 0; y < bmp.Height; y++) for (int x = 0; x < bmp.Width; x++) n += Black(bmp, x, y);
+                return n;
+            };
+            Func<IEnumerable<TextRun>, TextObject> make = r =>
+            {
+                var o = new TextObject { X = 2, Y = 2, Font = "Arial", Size = 12 };
+                o.SetRuns(r);
+                EditorRender.FitBox(o);
+                return o;
+            };
+            var plainT = make(new[] { new TextRun("Schrauben M4 verzinkt") });
+            var boldT = make(new[] { new TextRun("Schrauben "), new TextRun("M4", bold: true), new TextRun(" verzinkt") });
+            var bigT = make(new[] { new TextRun("Schrauben "), new TextRun("M4", size: 24), new TextRun(" verzinkt") });
+            Check(boldT.Runs != null && ink(boldT) > ink(plainT) && boldT.W >= plainT.W, "runs drawn: bold adds ink, not narrower: " + ink(plainT) + " " + ink(boldT));
+            Check(bigT.H > plainT.H * 1.5 && bigT.W > plainT.W, "runs drawn: a larger run makes the line taller: " + plainT.H + " " + bigT.H);
+            Check(!EditorRender.Overflows(new TextObject { Text = "x", Kind = TextKind.Frame, W = 20, H = 10 }), "runs: a plain frame still fits");
+            var frameT = new TextObject { X = 2, Y = 2, W = 14, H = 30, Font = "Arial", Size = 10, Kind = TextKind.Frame };
+            frameT.SetRuns(new[] { new TextRun("aaaa "), new TextRun("M4", bold: true), new TextRun(", bbbb cccc dddd") });
+            var lines = EditorRender.LinesOf(frameT);
+            Check(lines.Any(l => l.Contains("M4,")) && lines.All(l => !l.EndsWith("M4")), "runs: wrapping keeps a word across formats together: " + string.Join("|", lines));
+        }
+
+        static bool TextRunFromBadJson()
+        {
+            string bad = "{\"format\":\"QL label\",\"version\":2,\"objects\":[{\"type\":\"text\",\"text\":\"ab\",\"runs\":[{\"t\":\"a\"},5]}]}";
+            try { return ((TextObject)LabelDoc.FromJson(bad).Objects[0]).Runs == null; }
+            catch (Exception) { return false; }
+        }
+
         static void LineSnap()
         {
             var o = new PointF(10, 20);
@@ -306,7 +401,7 @@ namespace QlLabels.Tests
         static void RenderPart()
         {
             var doc = new LabelDoc();
-            doc.Objects.Add(new BoxObject { X = 2, Y = 2, W = 60, H = 40, Thickness = 0.5 });
+            doc.Objects.Add(new ShapeObject { X = 2, Y = 2, W = 60, H = 40, Thickness = 0.5 });
             doc.Objects.Add(new BarcodeObject { Kind = Symbology.Qr, X = 30, Y = 8, W = 15, H = 15, Data = "part" });
             doc.Objects.Add(new TextObject { X = 8, Y = 10, W = 20, H = 8, Text = "Regal 3", Size = 14, Bold = true });
             doc.Objects.Add(new LineObject { X = 5, Y = 30, W = 40, H = 0, Thickness = 0.5 });
@@ -774,7 +869,7 @@ namespace QlLabels.Tests
             var doc = new LabelDoc { FormName = "Test 62", PaperId = 259, Length01 = 500 };
             doc.Objects.Add(new TextObject { X = 5, Y = 4, W = 30, H = 8, Text = "Hallo\nÄÖÜ ß \"x\"", Size = 14, Bold = true, Align = TextAlign.Center, Rotation = 90 });
             doc.Objects.Add(new LineObject { X = 1, Y = 2, W = 40, H = 0, Thickness = 0.8, Rising = true });
-            doc.Objects.Add(new BoxObject { X = 3, Y = 3, W = 10, H = 10, Filled = true, Ellipse = true });
+            doc.Objects.Add(new ShapeObject { X = 3, Y = 3, W = 10, H = 10, Filled = true, Kind = ShapeKind.Ellipse });
             doc.Objects.Add(new ImageObject { X = 20, Y = 10, W = 5, H = 5, Png = new byte[] { 1, 2, 3 }, Mode = ImageMode.Threshold, Threshold = 90, Invert = true });
             string json = doc.ToJson();
             var back = LabelDoc.FromJson(json);
@@ -806,9 +901,82 @@ namespace QlLabels.Tests
             Check(n.Skipped == 1 && n.Objects.Count == 1 && n.Objects[0].Rotation == 90, "unknown object skipped, rotation normalised");
             string again = n.ToJson();
             Check(again.Contains("\"colour\":\"red\"") && again.Contains("\"glow\":7"), "unknown fields kept: " + again);
+            Check(!n.Newer && !LabelDoc.FromJson("{\"format\":\"QL label\",\"objects\":[]}").Newer, "version 2 and none: not newer");
+
+            // 0.21 safeguard: a version 3 file; its unknown objects are kept (not shown) and written back at their place
+            string v3 = "{\"format\":\"QL label\",\"version\":3,\"label\":{\"form\":\"X\",\"paperId\":271,\"length01\":898},\"objects\":[" +
+                        "{\"type\":\"line\",\"x\":1,\"y\":2,\"w\":10,\"h\":0,\"rot\":0,\"thickness\":0.5,\"rising\":false}," +
+                        "{\"type\":\"curve\",\"points\":[[1,2],[3,4]],\"style\":{\"dash\":true}}," +
+                        "{\"type\":\"box\",\"x\":1,\"y\":2,\"w\":3,\"h\":4,\"rot\":0}," +
+                        "{\"type\":\"hologram\",\"x\":5}]}";
+            var three = LabelDoc.FromJson(v3);
+            Check(three.Newer && three.FileVersion == 3 && three.Skipped == 2 && three.Objects.Count == 2, "version 3: newer, two unknown objects not shown");
+            string saved = three.ToJson();
+            var types = System.Text.RegularExpressions.Regex.Matches(saved, "\"type\":\"(\\w+)\"").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Value).ToList();
+            Check(string.Join(",", types) == "line,curve,box,hologram", "version 3: unknown objects written back at their places: " + string.Join(",", types));
+            Check(saved.Contains("\"points\":[[1,2],[3,4]]") && saved.Contains("\"style\":{\"dash\":true}"), "version 3: unknown objects unchanged: " + saved);
+            var edited = three.Clone();
+            edited.Objects.RemoveAt(0);   // the line deleted: the curve comes first now
+            var after = System.Text.RegularExpressions.Regex.Matches(edited.ToJson(), "\"type\":\"(\\w+)\"").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Value);
+            Check(after.Count() == 3 && after.Contains("curve") && after.Contains("hologram"), "version 3: after an edit the unknown objects are still there: " + string.Join(",", after));
+            Check(LabelDoc.FromJson(saved).ToJson() == saved, "version 3: a second round trip gives the same JSON");
             bool threw = false;
             try { LabelDoc.FromJson("{\"objects\":[]}"); } catch (Exception) { threw = true; }
             Check(threw, "a file without the format marker is refused");
+        }
+
+        // ---------- shapes (editor-next step 3): file keys, version 2, regular proportions, drawing ----------
+        static void Shapes()
+        {
+            var doc = new LabelDoc();
+            doc.Objects.Add(new ShapeObject { X = 1, Y = 1, W = 20, H = 10, Radius = 2 });
+            doc.Objects.Add(new ShapeObject { X = 1, Y = 1, W = 20, H = 10, Kind = ShapeKind.Ellipse, Radius = 2 });
+            doc.Objects.Add(new ShapeObject { X = 1, Y = 1, W = 20, H = 10, Kind = ShapeKind.Triangle, Filled = true });
+            doc.Objects.Add(new ShapeObject { X = 1, Y = 1, W = 20, H = 10, Kind = ShapeKind.Polygon, Sides = 8 });
+            doc.Objects.Add(new ShapeObject { X = 1, Y = 1, W = 20, H = 10, Kind = ShapeKind.Star, Points = 7, Inner = 30 });
+            string json = doc.ToJson();
+            Check(json.Contains("\"version\":2"), "shapes: the file is version 2");
+            Check(json.Contains("\"type\":\"box\",\"x\":1,\"y\":1,\"w\":20,\"h\":10,\"rot\":0,\"thickness\":0.5,\"filled\":false,\"ellipse\":false,\"radius\":2"),
+                  "shapes: a rectangle stays a box, + radius: " + json);
+            Check(json.Contains("\"ellipse\":true}"), "shapes: an ellipse is a box without radius");
+            Check(json.Contains("\"type\":\"shape\"") && json.Contains("\"shape\":\"triangle\"") && json.Contains("\"corners\":8") &&
+                  json.Contains("\"points\":7,\"inner\":30"), "shapes: triangle, polygon, star as type shape");
+            var back = LabelDoc.FromJson(json);
+            Check(back.ToJson() == json, "shapes: round trip gives the same JSON");
+            var k = back.Objects.Cast<ShapeObject>().ToList();
+            Check(k[0].Kind == ShapeKind.Rectangle && k[0].Radius == 2 && k[1].Kind == ShapeKind.Ellipse && k[2].Kind == ShapeKind.Triangle && k[2].Filled &&
+                  k[3].Kind == ShapeKind.Polygon && k[3].Sides == 8 && k[4].Kind == ShapeKind.Star && k[4].Points == 7 && k[4].Inner == 30, "shapes: fields back");
+            // A version 1 box; a shape name of a newer version (its corners); values out of range
+            var old = LabelDoc.FromJson("{\"format\":\"QL label\",\"version\":1,\"objects\":[{\"type\":\"box\",\"x\":1,\"y\":2,\"w\":3,\"h\":4,\"ellipse\":true}," +
+                                        "{\"type\":\"shape\",\"shape\":\"heart\",\"corners\":99,\"x\":1,\"y\":2,\"w\":3,\"h\":4}," +
+                                        "{\"type\":\"shape\",\"shape\":\"star\",\"points\":1,\"inner\":500,\"radius\":-3,\"x\":1,\"y\":2,\"w\":3,\"h\":4}]}");
+            var o = old.Objects.Cast<ShapeObject>().ToList();
+            Check(o.Count == 3 && o[0].Kind == ShapeKind.Ellipse && o[0].Radius == 0, "shapes: a version 1 ellipse");
+            Check(o[1].Kind == ShapeKind.Polygon && o[1].Sides == 20, "shapes: an unknown shape is a polygon, corners at most 20");
+            Check(o[2].Kind == ShapeKind.Star && o[2].Points == 3 && o[2].Inner == 90 && o[2].Radius == 0, "shapes: points, inner and radius limited");
+
+            // Shift while dragging: these proportions are regular
+            Func<ShapeKind, int, double> ratio = (kind, n) => new ShapeObject { Kind = kind, Sides = n, Points = n }.NaturalRatio;
+            Check(ratio(ShapeKind.Rectangle, 0) == 1 && ratio(ShapeKind.Ellipse, 0) == 1, "shapes: square and circle");
+            Check(Math.Abs(ratio(ShapeKind.Triangle, 0) - 2 / Math.Sqrt(3)) < 1e-6, "shapes: equilateral triangle " + ratio(ShapeKind.Triangle, 0));
+            Check(Math.Abs(ratio(ShapeKind.Polygon, 4) - 1) < 1e-6 && Math.Abs(ratio(ShapeKind.Polygon, 6) - Math.Sqrt(3) / 2) < 1e-6, "shapes: square on its corner, hexagon point up");
+
+            // Drawn: the outline stays inside the box, also at the triangle's point; a filled star is black in its middle only
+            var layout = LabelLayout.Estimate(Continuous62(50), false, false);
+            Func<Bitmap, double, double, int> at = (bmp, x, y) =>
+                Black(bmp, (int)Math.Round((x - layout.Printable.X) * layout.DpiX / 25.4), (int)Math.Round((y - layout.Printable.Y) * layout.DpiY / 25.4));
+            var draw = new LabelDoc();
+            double h = Math.Round(20 / (2 / Math.Sqrt(3)), 2);   // 17.32
+            draw.Objects.Add(new ShapeObject { X = 10, Y = 10, W = 20, H = h, Kind = ShapeKind.Triangle, Thickness = 1 });
+            draw.Objects.Add(new ShapeObject { X = 35, Y = 10, W = 20, H = 19, Kind = ShapeKind.Star, Filled = true });
+            draw.Objects.Add(new ShapeObject { X = 10, Y = 32, W = 20, H = 10, Thickness = 1, Radius = 4 });
+            using (var bmp = EditorRender.Render(draw, layout))
+            {
+                Check(at(bmp, 20, 10 + h - 0.4) == 1 && at(bmp, 20, 10 + h + 0.4) == 0 && at(bmp, 20, 20) == 0, "shapes: triangle outline inside, middle empty");
+                Check(at(bmp, 20, 10.7) == 1 && at(bmp, 20, 9.6) == 0, "shapes: the triangle's point stays inside the box");
+                Check(at(bmp, 45, 20) == 1 && at(bmp, 36, 11) == 0 && at(bmp, 45, 10.4) == 1, "shapes: filled star");
+                Check(at(bmp, 20, 32.4) == 1 && at(bmp, 10.4, 32.4) == 0 && at(bmp, 10.4, 37) == 1, "shapes: round corners, square edges between");
+            }
         }
 
         // ---------- custom sizes: Unidrv reports the side margin on the left only, the label prints centred ----------
@@ -851,12 +1019,12 @@ namespace QlLabels.Tests
             var invertedInside = new TextObject { Text = "Text", Size = 12, Invert = true, X = p.Left + EditorRender.InvertPad + 0.3, Y = p.Top + 10, W = 20, H = 6 };
             Check(!hint(invertedInside), "margin: an inverted text with its black box inside gives no hint");
             // a filled 10 mm box turned 45°: its corner reaches (10√2 - 10) / 2 = 2.07 mm above its box
-            var turned = new BoxObject { X = p.Left + 10, Y = p.Top + 1, W = 10, H = 10, Filled = true, Tilt = 45 };
-            var straight = new BoxObject { X = p.Left + 10, Y = p.Top + 1, W = 10, H = 10, Filled = true };
-            var turnedInside = new BoxObject { X = p.Left + 10, Y = p.Top + 2.5, W = 10, H = 10, Filled = true, Tilt = 45 };
+            var turned = new ShapeObject { X = p.Left + 10, Y = p.Top + 1, W = 10, H = 10, Filled = true, Tilt = 45 };
+            var straight = new ShapeObject { X = p.Left + 10, Y = p.Top + 1, W = 10, H = 10, Filled = true };
+            var turnedInside = new ShapeObject { X = p.Left + 10, Y = p.Top + 2.5, W = 10, H = 10, Filled = true, Tilt = 45 };
             Check(hint(turned) && !hint(straight) && !hint(turnedInside), "margin: a turned box's corner in the margin gives the hint, inside none");
             // beyond the label counts there, not here
-            var beyond = new BoxObject { X = 45, Y = 20, W = 20, H = 10, Filled = true };
+            var beyond = new ShapeObject { X = 45, Y = 20, W = 20, H = 10, Filled = true };
             Check(!hint(beyond) && beyondHint(beyond), "margin: an object beyond the label is counted there, not twice");
             // an inverted text whose black box (not its glyphs) crosses the label's left edge: beyond
             var invertedEdge = new TextObject { Text = "Text", Size = 12, Invert = true, X = EditorRender.InvertPad - 0.5, Y = p.Top + 10, W = 20, H = 6 };
@@ -872,10 +1040,10 @@ namespace QlLabels.Tests
         static void Outside()
         {
             var layout = LabelLayout.Estimate(Continuous62(50), false, false);   // 50 x 62 mm, shown along
-            var inside = new BoxObject { X = 5, Y = 5, W = 20, H = 10, Filled = true };
-            var edge = new BoxObject { X = 40, Y = 5, W = 10, H = 10, Filled = true };              // right edge on the label's
-            var partly = new BoxObject { X = 45, Y = 20, W = 20, H = 10, Filled = true };           // 15 mm beyond
-            var away = new BoxObject { X = 60, Y = 70, W = 10, H = 10, Filled = true };             // all beyond
+            var inside = new ShapeObject { X = 5, Y = 5, W = 20, H = 10, Filled = true };
+            var edge = new ShapeObject { X = 40, Y = 5, W = 10, H = 10, Filled = true };              // right edge on the label's
+            var partly = new ShapeObject { X = 45, Y = 20, W = 20, H = 10, Filled = true };           // 15 mm beyond
+            var away = new ShapeObject { X = 60, Y = 70, W = 10, H = 10, Filled = true };             // all beyond
             Check(!EditorRender.Beyond(inside, layout) && !EditorRender.Beyond(edge, layout) && EditorRender.Beyond(partly, layout) &&
                   EditorRender.Beyond(away, layout), "beyond the label");
             var doc = new LabelDoc();
@@ -898,7 +1066,7 @@ namespace QlLabels.Tests
         // ---------- stacking order (layer commands) ----------
         static void Layers()
         {
-            var o = Enumerable.Range(0, 5).Select(i => (LabelObject)new BoxObject { X = i }).ToList();
+            var o = Enumerable.Range(0, 5).Select(i => (LabelObject)new ShapeObject { X = i }).ToList();
             Func<LabelDoc, string> order = d => string.Concat(d.Objects.Select(x => (int)x.X));
             Func<LabelDoc> fresh = () => { var d = new LabelDoc(); d.Objects.AddRange(o); return d; };
             var doc = fresh();
@@ -929,7 +1097,7 @@ namespace QlLabels.Tests
 
         static void Rotation()
         {
-            var b = new BoxObject { X = 10, Y = 5, W = 20, H = 6 };
+            var b = new ShapeObject { X = 10, Y = 5, W = 20, H = 6 };
             b.Rotate90();
             Check(b.Rotation == 90 && Math.Abs(b.W - 6) < 1e-9 && Math.Abs(b.H - 20) < 1e-9 && Math.Abs(b.X - 17) < 1e-9 && Math.Abs(b.Y + 2) < 1e-9, "rotate 90 about the centre");
             b.Rotate90(); b.Rotate90(); b.Rotate90();
@@ -1018,7 +1186,7 @@ namespace QlLabels.Tests
         // ---------- free rotation ----------
         static void Tilt()
         {
-            var b = new BoxObject { X = 10, Y = 5, W = 20, H = 6, Filled = true };
+            var b = new ShapeObject { X = 10, Y = 5, W = 20, H = 6, Filled = true };
             b.SetAngle(30);
             Check(b.Rotation == 0 && b.Tilt == 30 && b.Angle == 30 && b.W == 20, "30°: no quarter turn, tilted");
             b.SetAngle(120);
@@ -1041,7 +1209,7 @@ namespace QlLabels.Tests
             var doc = new LabelDoc();
             doc.Objects.Add(b);
             string json = doc.ToJson();
-            var back = (BoxObject)LabelDoc.FromJson(json).Objects[0];
+            var back = (ShapeObject)LabelDoc.FromJson(json).Objects[0];
             Check(json.Contains("\"tilt\":45") && back.Tilt == 45 && back.Rotation == 0 && back.Angle == 45, "tilt saved and read back");
             b.SetAngle(0);
             Check(!doc.ToJson().Contains("tilt"), "no tilt, no tilt in the file");
@@ -1179,7 +1347,7 @@ namespace QlLabels.Tests
                   "estimated 62 x 50 layout: " + layout.DotsX + " x " + layout.DotsY);
             var doc = new LabelDoc();
             // A filled box 10 x 5 mm at 10 mm / 10 mm on the label.
-            doc.Objects.Add(new BoxObject { X = 10, Y = 10, W = 10, H = 5, Filled = true });
+            doc.Objects.Add(new ShapeObject { X = 10, Y = 10, W = 10, H = 5, Filled = true });
             using (var bmp = EditorRender.Render(doc, layout))
             {
                 var r = EditorRender.DotRect(doc.Objects[0], layout);
@@ -1222,7 +1390,7 @@ namespace QlLabels.Tests
             var layout = LabelLayout.Estimate(Continuous62(50), true, false);
             Check(layout.DpiX == 600 && layout.DpiY == 300 && Math.Abs(layout.DotsX - 44 * 600 / 25.4) <= 3, "300 x 600 layout");
             var doc = new LabelDoc();
-            doc.Objects.Add(new BoxObject { X = 10, Y = 10, W = 10, H = 5, Filled = true });
+            doc.Objects.Add(new ShapeObject { X = 10, Y = 10, W = 10, H = 5, Filled = true });
             using (var bmp = EditorRender.Render(doc, layout))
             {
                 var r = EditorRender.DotRect(doc.Objects[0], layout);
@@ -1245,7 +1413,7 @@ namespace QlLabels.Tests
             Check(Math.Abs(across.Printable.X - 18 * 25.4 / 300) < 1e-4 && Math.Abs(across.Printable.Y - 35 * 25.4 / 300) < 1e-4, "across: printable origin");
             Check(Math.Abs(along.Printable.X - 35 * 25.4 / 300) < 1e-4 && Math.Abs(along.Printable.Y - 18 * 25.4 / 300) < 1e-4, "along: printable origin");
             var doc = new LabelDoc();
-            doc.Objects.Add(new BoxObject { X = 5, Y = 5, W = 3, H = 3, Filled = true });
+            doc.Objects.Add(new ShapeObject { X = 5, Y = 5, W = 3, H = 3, Filled = true });
             using (var bmp = EditorRender.Render(doc, across))
             using (var p = EditorRender.ForPrinter(bmp, across))
             {
@@ -1262,6 +1430,10 @@ namespace QlLabels.Tests
             var grey = Enumerable.Repeat((byte)128, 100 * 100).ToArray();
             int dithered = EditorRender.Dither(grey, 100, 100).Count(b => b);
             Check(dithered > 4500 && dithered < 5500, "dithered mid-grey is about half black: " + dithered);
+            Check(EditorRender.Dither(Enumerable.Repeat((byte)18, 10000).ToArray(), 100, 100).All(b => b), "dither: near-black (RGB 19,19,18) prints solid black");
+            Check(!EditorRender.Dither(Enumerable.Repeat((byte)232, 10000).ToArray(), 100, 100).Any(b => b), "dither: near-white stays white");
+            int g26 = EditorRender.Dither(Enumerable.Repeat((byte)26, 10000).ToArray(), 100, 100).Count(b => !b);
+            Check(g26 > 0 && g26 < 1500, "dither: just under 90 % black still dithers: " + g26 + " white");
             Check(EditorRender.Threshold(grey, 129).All(b => b) && EditorRender.Threshold(grey, 128).All(b => !b), "threshold");
 
             // A picture: left half black, right half white; 20 x 10 mm.

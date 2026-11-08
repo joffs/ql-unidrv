@@ -29,6 +29,7 @@ $install = Join-Path $PSScriptRoot "install.ps1"
 $log = Join-Path $env:TEMP "ql-unidrv-install.log"
 # Removed after a run that finished, with the files earlier runs and the setup window left;
 # kept after a failure, which names it.
+# The same names as the setup window's (labeltool\src\ScriptRun.cs RunFileNames): change both.
 function Remove-Log {
     foreach ($name in "ql-unidrv-install.log", "ql-unidrv-setup.txt", "ql-unidrv-settings.log", "ql-unidrv-settings.txt") {
         Remove-Item (Join-Path $env:TEMP $name) -Force -ErrorAction SilentlyContinue
@@ -292,13 +293,14 @@ function Format-Version([uint64]$v) {
 function Get-InstalledDrivers { @(Get-PrinterDriver -ErrorAction SilentlyContinue | Where-Object Name -like "Brother QL-* (Unidrv)") }
 # The releases, as the setup window compares them (labeltool\src\Versions.cs): a driver by "0.18" of its DriverVer
 # (driver\VERSION), the programs by their product version "0.18.1 (build 305.700)" (a build from before the split,
-# "0.18.304.1157", counts as 0.18.0)
+# "0.18.304.1157", counts as 0.18.0). Get-Release and Get-AppRelease are the same as in install.ps1: each script is
+# copied alone, so change both.
 function Get-Release([string]$v) { if ($v -match "^(\d+)\.(\d+)") { "$($Matches[1]).$($Matches[2])" } }
 function Get-AppOrder([string]$product) {
     if ($product -match "^(\d+)\.(\d+)\.(\d+) \(build (\d+)\.(\d+)\)$") { return [version]::new($Matches[1], $Matches[2], $Matches[3], [int]$Matches[4] * 1440 + [int]$Matches[5]) }
     if ($product -match "^(\d+)\.(\d+)\.") { return [version]::new($Matches[1], $Matches[2], 0, 0) }
 }
-function Get-AppRelease([string]$product) { if ($product -match "^(\d+\.\d+\.\d+) \(build") { $Matches[1] } else { Get-Release $product } }
+function Get-AppRelease([string]$product) { if ($product -match "^(\d+\.\d+\.\d+) \(build \d+\.\d+\)$") { $Matches[1] } else { Get-Release $product } }
 function Get-Product([string]$exe) { if (Test-Path $exe) { (Get-Item $exe).VersionInfo.ProductVersion } }
 
 # Only the programs (install.ps1 -AppOnly): the zip's driver is the installed one, so no signing and no special start.

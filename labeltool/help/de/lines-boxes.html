@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Linien und Rahmen – QL Label Maker Hilfe</title>
+<title>Linien und Formen – QL Label Maker Hilfe</title>
 <link rel="stylesheet" href="../help.css">
 </head>
 <body>
@@ -21,8 +21,8 @@
 <section class="page"><div class="wrap">
   <header>
     <span class="eyebrow">Objekte</span>
-    <h1>Linien und Rahmen</h1>
-    <p class="lead">Linien trennen Bereiche auf dem Etikett, Rahmen fassen etwas ein oder werden zur schwarzen Fläche.</p>
+    <h1>Linien und Formen</h1>
+    <p class="lead">Linien trennen Bereiche auf dem Etikett, Formen fassen etwas ein, setzen ein Zeichen oder werden zur schwarzen Fläche.</p>
   </header>
 
   <ul class="blocks">
@@ -56,19 +56,30 @@
 
     <li>
       <div class="step">
-        <h2 id="box">Rahmen</h2>
-        <p>Werkzeug <span class="ui">Rahmen</span> oder <span class="path">Einfügen &gt; Rahmen</span>. Rechts stellen Sie
-          ein:</p>
+        <h2 id="shapes">Formen</h2>
+        <p>Gruppe <span class="ui">Formen</span> in der Werkzeugleiste oder <span class="path">Einfügen</span>:
+          <span class="ui">Rechteck</span>, <span class="ui">Ellipse</span>, <span class="ui">Dreieck</span>,
+          <span class="ui">Polygon</span> und <span class="ui">Stern</span>. Rechts stellen Sie ein:</p>
+        <figure class="frame" style="max-width:458px"><img src="../img/de/shapes-label.png" width="438" height="130" alt="Ein Rechteck mit runden Ecken, eine Ellipse und ein ausgewählter gefüllter Stern"></figure>
         <ul>
-          <li><span class="ui">Linienstärke (mm)</span></li>
-          <li><span class="ui">Gefüllt</span>: eine schwarze Fläche statt eines Rahmens</li>
-          <li><span class="ui">Ellipse</span>: rund statt eckig</li>
+          <li><span class="ui">Form</span>: eine andere Form; Größe und Lage bleiben</li>
+          <li><span class="ui">Ecken</span> (Polygon) oder <span class="ui">Zacken</span> (Stern): 3 bis 20</li>
+          <li><span class="ui">Innenradius (%)</span> (Stern): 10 bis 90; kleiner = spitzere Zacken</li>
+          <li><span class="ui">Ecken abrunden (mm)</span> (Rechteck): 0 = eckig</li>
+          <li><span class="ui">Linienstärke (mm)</span>: die Linie liegt innen am Rand der Form</li>
+          <li><span class="ui">Gefüllt</span>: eine schwarze Fläche statt einer Linie (dann ohne Linienstärke)</li>
         </ul>
-        <p>Ein Rahmen lässt sich um jeden Winkel drehen, siehe <a href="rotate-arrange.html">Drehen und Anordnen</a>.</p>
+        <p>Halten Sie beim Ziehen an einem Eck-Anfasser <kbd>Umschalt</kbd> gedrückt, wird die Form regelmäßig: ein
+          Quadrat, ein Kreis, ein gleichseitiges Dreieck, ein gleichmäßiges Polygon oder ein gleichmäßiger Stern.</p>
+        <figure class="frame" style="max-width:278px"><img src="../img/de/shapes-panel.png" width="258" height="248" alt="Einstellungen eines Sterns: Form Stern, Zacken 5, Innenradius 45 %, Gefüllt, Lage und Größe"></figure>
+        <p>Eine Form lässt sich um jeden Winkel drehen, siehe <a href="rotate-arrange.html">Drehen und Anordnen</a>.
+          Rahmen aus älteren Etiketten öffnen sich als Rechteck oder Ellipse.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
-        <div><span><kbd>Strg</kbd> + <kbd>B</kbd></span><span>Rahmen einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>B</kbd></span><span>Rechteck einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>E</kbd></span><span>Ellipse einfügen</span></div>
+        <div><span><kbd>Umschalt</kbd> beim Ziehen an einer Ecke</span><span>regelmäßige Form</span></div>
       </aside>
     </li>
 
@@ -88,7 +99,7 @@
     </li>
   </ul>
 
-  <nav class="pager" aria-label="Seiten"><a href="text.html">← Text und Textrahmen</a><a href="pictures.html">Weiter: Bilder →</a></nav>
+  <nav class="pager" aria-label="Seiten"><a href="text.html">← Grafiktext und Mengentext</a><a href="pictures.html">Weiter: Bilder →</a></nav>
 </div></section>
 </main>
 

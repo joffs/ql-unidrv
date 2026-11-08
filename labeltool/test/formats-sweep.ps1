@@ -6,7 +6,7 @@
 # -> <Out>\<scheme>-<lang>-<window>.png and <Out>\report.tsv (shot, logical height, black blocks, white blocks, TALL).
 param(
     [string]$App = "$PSScriptRoot\..\..\out\tools\QlLabelFormats.exe",
-    [string]$Out = "$PSScriptRoot\..\..\out\formats-sweep")
+    [string]$Out = $(if ($env:QL_TEST_OUT) { Join-Path $env:QL_TEST_OUT "formats-sweep" } else { "$PSScriptRoot\..\..\out\formats-sweep" }))
 
 $ErrorActionPreference = "Stop"
 $Out = [IO.Path]::GetFullPath($Out)

@@ -47,7 +47,7 @@ namespace QlLabels
                 using (var setup = new SetupForm()) setup.ShowDialog(owner);
                 if (after != null) after();
             })
-            { ToolTipText = Lang.T("Add a network or shared QL printer, the printer status service, the driver log, uninstall") };
+            { ToolTipText = Lang.T("Add, share and remove QL printers, printer status service, driver log, uninstall") };
         }
     }
 }

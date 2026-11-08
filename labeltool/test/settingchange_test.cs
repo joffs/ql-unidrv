@@ -74,7 +74,7 @@ static class SettingChangeTest
         var showEvent = asm.GetType("QlLabels.PrinterStatusProgram").GetField("ShowEventName", All);   // missing before 0.18.19
         if (showEvent != null) showEvent.SetValue(null, @"Local\QLUnidrv.StatusWindow.Show.Test" + Process.GetCurrentProcess().Id);
         var tray = (ApplicationContext)Activator.CreateInstance(asm.GetType("QlLabels.TrayMonitor"), true);
-        var printers = (IEnumerable<string>)asm.GetType("QlLabels.MainForm").GetMethod("OurPrinters", All).Invoke(null, null);
+        var printers = (IEnumerable<string>)asm.GetType("QlLabels.QlPrinters").GetMethod("OurPrinters", All).Invoke(null, null);
         var list = printers.ToList();
         if (list.Count == 0) list.Add("Brother QL-800 (Unidrv)");   // no printer here (Sandbox): the checks still run and fail
         Console.WriteLine("printers: " + string.Join(" | ", list));

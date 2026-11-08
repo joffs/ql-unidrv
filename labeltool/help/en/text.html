@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Text and text frames – QL Label Maker Help</title>
+<title>Artistic and paragraph text – QL Label Maker Help</title>
 <link rel="stylesheet" href="../help.css">
 </head>
 <body>
@@ -21,31 +21,31 @@
 <section class="page"><div class="wrap">
   <header>
     <span class="eyebrow">Objects</span>
-    <h1>Text and text frames</h1>
-    <p class="lead">A text is either a single line or a text frame with several lines. You set everything else in the
-      settings on the right.</p>
+    <h1>Artistic and paragraph text</h1>
+    <p class="lead">A text is either an artistic text (one line, the box follows the text) or a paragraph text (several
+      lines that wrap in their box). You set everything else in the settings on the right.</p>
   </header>
 
   <ul class="blocks">
     <li>
       <div class="step">
-        <h2 id="single-line">Single line</h2>
-        <p>The <span class="ui">Text</span> tool or <span class="path">Insert &gt; Text</span>. The box always fits the
+        <h2 id="single-line">Artistic text</h2>
+        <p>The <span class="ui">Artistic text</span> tool or <span class="path">Insert &gt; Artistic text</span>. The box always fits the
           text. Drag a handle to make the text larger or smaller; the opposite side stays where it is. Or type the
           <span class="ui">Size (pt)</span>.</p>
         <p>Enter does nothing here; pasted line breaks become spaces.</p>
-        <figure class="frame" style="max-width:340px"><img src="../img/en/text-panel.png" width="230" height="173" alt="Settings of a single-line text: Text, Insert field, Kind Single line, Font, Size, Bold, Italic, Underline"></figure>
+        <figure class="frame" style="max-width:340px"><img src="../img/en/text-panel.png" width="230" height="173" alt="Settings of an artistic text: Text, Insert field, Kind Artistic text, Font, Size, Bold, Italic, Underline"></figure>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
-        <div><span><kbd>Ctrl</kbd> + <kbd>T</kbd></span><span>add text</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>T</kbd></span><span>add artistic text</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
-        <h2 id="text-frame">Text frame</h2>
-        <p><span class="path">Insert &gt; Text frame</span>. You set the box with the handles; the text wraps at its edge
+        <h2 id="text-frame">Paragraph text</h2>
+        <p>The <span class="ui">Paragraph text</span> tool or <span class="path">Insert &gt; Paragraph text</span>. You set the box with the handles; the text wraps at its edge
           at its font size. A word longer than a line breaks between letters.</p>
         <p>You also get the alignment of the lines (<span class="ui">Left</span>, <span class="ui">Centre</span>,
           <span class="ui">Right</span>) and the <span class="ui">Line spacing</span> (0.5 to 3 times).</p>
@@ -54,16 +54,38 @@
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
-        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></span><span>add a text frame</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></span><span>add paragraph text</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="word-formats">Words in their own format</h2>
+        <p>In a paragraph text single words can be bold, italic, underlined, in another font or size. Select them in the
+          <span class="ui">Text</span> box and click <span class="ui">B</span>, <span class="ui">I</span> or
+          <span class="ui">U</span> above it, or change <span class="ui">Font</span> and <span class="ui">Size (pt)</span>.
+          A line below the box says what the settings apply to.</p>
+        <figure class="frame" style="max-width:348px"><img src="../img/en/text-runs-panel.png" width="328" height="295" alt="Settings of a paragraph text: B, I and U above the text box; in the box M4 × 20 bold, verzinkt italic, Fach 12 underlined"></figure>
+        <p>With nothing selected, <span class="ui">B</span>, <span class="ui">I</span> and <span class="ui">U</span> apply
+          to what you type next. When the text box isn't active, the settings apply to the whole text. Where the selected
+          words differ, the setting stays blank or shows ■.</p>
+        <p>Pasted text takes the format at the cursor. An artistic text has one format for the whole text: switching a
+          paragraph text with word formats to it asks first and keeps the first word's format.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>bold</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>I</kbd></span><span>italic</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>U</kbd></span><span>underline</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
         <h2 id="switch-between-the-two">Switch between the two</h2>
-        <p><span class="ui">Kind</span> switches between <span class="ui">Single line</span> and
-          <span class="ui">Text frame</span>. A text frame becomes one line (line breaks become spaces), a single line
-          becomes a frame around its text.</p>
+        <p><span class="ui">Kind</span> switches between <span class="ui">Artistic text</span> and
+          <span class="ui">Paragraph text</span>. A paragraph text becomes one line (line breaks become spaces), an artistic
+          text becomes a paragraph text in a box around its text.</p>
       </div>
     </li>
 
@@ -96,7 +118,7 @@
     </li>
   </ul>
 
-  <nav class="pager" aria-label="Pages"><a href="length.html">← Label formats and custom lengths</a><a href="lines-boxes.html">Next: Lines and boxes →</a></nav>
+  <nav class="pager" aria-label="Pages"><a href="length.html">← Label formats and custom lengths</a><a href="lines-boxes.html">Next: Lines and shapes →</a></nav>
 </div></section>
 </main>
 

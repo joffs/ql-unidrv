@@ -35,8 +35,8 @@
         <dl class="terms">
           <dt>Unterstützt</dt><dd>PNG (auch mit Transparenz), JPG/JPEG, BMP, GIF (bei Animationen das erste Bild),
             TIF/TIFF (die erste Seite), WebP (bei Animationen das erste Bild), HEIC/HEIF (Handyfotos), PDF (die erste
-            Seite), SVG (bleibt in jeder Größe scharf); über <span class="ui">Alle Dateien</span> auch ICO und EMF/WMF
-            (werden in Pixel umgewandelt)</dd>
+            Seite), SVG (bleibt in jeder Größe scharf); über <span class="ui">Alle Dateien</span> auch ICO, WMF
+            (wird in Pixel umgewandelt) und EMF (bleibt eine Zeichnung)</dd>
           <dt>Nicht in SVG</dt><dd>Text entlang einer Linie und senkrechter Text (im Zeichenprogramm vorher
             in Pfade umwandeln), Filter, Masken, Verweise auf andere Dateien</dd>
         </dl>
@@ -64,10 +64,10 @@
     <li>
       <div class="step">
         <h2 id="black-and-white">Schwarzweiß</h2>
-        <figure class="frame" style="max-width:368px"><img src="../img/de/pictures-panel.png" width="348" height="285" alt="Einstellungen eines Bildes: Schwarzweiß Rastern, Invertieren, Ersetzen, Originalproportionen, Lage, Größe und Drehung"></figure>
+        <figure class="frame" style="max-width:368px"><img src="../img/de/pictures-panel.png" width="348" height="320" alt="Einstellungen eines Bildes: Schwarzweiß Rastern, Invertieren, Ersetzen, Originalproportionen, An Etikett anpassen, Lage, Größe und Drehung"></figure>
         <dl class="terms">
           <dt>Rastern (Fotos, Graustufen)</dt><dd>Graue Flächen werden zu feinen Punktmustern. Gut für Fotos und
-            Verläufe.</dd>
+            Verläufe. Fast Schwarz (ab 90 %) wird ganz schwarz gedruckt, fast Weiß (unter 10 %) bleibt weiß.</dd>
           <dt>Schwellenwert (Logos, Zeichnungen)</dt><dd>Was dunkler als der Schieberegler ist, wird schwarz, der Rest
             weiß. Gut für klare Kanten.</dd>
           <dt>Invertieren (weiß auf schwarz)</dt><dd>tauscht Schwarz und Weiß.</dd>
@@ -80,8 +80,42 @@
       <div class="step">
         <h2 id="replace-and-proportions">Austauschen und Proportionen</h2>
         <p><span class="ui">Ersetzen...</span> tauscht das Bild gegen eine andere Datei aus.
-          <span class="ui">Originalproportionen</span> stellt das Seitenverhältnis der Bilddatei wieder her.</p>
+          <span class="ui">Originalproportionen</span> stellt das Seitenverhältnis der Bilddatei wieder her.
+          <span class="ui">An Etikett anpassen</span> bringt das Bild in seinen Proportionen auf die Größe des
+          bedruckbaren Bereichs und setzt es in die Mitte (auch im Kontextmenü, dort für mehrere markierte Bilder
+          zusammen).</p>
       </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="paste-and-drop">Einfügen und Hineinziehen</h2>
+        <p>Kopieren Sie ein Bild in einem anderen Programm und fügen Sie es mit <span class="path">Bearbeiten &gt;
+          Einfügen</span> ein, oder ziehen Sie Bilddateien aus dem Explorer auf das Etikett. Zeichnungen aus CorelDRAW,
+          Affinity, Word und anderen Programmen bleiben Zeichnungen (SVG oder EMF) und werden in jeder Größe scharf
+          gedruckt; Fotos und Bildschirmfotos kommen als Bild. Eingefügte und hineingezogene Bilder behalten ihre Größe
+          (1:1), auch wenn sie größer als das Etikett sind; dann meldet eine Leiste über dem Etikett
+          <span class="ui">Größer als das Etikett.</span> und bietet <span class="ui">An Etikett anpassen</span> an.
+          Ein eingefügtes Bild landet in der Mitte des Etiketts,
+          hineingezogene Dateien dort, wo Sie sie loslassen, mehrere nebeneinander. Eine hineingezogene
+          .qllabel-Datei wird geöffnet.</p>
+        <p>Was Sie hier kopieren, fügen Word, Affinity, Inkscape und andere Programme als Zeichnung (EMF) ein: Text bleibt
+          Text mit seiner Schriftart, Linien und Formen bleiben scharf; Bilder und Barcodes kommen so, wie sie gedruckt
+          werden.</p>
+        <p>Kopierter Text wird ein Textobjekt (mehrere Zeilen: ein Mengentext). Text aus CorelDRAW behält Schriftart,
+          Größe, fett, kursiv und seinen Platz, auch Wörter in einem anderen Format (dann als Mengentext); fehlt hier eine Schriftart, wird eine
+          Ersatzschrift verwendet, und die Statusleiste nennt die Schriftart. Text aus Word, WordPad, Outlook und anderen
+          Programmen, die formatierten Text kopieren, behält Schriftarten, Größen, fett, kursiv und unterstrichen (nicht die
+          Farben). Aus anderen Programmen kommt nur der Text, ohne seine Schriftarten. Eine Zeichnung mit Text darin bleibt eine Zeichnung (ihr Text an der richtigen Stelle, auch aus CorelDRAW), und die Statusleiste sagt das;
+          <span class="path">Bearbeiten &gt; Unformatierten Text einfügen</span> nimmt stattdessen den Text.</p>
+        <figure class="frame" style="max-width:376px"><img src="../img/de/edit-menu.png" width="356" height="220" alt="Menü Bearbeiten: Rückgängig, Wiederholen, Ausschneiden, Kopieren, Einfügen, Unformatierten Text einfügen, Duplizieren, Löschen, Alles auswählen"></figure>
+        <p>Webadressen werden nie geöffnet: Aus einem Browser kommt nur ein Bild, das selbst in der Zwischenablage liegt.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>V</kbd></span><span>einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>V</kbd></span><span>unformatierten Text einfügen</span></div>
+      </aside>
     </li>
   </ul>
 
@@ -94,7 +128,7 @@
     </div>
   </aside>
 
-  <nav class="pager" aria-label="Seiten"><a href="lines-boxes.html">← Linien und Rahmen</a><a href="codes.html">Weiter: Barcodes und QR-Codes →</a></nav>
+  <nav class="pager" aria-label="Seiten"><a href="lines-boxes.html">← Linien und Formen</a><a href="codes.html">Weiter: Barcodes und QR-Codes →</a></nav>
 </div></section>
 </main>
 

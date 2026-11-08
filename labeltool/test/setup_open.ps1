@@ -6,7 +6,7 @@
 param([string]$Lang = "de,en")
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$out = Join-Path $root "out\setup-open"
+$out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } else { Join-Path $root "out" }) "setup-open"   # QL_TEST_OUT: a folder per session
 New-Item -ItemType Directory -Force $out | Out-Null
 $deskrun = Join-Path $root "out\tools\uitest\deskrun.exe"
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }

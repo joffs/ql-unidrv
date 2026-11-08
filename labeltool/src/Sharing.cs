@@ -28,7 +28,7 @@ namespace QlLabels
             var list = new List<ShareablePrinter>();
             try
             {
-                foreach (string name in MainForm.OurPrinters())
+                foreach (string name in QlPrinters.OurPrinters())
                     using (var k = Registry.LocalMachine.OpenSubKey(PrintersKey + "\\" + name))
                     {
                         if (k == null) continue;

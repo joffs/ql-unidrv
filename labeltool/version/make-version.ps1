@@ -3,10 +3,13 @@
 # minor with a driver change), then the build stamp: days since 2026 and minute of day. File version 0.18.1.305 (16 bits
 # per part, so only the day), product version "0.18.1 (build 305.700)"; the setup window and Help > Info read the
 # product version (Versions.cs).
+# QL_BUILD_TIME=yyyy-MM-ddTHH:mm fixes the build stamp (labeltool\test\refactor-snapshot.ps1: shots that compare
+# byte for byte across builds).
 param([Parameter(Mandatory = $true)][string]$Out)
 $release = (Get-Content (Join-Path $PSScriptRoot "VERSION") -TotalCount 1).Trim()
 if ($release -notmatch "^\d+\.\d+\.\d+$") { throw "labeltool\version\VERSION must be major.minor.patch (e.g. 0.18.1), not '$release'." }
 $now = Get-Date
+if ($env:QL_BUILD_TIME) { $now = [DateTime]::ParseExact($env:QL_BUILD_TIME, "yyyy-MM-ddTHH:mm", [Globalization.CultureInfo]::InvariantCulture) }
 $days = [int]($now.Date - (Get-Date -Year 2026 -Month 1 -Day 1).Date).TotalDays
 $version = "{0}.{1}" -f $release, $days
 Set-Content -Path $Out -Encoding UTF8 -Value @(

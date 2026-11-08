@@ -152,7 +152,7 @@ namespace QlLabels
                     if (!PublishedStatus.IsShare(d.Source, out at, out shareName)) at = null;
                     Set(Health.Warning, Lang.T("The printer is not connected"),
                         at != null ? Lang.F("Switch the printer on and check its connection at the PC {0}.", at) : Lang.T("Switch the printer on and check the USB cable."));
-                    var model = MainForm.ModelOf(Printer);
+                    var model = QlPrinters.ModelOf(Printer);
                     if (model == null || EditorLiteModels.Contains(model.Name))
                         Advice.Add(Lang.T("If the Editor Lite LED is on, hold the Editor Lite button until it goes out; otherwise Windows sees a USB drive instead of the printer."));
                     Says(Lang.T("Not connected"), at != null ? Lang.F("printer off or USB cable at {0}", at) : Lang.T("printer off or USB cable"));

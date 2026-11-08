@@ -27,7 +27,7 @@ using Microsoft.Win32;
 
 namespace QlLabels
 {
-    sealed class InstallForm : Form
+    sealed partial class InstallForm : ScaledForm
     {
         enum StepState { Waiting, Working, Done, Problem, Skipped }
         // Prepare = ARM64 outside the special start: "Prepare and restart"; Restart = prepared, waiting for the restart.
@@ -52,165 +52,6 @@ namespace QlLabels
                 case "app": return appOnly ? Lang.T("Updating the programs...") : Lang.T("Installing the programs...");
                 case "labels": return Lang.T("Creating the label formats...");
                 default: return null;
-            }
-        }
-
-        // A step: one line of what to do now (Detail); the why and the details behind the (i) next to its title (Tip);
-        // Links = the step's own links (picture, report). F7 test 2026-10-30: less text, one line per step.
-        sealed class Step
-        {
-            public readonly StepMark Mark = new StepMark();
-            public readonly Label Title = new Label { AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 0, 0, 0) };
-            public readonly Label Detail = Theme.Fore(new Label { AutoSize = true }, Role.Dim);
-            public readonly FlowLayoutPanel Head = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
-            public readonly FlowLayoutPanel Links = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Visible = false };
-            // The explanation: the app's own tip at the (i) (InfoTip; user's choice 2026-10-30: no Windows ToolTip,
-            // and no text opening inline in the window)
-            public Control Info;
-            public string Tip;
-            public bool Shown = true;  // the step is part of this window (special: ARM64 only); Visible reads false before the window shows
-            public string Text = "";    // the detail without the elapsed time
-            public DateTime? BusySince;  // the window waits for work outside it (a script, Windows' prompt): ring turns, time counts
-        }
-
-        // A step's marker (colours from Brand): done = petrol circle with a white tick, current = petrol ring with an
-        // orange dot, busy = a petrol arc turning on a light ring, waiting = grey ring, problem = red circle with "!",
-        // skipped = grey ring with a dash. Drawn, so it scales with the font and doesn't depend on a symbol font.
-        sealed class StepMark : Control
-        {
-            StepState state;
-            Timer spin;
-            int angle;
-
-            public StepMark()
-            {
-                SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                         ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-                BackColor = Color.Transparent;
-            }
-
-            public StepState State { get { return state; } set { state = value; Invalidate(); } }
-
-            // The setup waits for work outside the window (variant A of the progress mockup, 0504d06, user's choice
-            // 2026-10-30: the install step looked frozen for 30-40 s)
-            public bool Spinning
-            {
-                get { return spin != null; }
-                set
-                {
-                    if (value == Spinning) return;
-                    if (value)
-                    {
-                        spin = new Timer { Interval = 40 };
-                        spin.Tick += delegate { angle = (angle + 12) % 360; Invalidate(); };
-                        spin.Start();
-                    }
-                    else { spin.Dispose(); spin = null; }
-                    Invalidate();
-                }
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing && spin != null) { spin.Dispose(); spin = null; }
-                base.Dispose(disposing);
-            }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                var g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                float d = Math.Min(Width, Height) - 2, pen = Math.Max(1.5f, d / 10), x = (Width - d) / 2, y = 1;
-                var ring = new RectangleF(x + pen / 2, y + pen / 2, d - pen, d - pen);
-                if (spin != null)
-                {
-                    float wide = pen * 1.3f;
-                    var r = new RectangleF(x + wide / 2, y + wide / 2, d - wide, d - wide);
-                    using (var light = new Pen(Theme.Of(Role.AccentSoft), wide)) g.DrawEllipse(light, r);
-                    using (var arc = new Pen(Theme.Of(Role.Accent), wide) { StartCap = LineCap.Round, EndCap = LineCap.Round }) g.DrawArc(arc, r, angle - 90, 100);
-                    return;
-                }
-                switch (state)
-                {
-                    case StepState.Done:
-                        using (var fill = new SolidBrush(Theme.Fixed.StateOk)) g.FillEllipse(fill, x, y, d, d);
-                        using (var tick = new Pen(Theme.Fixed.StateSymbol, pen * 1.2f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-                            g.DrawLines(tick, new[] { new PointF(x + d * 0.28f, y + d * 0.52f), new PointF(x + d * 0.44f, y + d * 0.67f), new PointF(x + d * 0.72f, y + d * 0.36f) });
-                        break;
-                    case StepState.Working:
-                        using (var p = new Pen(Theme.Of(Role.Accent), pen)) g.DrawEllipse(p, ring);
-                        using (var dot = new SolidBrush(Theme.Fixed.Orange)) g.FillEllipse(dot, x + d * 0.3f, y + d * 0.3f, d * 0.4f, d * 0.4f);
-                        break;
-                    case StepState.Problem:
-                        using (var fill = new SolidBrush(Theme.Fixed.StateError)) g.FillEllipse(fill, x, y, d, d);
-                        using (var mark = new Pen(Theme.Fixed.StateSymbol, pen * 1.2f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                        {
-                            g.DrawLine(mark, x + d / 2, y + d * 0.25f, x + d / 2, y + d * 0.56f);
-                            g.DrawLine(mark, x + d / 2, y + d * 0.74f, x + d / 2, y + d * 0.75f);
-                        }
-                        break;
-                    default:
-                        using (var p = new Pen(Theme.Fixed.StateUnknown, pen)) g.DrawEllipse(p, ring);
-                        if (state == StepState.Skipped)
-                            using (var dash = new Pen(Theme.Fixed.StateUnknown, pen) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                                g.DrawLine(dash, x + d * 0.32f, y + d / 2, x + d * 0.68f, y + d / 2);
-                        break;
-                }
-            }
-        }
-
-        // The box at the top of the after-restart view: a large done mark, "Done – ..." in bold, a grey line under it; white
-        // with a hairline and a petrol bar on the left (F7 test 2026-10-30: that view didn't read as finished).
-        sealed class DoneBox : TableLayoutPanel
-        {
-            public readonly Label Line = Theme.Fore(new Label { AutoSize = true, Margin = new Padding(0, 2, 0, 0) }, Role.Dim);
-            readonly Label title = new Label { AutoSize = true, Margin = Padding.Empty };
-
-            // A little larger than the steps' titles; semibold (not Bold), so Brand.FollowFont leaves it alone and it
-            // follows the window's font here when the scaling changes
-            void TitleFont(Font font)
-            {
-                title.Font = new Font("Segoe UI Semibold", font.SizeInPoints * 1.15f, FontStyle.Regular, GraphicsUnit.Point);
-            }
-
-            protected override void OnFontChanged(EventArgs e)
-            {
-                base.OnFontChanged(e);
-                TitleFont(Font);
-            }
-
-            public DoneBox(Font font, int em, int width)
-            {
-                AutoSize = true;
-                ColumnCount = 2;
-                Theme.Back(this, Role.Content);
-                Padding = new Padding(em * 3 / 4 + Bar(em), em * 3 / 4, em, em * 3 / 4);
-                Margin = new Padding(0, 0, 0, em * 5 / 4);
-                MinimumSize = new Size(width, 0);
-                ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-                var mark = new StepMark { State = StepState.Done, Size = new Size(em * 2, em * 2), Margin = new Padding(0, 0, em * 3 / 4, 0), Anchor = AnchorStyles.Left };
-                var text = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty, Anchor = AnchorStyles.Left };
-                Title = Lang.T("Done – the driver is installed.");
-                TitleFont(font);
-                int textWidth = width - Padding.Horizontal - mark.Width - mark.Margin.Horizontal;
-                title.MaximumSize = Line.MaximumSize = new Size(textWidth, 0);
-                text.Controls.Add(title);
-                text.Controls.Add(Line);
-                Controls.Add(mark, 0, 0);
-                Controls.Add(text, 1, 0);
-                SetStyle(ControlStyles.ResizeRedraw, true);
-            }
-
-            public string Title { set { title.Text = value; } }
-
-            static int Bar(int em) { return Math.Max(3, em / 4); }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                base.OnPaint(e);
-                using (var line = new Pen(Theme.Of(Role.SurfaceLine))) e.Graphics.DrawRectangle(line, 0, 0, Width - 1, Height - 1);
-                using (var bar = new SolidBrush(Theme.Of(Role.Accent))) e.Graphics.FillRectangle(bar, 0, 0, Bar(Font.Height), Height);
             }
         }
 
@@ -297,7 +138,7 @@ namespace QlLabels
             Font = SystemFonts.MessageBoxFont;
             AutoScaleMode = AutoScaleMode.Dpi;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
-            Brand.TintCaption(this);
+            Theme.TintCaption(this);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -368,16 +209,16 @@ namespace QlLabels
             // ARM64: the picture of what Windows shows next (in the step it belongs to), a way past a wrong detection,
             // the signature report (in the special start's step)
             pictureLink.LinkClicked += delegate { OpenPicture(); };
-            Brand.StyleLink(pictureLink);
+            Theme.StyleLink(pictureLink);
             inSpecial.Margin = new Padding(em * 2, 0, 0, em / 2);
             inSpecial.LinkClicked += delegate { assumeSpecial = true; RunCheck(); };
-            Brand.StyleLink(inSpecial);
+            Theme.StyleLink(inSpecial);
             layout.Controls.Add(inSpecial);
             report.LinkClicked += delegate { RunSigningReport(); };
-            Brand.StyleLink(report);
+            Theme.StyleLink(report);
             special.Links.Controls.Add(report);
             testLink.LinkClicked += delegate { PrintTest(); };
-            Brand.StyleLink(testLink);
+            Theme.StyleLink(testLink);
             test.Links.Controls.Add(testLink);
 
             // Questions, only before the install; their explanations behind an (i)
@@ -419,11 +260,11 @@ namespace QlLabels
             bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             details.Anchor = AnchorStyles.Left;
             details.LinkClicked += delegate { ShowDetails(); };
-            Brand.StyleLink(details);
-            Brand.StyleLink(netLink);
+            Theme.StyleLink(details);
+            Theme.StyleLink(netLink);
             main.MinimumSize = new Size(em * 8, em * 2);
             main.Font = new Font(Font, FontStyle.Bold);
-            Brand.StylePrimary(main);
+            Theme.Primary(main);
             main.Click += delegate { MainClicked(); };
             close.MinimumSize = new Size(em * 6, em * 2);
             extra.MinimumSize = new Size(em * 6, em * 2);
@@ -433,7 +274,7 @@ namespace QlLabels
             uninstallLink.Anchor = AnchorStyles.Left;
             // this.: the constructor's parameter of the same name would take it, and ShowUninstall found none (2026-11-02)
             uninstallLink.LinkClicked += delegate { uninstallFromCheck = true; this.uninstallScripts = Path.Combine(root, "driver"); ShowUninstall(); };
-            Brand.StyleLink(uninstallLink);
+            Theme.StyleLink(uninstallLink);
             var leftLinks = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Anchor = AnchorStyles.Left, Margin = Padding.Empty };
             leftLinks.Controls.Add(details);
             leftLinks.Controls.Add(uninstallLink);
@@ -513,24 +354,10 @@ namespace QlLabels
             return info;
         }
 
-        // Opened directly on a second screen with other scaling: the handle exists early (the caption tint) and the window
-        // is placed on its screen only before it shows, without the message a move would bring; so the check runs here too
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            Brand.MatchScreenDpi(this);
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            Brand.MatchScreenDpi(this);
-            base.OnLoad(e);
-        }
-
+        // A second screen with other scaling: ScaledForm (MatchScreenDpi on handle and load, FollowFont on a DPI change)
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
-            Brand.FollowFont(this, Font);
             if (removeList.Visible) FillRemoveList();  // its labels are made with the scaling of their time
         }
 
@@ -691,164 +518,6 @@ namespace QlLabels
             pictureLink.Visible = pictureShown;
         }
 
-        // ---------- the release folder ----------
-
-        // The folder with out\package and driver\: given, the exe's own (Setup.exe in the zip's root) or two up
-        // (out\tools\QlLabelFormats.exe in the zip).
-        static string FindRoot(string given)
-        {
-            string exeDir = Path.GetDirectoryName(Application.ExecutablePath);
-            // the release zip: Setup.exe at the top, the rest in advanced\; the source tree; out\tools\ in either
-            foreach (var dir in new[] { given, Path.Combine(exeDir, "advanced"), exeDir, Path.GetFullPath(Path.Combine(exeDir, @"..\..")) })
-                if (dir != null && File.Exists(Path.Combine(dir, @"out\package\qlunidrv.inf")) && File.Exists(Path.Combine(dir, @"driver\install.ps1")))
-                    return Path.GetFullPath(dir);
-            return null;
-        }
-
-        // Windows' zip view runs a program from a temporary copy (Windows 11 24H2: of the whole zip) under %TEMP%:
-        // ...\Temp\Temp1_name.zip\Setup.exe, or ...\Temp\<GUID>_name.zip.ba6\name\Setup.exe (x64 Sandbox 2026-10-27).
-        static bool StartedFromZip() { return IsZipView(LongPath(Path.GetDirectoryName(Application.ExecutablePath)), LongPath(Path.GetTempPath())); }
-
-        internal static bool IsZipView(string dir, string temp)
-        {
-            return dir.StartsWith(temp.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(dir, @"\.zip(\.[0-9a-z]{3})?(\\|$)", RegexOptions.IgnoreCase);
-        }
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        static extern int GetLongPathNameW(string shortPath, StringBuilder longPath, int size);
-
-        // %TEMP% can be an 8.3 path (C:\Users\WDAGUT~1\...) while the exe's path is the long one.
-        static string LongPath(string path)
-        {
-            var sb = new StringBuilder(1024);
-            int n = GetLongPathNameW(path, sb, sb.Capacity);
-            return n > 0 && n < sb.Capacity ? sb.ToString() : path;
-        }
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        static extern bool DeleteFileW(string path);
-
-        // Removes the download mark (Mark of the Web) from the extracted files, as Properties > Unblock would.
-        static void Unblock(string dir)
-        {
-            if (Preview) return;
-            try
-            {
-                foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)) DeleteFileW(f + ":Zone.Identifier");
-            }
-            catch (Exception) { }
-        }
-
-        internal static string ZipVersion(string dir)
-        {
-            try
-            {
-                var m = File.ReadAllLines(Path.Combine(dir, @"out\package\qlunidrv.inf")).Select(l => Regex.Match(l, @"^DriverVer=[^,]+,\s*([\d.]+)")).FirstOrDefault(x => x.Success);
-                return m != null ? m.Groups[1].Value : null;
-            }
-            catch (Exception) { return null; }
-        }
-
-        // The PC's own architecture, not this process's (NativeTools)
-        static bool IsArm64() { return NativeTools.IsArm64(); }
-
-        // ---------- ARM64: the special start ----------
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct CodeIntegrityInformation { public uint Length, Options; }
-
-        [DllImport("ntdll.dll")]
-        static extern int NtQuerySystemInformation(int infoClass, ref CodeIntegrityInformation info, int length, out int returned);
-
-        // Does this start let self-signed drivers in? Asked without admin rights: the code integrity options
-        // (SystemCodeIntegrityInformation = 103; normal start on the ARM64 dev PC 2026-10-30: 0xC001) and the start
-        // options Windows records for this boot (Control\SystemStartOptions).
-        static bool SignatureChecksOff()
-        {
-            uint options = 1;
-            try
-            {
-                var info = new CodeIntegrityInformation { Length = 8 };
-                int returned;
-                if (NtQuerySystemInformation(103, ref info, 8, out returned) == 0) options = info.Options;
-            }
-            catch (Exception) { }
-            string start = null;
-            try { using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control")) start = k == null ? null : k.GetValue("SystemStartOptions") as string; }
-            catch (Exception) { }
-            return SignatureChecksOff(options, start);
-        }
-
-        // Off when code integrity is off (CODEINTEGRITY_OPTION_ENABLED 0x1 clear) or in test mode (TESTSIGN 0x2), or the
-        // boot loader passed DISABLE_INTEGRITY_CHECKS (key 7) or TESTSIGNING. Which of these the special start shows
-        // on ARM64 is not measured yet: any of them counts.
-        internal static bool SignatureChecksOff(uint options, string startOptions)
-        {
-            if ((options & 0x1) == 0 || (options & 0x2) != 0) return true;
-            return startOptions != null && Regex.IsMatch(startOptions, @"\b(DISABLE_INTEGRITY_CHECKS|TESTSIGNING)\b", RegexOptions.IgnoreCase);
-        }
-
-        // install.ps1 holds this while it runs (one run at a time, debug pass 2026-10-31 I4). Made by an elevated
-        // process, it may refuse this one access: that also means it exists.
-        static bool SetupRunning()
-        {
-            try
-            {
-                System.Threading.Mutex m;
-                if (!System.Threading.Mutex.TryOpenExisting(@"Global\QLUnidrvInstall", out m)) return false;
-                m.Dispose();
-                return true;
-            }
-            catch (UnauthorizedAccessException) { return true; }
-            catch (Exception) { return false; }
-        }
-
-        // Windows settings that keep this driver out (debug pass 2026-10-31 I11): Smart App Control on (blocks programs
-        // without a paid signature, the label tool and probably the driver's plug-in) and Windows protected print mode
-        // (only Windows' own printer drivers). Not measured on a PC with either on: the documented registry values.
-        static string BlockingPolicy()
-        {
-            object sac = null, wppPolicy = null, wppMode = null;
-            try
-            {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\Policy")) if (k != null) sac = k.GetValue("VerifiedAndReputablePolicyState");
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows NT\Printers\WPP"))
-                    if (k != null) { wppPolicy = k.GetValue("WindowsProtectedPrintGroupPolicyState"); wppMode = k.GetValue("WindowsProtectedPrintMode"); }
-            }
-            catch (Exception) { }
-            return BlockingPolicy(sac, wppPolicy, wppMode);
-        }
-
-        internal static string BlockingPolicy(object sac, object wppPolicy, object wppMode)
-        {
-            Func<object, int> num = v => v is int ? (int)v : -1;
-            if (num(sac) == 1)
-                return Lang.T("Smart App Control is on. It blocks programs without a paid signature, so this driver and its programs can't run here. " +
-                              "(Windows Security > App & browser control > Smart App Control; once off, Windows can turn it on again only with a reset.)");
-            if (num(wppPolicy) == 1 || num(wppMode) == 1)
-                return Lang.T("Windows protected print mode is on. It allows only Windows' own printer drivers, so this driver can't be installed here. " +
-                              "Your organisation or you can turn it off in Settings > Bluetooth & devices > Printers & scanners.");
-            return null;
-        }
-
-        // BitLocker (or device encryption) on the system drive: the restart with key 7 may ask for its recovery key.
-        // Shell property System.Volume.BitLockerProtection, readable without admin rights: 1 = on, 3 = encrypting.
-        static bool SystemDriveEncrypted()
-        {
-            try
-            {
-                var type = Type.GetTypeFromProgID("Shell.Application");
-                object shell = Activator.CreateInstance(type);
-                object computer = type.InvokeMember("NameSpace", System.Reflection.BindingFlags.InvokeMethod, null, shell, new object[] { 17 });  // This PC
-                string drive = Path.GetPathRoot(Environment.SystemDirectory).TrimEnd('\\');
-                object item = computer.GetType().InvokeMember("ParseName", System.Reflection.BindingFlags.InvokeMethod, null, computer, new object[] { drive });
-                object v = item.GetType().InvokeMember("ExtendedProperty", System.Reflection.BindingFlags.InvokeMethod, null, item, new object[] { "System.Volume.BitLockerProtection" });
-                int state = v == null ? 0 : Convert.ToInt32(v);
-                return state == 1 || state == 3;
-            }
-            catch (Exception) { return false; }
-        }
-
         // Set by screenshot tools before a window is made: the views render, but nothing on the PC changes (no RunOnce,
         // Unblock, temp-file or certificate cleanup, restart). A harness run once left a RunOnce entry pointing at itself
         // (2026-10-31); setup_test checks that every such method starts with this guard.
@@ -869,41 +538,6 @@ namespace QlLabels
                 }
             }
             catch (Exception) { }
-        }
-
-        // The open window that may hold unsaved changes: the label tool's ("QL Label Formats") or the label editor's
-        // ("<label> – QL Label Maker", QlLabelMaker.exe); null when none. The monitor and status windows close themselves.
-        static string LabelToolOpen()
-        {
-            int me = Process.GetCurrentProcess().Id;
-            foreach (var p in new[] { "QlLabelFormats", "QlLabelMaker" }.SelectMany(Process.GetProcessesByName))
-            {
-                try
-                {
-                    if (p.Id == me) continue;
-                    string title = p.MainWindowTitle;
-                    if (title.StartsWith(MainForm.AppTitle, StringComparison.Ordinal)) return MainForm.AppTitle;
-                    if (title.EndsWith(EditorForm.AppTitle, StringComparison.Ordinal)) return EditorForm.AppTitle;
-                }
-                catch (Exception) { }
-            }
-            return null;
-        }
-
-        internal static bool IsShared(string printer)
-        {
-            try
-            {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Print\Printers\" + printer))
-                    return k != null && (Convert.ToInt32(k.GetValue("Attributes", 0)) & 0x8) != 0;  // PRINTER_ATTRIBUTE_SHARED
-            }
-            catch (Exception) { return false; }
-        }
-
-        static bool ServiceInstalled()
-        {
-            try { using (var sc = new ServiceController(PublishedStatus.ServiceName)) return sc.Status >= 0; }  // throws when not installed
-            catch (Exception) { return false; }
         }
 
         // "QL-800 on USB001: 62 mm continuous" for each Brother USB printer connected now.
@@ -998,7 +632,7 @@ namespace QlLabels
                 try { return QlDevice.ScanUsb(); } catch (Exception) { return new List<DeviceResult>(); }
             });
             driverInstalled = SetupForm.Drivers().Length > 0;
-            var ours = MainForm.OurPrinters();
+            var ours = QlPrinters.OurPrinters();
             Func<string, string, bool> onPort = (printer, port) => string.Equals(QlDevice.PortOf(printer), port, StringComparison.OrdinalIgnoreCase);
             var others = PrinterSettings.InstalledPrinters.Cast<string>().Where(p => !ours.Contains(p)).ToList();
             var foreign = found.Where(d => d.Port != null && !ours.Any(p => onPort(p, d.Port)) && others.Any(p => onPort(p, d.Port)))
@@ -1074,7 +708,7 @@ namespace QlLabels
                 // Opened once more after the normal restart that ended the special start: the check (installed, checks on)
                 Set(sign, StepState.Done, Lang.T("Signed."));
                 Set(install, StepState.Done, Lang.F("Installed ({0}).", driver));
-                readyPrinters = MainForm.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
+                readyPrinters = QlPrinters.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
                 ShowDone(TestPrintedBeforeRestart());
             }
             else if (nothingToDo || foreignOnly)
@@ -1163,14 +797,12 @@ namespace QlLabels
             // The prompt names the program that asks (bcdedit runs in cmd.exe), not this setup
             Set(special, StepState.Working, Lang.T("Windows asks about \"Windows Command Processor\": click Yes."));
             Busy(special);
-            var psi = new ProcessStartInfo(NativeTools.Path("cmd.exe", elevated: true), "/c bcdedit /set {current} onetimeadvancedoptions on")
-            { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
             int code;
-            try { code = await Task.Run(() => { using (var p = Process.Start(psi)) { p.WaitForExit(); return p.ExitCode; } }); }
+            try { code = await Task.Run(() => Elevated.Run(NativeTools.Path("cmd.exe", elevated: true), "/c bcdedit /set {current} onetimeadvancedoptions on")); }
             catch (Win32Exception ex)
             {
                 ShowPrepare(false);
-                Set(special, StepState.Problem, ex.NativeErrorCode == 1223
+                Set(special, StepState.Problem, Elevated.Declined(ex)
                     ? Lang.T("Declined, nothing changed. To try again: Prepare and restart.")
                     : Lang.T("Could not prepare the restart with key 7:") + " " + ex.Message);
                 return;
@@ -1217,10 +849,8 @@ namespace QlLabels
             string script = Path.Combine(root, @"driver\check-signing.ps1"), dir = Path.Combine(root, @"out\check-signing");
             if (!File.Exists(script)) return;
             var started = DateTime.Now.AddSeconds(-5);
-            var psi = new ProcessStartInfo(NativeTools.Path("powershell.exe", elevated: true), "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\"")
-            { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = root };
             report.Enabled = false;
-            try { await Task.Run(() => { using (var p = Process.Start(psi)) p.WaitForExit(); }); }
+            try { await Task.Run(() => Elevated.Run(NativeTools.Path("powershell.exe", elevated: true), "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\"", root)); }
             catch (Win32Exception) { report.Enabled = true; return; }  // declined
             report.Enabled = true;
             var file = Directory.Exists(dir) ? new DirectoryInfo(dir).GetFiles("check-*.txt").Where(f => f.LastWriteTime >= started)
@@ -1339,25 +969,22 @@ namespace QlLabels
             {
                 Set(sign, StepState.Working, Lang.T("Making a certificate for this PC and signing the driver..."));
                 Busy(sign);
-                var signing = await Task.Run(() => RunHidden(NativeTools.Path("powershell.exe"), "-NoProfile -ExecutionPolicy Bypass -File \"" + Path.Combine(root, @"driver\package.ps1") +
+                var signing = await Task.Run(() => ScriptRun.RunHidden(NativeTools.Path("powershell.exe"), "-NoProfile -ExecutionPolicy Bypass -File \"" + Path.Combine(root, @"driver\package.ps1") +
                                                              "\" -SignOnly -OneTimeKeys"));
                 if (signing.Item1 != 0)
                 {
-                    Fail(sign, Lang.T("Signing failed:") + " " + ErrorMessage(signing.Item2, signing.Item3), (signing.Item2 + "\r\n" + signing.Item3).Trim());
+                    Fail(sign, Lang.T("Signing failed:") + " " + ScriptRun.ErrorMessage(signing.Item2, signing.Item3), (signing.Item2 + "\r\n" + signing.Item3).Trim());
                     return;
                 }
                 Set(sign, StepState.Done, Lang.T("Signed."));
             }
 
             // 2. install.ps1 as administrator, its steps shown while it runs
-            string temp = Path.GetTempPath(), resultFile = Path.Combine(temp, "ql-unidrv-setup.txt");
-            logFile = Path.Combine(temp, "ql-unidrv-install.log");
-            foreach (var f in new[] { logFile, resultFile }) try { File.Delete(f); } catch (Exception) { }
+            string resultFile = ScriptRun.TempFile(ScriptRun.SetupResult);
+            logFile = ScriptRun.TempFile(ScriptRun.SetupLog);
+            ScriptRun.ClearFiles(logFile, resultFile);
             string arguments = appOnly ? " -AppOnly" : settingsOnly ? " -Settings" + usbArguments + net
                 : (wasUpdate ? " -Update" : "") + (shareOrService ? " -StatusService " + (service.Checked ? "on" : "off") : "") + net + usbArguments;
-            var psi = new ProcessStartInfo(NativeTools.Path("powershell.exe", elevated: true), "-NoProfile -ExecutionPolicy Bypass -File \"" + Path.Combine(root, @"driver\install.ps1") + "\"" + arguments +
-                                           " -Log \"" + logFile + "\" -ResultFile \"" + resultFile + "\"")
-            { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = root };
             Set(install, StepState.Working, Lang.T("Windows asks about \"Windows PowerShell\": click Yes."));
             Busy(install);
             // ARM64 (special start, a driver package to install): Windows asks once more, about the driver's publisher
@@ -1371,7 +998,7 @@ namespace QlLabels
             var timer = new Timer { Interval = 400 };
             timer.Tick += delegate
             {
-                var lines = ReadResult(resultFile);
+                var lines = ScriptRun.ReadResult(resultFile);
                 string step = lines.Where(kv => kv.Key == "step").Select(kv => kv.Value).LastOrDefault();
                 // The package was in Windows' driver store already (an earlier attempt): no publisher question comes
                 if (publisherPrompt && lines.Any(kv => kv.Key == "package" && kv.Value == "known")) { publisherPrompt = false; packageKnown = true; ShowPicture(null); }
@@ -1384,21 +1011,21 @@ namespace QlLabels
             try
             {
                 timer.Start();
-                code = await Task.Run(() => { using (var p = Process.Start(psi)) { installRunning = true; p.WaitForExit(); return p.ExitCode; } });
+                code = await Task.Run(() => ScriptRun.RunElevated(Path.Combine(root, @"driver\install.ps1"), arguments, logFile, resultFile, root, () => installRunning = true));
             }
             catch (Win32Exception ex)
             {
                 timer.Dispose();
                 installRunning = false;
                 ShowPicture(null);
-                Fail(install, ex.NativeErrorCode == 1223 ? Lang.T("Declined, nothing installed. To try again: Try again.")
+                Fail(install, Elevated.Declined(ex) ? Lang.T("Declined, nothing installed. To try again: Try again.")
                                                          : Lang.T("Could not start the install:") + " " + ex.Message, null);
                 return;
             }
             timer.Dispose();
             installRunning = false;
             ShowPicture(null);
-            var result = ReadResult(resultFile).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Last().Value);
+            var result = ScriptRun.ReadResultMap(resultFile);
             string done, error, errorCode, failedStep;
             result.TryGetValue("done", out done);
             if (closeWhenDone)  // closed while it ran: what follows a good install, then the window really closes
@@ -1424,7 +1051,7 @@ namespace QlLabels
                 if (arm && errorCode == "pnputil" && !SignatureChecksOff()) errorCode = "enforcement-on";
                 if (errorCode == "enforcement-on") assumeSpecial = false;
                 // PowerShell's transcript writes a script's throw as: PS>TerminatingError(): "message"
-                var body = SetupForm.TranscriptBody(logFile).Select(l => Regex.Replace(l, "^PS>TerminatingError\\(\\w*\\): \"(.*)\"$", "$1")).ToList();
+                var body = ScriptRun.FailureLines(logFile);
                 Fail(install, Explain(errorCode, error ?? body.LastOrDefault(l => !l.StartsWith(" ") && !l.StartsWith("+")) ?? Lang.T("It stopped without a message."), failedStep),
                      string.Join("\r\n", body.Skip(Math.Max(0, body.Count - 40))) + "\r\n\r\nLog: " + logFile, errorCode == "rdp-printer");
                 return;
@@ -1440,7 +1067,7 @@ namespace QlLabels
             if (installedLine != null && zipVersion != null)  // the check step said the old version (x64 test 2026-10-28)
                 Set(check, StepState.Done, check.Text.Replace(installedLine, Lang.F("Installed: programs {0}, driver {1}", Versions.App,
                                                                                     Versions.Release(Versions.InstalledDriver()) ?? Lang.T("unknown"))));
-            readyPrinters = MainForm.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
+            readyPrinters = QlPrinters.OurPrinters().Where(p => QlDevice.IsLocalStatusPort(QlDevice.PortOf(p))).ToList();
             Set(install, StepState.Done, (wasUpdate ? Lang.T("Updated. In the Start menu: QL Label Formats, QL Label Maker and QL Printer Status.")
                                                      : Lang.T("Installed. In the Start menu: QL Label Formats, QL Label Maker and QL Printer Status.")) + monitorNote +
                                          (packageKnown ? "\n" + PackageKnownText : ""));
@@ -1454,7 +1081,7 @@ namespace QlLabels
         {
             if (Preview) return;
             foreach (var f in new[] { logFile, resultFile }) try { if (f != null) File.Delete(f); } catch (Exception) { }
-            SetupForm.DeleteRunFiles();
+            ScriptRun.DeleteRunFiles();
             logFile = null;
         }
 
@@ -1676,314 +1303,5 @@ namespace QlLabels
             foreach (var s in new[] { check, sign, install, test }) ShowStep(s, true);
         }
 
-        // ---------- uninstall ----------
-
-        // QlLabelFormats.exe --uninstall [--scripts <folder with install.ps1>] [--temp-copy]. The installed exe can't remove its own
-        // folder while it runs, so from there it starts a copy of itself in %TEMP% (with install.ps1) and ends; the copy
-        // deletes itself when its window closes.
-        internal static void Uninstall(string[] args)
-        {
-            string exeDir = Path.GetDirectoryName(Application.ExecutablePath), appDir = Path.GetDirectoryName(InstalledExe);
-            int at = Array.IndexOf(args, "--scripts");
-            string scripts = at >= 0 && at + 1 < args.Length ? args[at + 1] : null;
-            if (scripts == null && string.Equals(exeDir.TrimEnd('\\'), appDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-            {
-                string temp = Path.Combine(Path.GetTempPath(), "ql-unidrv-uninstall-" + Guid.NewGuid().ToString("N").Substring(0, 8));
-                string tempScripts = Path.Combine(temp, "setup"), exe = Path.Combine(temp, Path.GetFileName(Application.ExecutablePath));
-                try
-                {
-                    Directory.CreateDirectory(tempScripts);
-                    File.Copy(Application.ExecutablePath, exe);
-                    if (File.Exists(Application.ExecutablePath + ".config")) File.Copy(Application.ExecutablePath + ".config", exe + ".config");
-                    string script = Path.Combine(appDir, @"setup\install.ps1");
-                    if (File.Exists(script)) File.Copy(script, Path.Combine(tempScripts, "install.ps1"));
-                    Process.Start(exe, "--uninstall --scripts \"" + tempScripts + "\" --temp-copy");
-                    return;
-                }
-                catch (Exception) { scripts = Path.Combine(appDir, "setup"); }  // no copy: from here (the folder may stay)
-            }
-            var form = new InstallForm(null, false, scripts ?? Path.Combine(exeDir, "setup"));
-            if (Array.IndexOf(args, "--temp-copy") >= 0) form.tempCopy = exeDir;
-            Application.Run(form);
-        }
-
-        // The %TEMP% copy removes itself a moment after it ended
-        void RemoveTempCopy()
-        {
-            if (tempCopy == null || !Path.GetFileName(tempCopy).StartsWith("ql-unidrv-uninstall-", StringComparison.Ordinal)) return;
-            try
-            {
-                Process.Start(new ProcessStartInfo(NativeTools.Path("cmd.exe"), "/c ping -n 4 127.0.0.1 >nul & rd /s /q \"" + tempCopy + "\"")
-                { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Path.GetTempPath() });
-            }
-            catch (Exception) { }
-        }
-
-        // What will be removed: the printers (a shared one in orange: other PCs lose it), the programs, the rest; keep the
-        // label formats (ticked).
-        void ShowUninstall()
-        {
-            mode = Mode.Uninstall;
-            uninstallMode = true;
-            string script = Path.Combine(uninstallScripts, "install.ps1");
-            SetSubtitle(Versions.App);
-            headline.Text = Lang.T("Uninstall the QL printer driver");
-            doneBox.Visible = options.Visible = inSpecial.Visible = details.Visible = uninstallLink.Visible = false;
-            ShowPicture(null);
-            ShowReport(false);
-            foreach (var s in new[] { check, special, sign, install, test }) { Set(s, StepState.Waiting, ""); ShowStep(s, false); }
-            intro.Visible = true;
-            if (!File.Exists(script))
-            {
-                intro.Text = Lang.F("Uninstall: use Setup.exe from the release zip ({0} is missing).", script);
-                main.Visible = false;
-                close.Visible = true;
-                close.Text = Lang.T("Close");
-                return;
-            }
-            intro.Text = Lang.T("Removes everything the setup installed on this PC:");
-            FillRemoveList();
-            removeList.Visible = true;
-            labelCount = 0;
-            try { if (File.Exists(LabelStore.JsonPath)) labelCount = LabelStore.Load(LabelStore.JsonPath).Formats.Count; } catch (Exception) { }
-            keepLabels.Text = Lang.F("Keep my label formats ({0} formats, for a later install)", labelCount);
-            keepRow.Visible = File.Exists(LabelStore.JsonPath);
-            main.Text = Lang.T("Uninstall");
-            main.Enabled = main.Visible = true;
-            close.Text = Lang.T("Cancel");
-            close.Visible = true;
-            AcceptButton = close;  // removing is never the default
-            close.Focus();
-        }
-
-        void FillRemoveList()
-        {
-            removeList.SuspendLayout();
-            foreach (Control c in removeList.Controls.Cast<Control>().ToList()) c.Dispose();
-            removeList.Controls.Clear();
-            // em and wide are from the start at 100 %: the new labels get the width at this screen's scaling (150 % test 1324)
-            int row = 0, valueWidth = (wide - em * 7) * Font.Height / em;
-            Action<string, Control> add = (key, value) =>
-            {
-                removeList.Controls.Add(Theme.Fore(new Label { Text = key, AutoSize = true, Margin = new Padding(0, 0, em, em / 3) }, Role.Dim), 0, row);
-                value.Margin = new Padding(0, 0, 0, em / 3);
-                removeList.Controls.Add(value, 1, row++);
-            };
-            Func<string, Role, Label> text = (t, role) => Theme.Fore(new Label { Text = t, AutoSize = true, MaximumSize = new Size(valueWidth, 0), Margin = Padding.Empty }, role);
-            bool first = true;
-            foreach (string p in MainForm.OurPrinters().Where(n => !Redirected(n)))
-            {
-                string port = QlDevice.PortOf(p) ?? "", share = ShareName(p);
-                var cell = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-                cell.Controls.Add(text(port.StartsWith(@"\\") ? Lang.F("{0} on {1}", p, port) : p, Role.Text));
-                if (share != null) cell.Controls.Add(text(Lang.F("shared as \"{0}\" – other PCs can't print through it any more", share), Role.WarningText));
-                add(first ? Lang.T("Printers") : "", cell);
-                first = false;
-            }
-            add(Lang.T("Programs"), text("QL Label Formats, QL Label Maker, QL Printer Status", Role.Text));
-            add(Lang.T("Also"), text(Lang.T("the driver, its certificate and the logs"), Role.Text));
-            removeList.ResumeLayout();
-        }
-
-        // A printer that a Remote Desktop session redirects here (TS port, "(redirected N)"): install.ps1's Test-RedirectedPrinter
-        static bool Redirected(string printer)
-        {
-            return Regex.IsMatch(QlDevice.PortOf(printer) ?? "", @"^TS\d+$") || Regex.IsMatch(printer, @"\((umgeleitet|redirected) \d+\)$");
-        }
-
-        // A printer's share name, or null when it isn't shared
-        static string ShareName(string printer)
-        {
-            if (!IsShared(printer)) return null;
-            try
-            {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Print\Printers\" + printer))
-                    return k == null ? null : (k.GetValue("Share Name") as string ?? printer);
-            }
-            catch (Exception) { return printer; }
-        }
-
-        // The uninstall's two steps (the setup's check and install steps with their own titles and tips)
-        void UninstallSteps()
-        {
-            check.Title.Text = Lang.T("Close the programs");
-            check.Tip = Lang.T("QL Label Formats and QL Label Maker are closed first; QL Printer Status closes by itself.");
-            install.Title.Text = Lang.T("Remove printers, driver and programs");
-            install.Tip = Lang.T("Windows asks once for your permission. Then the printers, the driver, the programs with their Start menu entries and the certificate are removed.");
-        }
-
-        async void RunUninstall()
-        {
-            // install.ps1 stops for redirected printers (they keep the driver in use): ask before anything is closed
-            var redirected = MainForm.OurPrinters().Where(Redirected).ToList();
-            if (redirected.Count > 0)
-            {
-                removeList.Visible = keepRow.Visible = false;
-                close.Text = Lang.T("Close");
-                UninstallSteps();
-                ShowStep(install, true);
-                Fail(install, Explain("rdp-printer", null), "Printers redirected by a Remote Desktop session use this driver: " +
-                     string.Join(", ", redirected.Select(p => "'" + p + "'")), true);
-                return;
-            }
-            for (string open; (open = LabelToolOpen()) != null; )
-            {
-                if (QlMessage.Show(this, Lang.F("\"{0}\" is open. Save your changes and close it, then click OK.", open), Text,
-                                    MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK)
-                    return;
-            }
-            mode = Mode.Running;
-            labelsKept = keepRow.Visible && keepLabels.Checked;
-            removeList.Visible = keepRow.Visible = intro.Visible = main.Visible = false;
-            close.Text = Lang.T("Close");
-            AcceptButton = null;
-            UninstallSteps();
-            ShowStep(check, true);
-            ShowStep(install, true);
-            Set(check, StepState.Done, Lang.T("Closed."));
-            Set(install, StepState.Working, Lang.T("Windows asks about \"Windows PowerShell\": click Yes."));
-            Busy(install);
-
-            string temp = Path.GetTempPath(), resultFile = Path.Combine(temp, "ql-unidrv-setup.txt");
-            logFile = Path.Combine(temp, "ql-unidrv-install.log");
-            foreach (var f in new[] { logFile, resultFile }) try { File.Delete(f); } catch (Exception) { }
-            var psi = new ProcessStartInfo(NativeTools.Path("powershell.exe", elevated: true), "-NoProfile -ExecutionPolicy Bypass -File \"" + Path.Combine(uninstallScripts, "install.ps1") +
-                                           "\" -Uninstall" + (labelsKept ? " -KeepLabels" : "") + " -Log \"" + logFile + "\" -ResultFile \"" + resultFile + "\"")
-            { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = temp };
-            var timer = new Timer { Interval = 400 };
-            bool switched = false;
-            timer.Tick += delegate
-            {
-                if (!installRunning || switched) return;
-                switched = true;
-                Set(install, StepState.Working, Lang.T("Removing printers, driver and programs..."));
-            };
-            int code;
-            try
-            {
-                timer.Start();
-                code = await Task.Run(() => { using (var p = Process.Start(psi)) { installRunning = true; p.WaitForExit(); return p.ExitCode; } });
-            }
-            catch (Win32Exception ex)
-            {
-                timer.Dispose();
-                installRunning = false;
-                Fail(install, ex.NativeErrorCode == 1223 ? Lang.T("Declined, nothing removed. To try again: Try again.") : Lang.T("Could not start the install:") + " " + ex.Message, null);
-                return;
-            }
-            timer.Dispose();
-            installRunning = false;
-            var result = ReadResult(resultFile).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Last().Value);
-            string done, error, errorCode;
-            result.TryGetValue("done", out done);
-            bool ok = code == 0 && (done == "1" || (!result.ContainsKey("error") && !File.Exists(InstalledExe)));
-            // What Windows didn't let go (left= lines: a port, a paper size): named in the done view, the log kept for Show details
-            var left = ReadResult(resultFile).Where(kv => kv.Key == "left-port" || kv.Key == "left-paper")
-                                             .Select(kv => kv.Key == "left-port" ? Lang.F("port {0}", kv.Value) : Lang.F("paper size \"{0}\"", kv.Value)).ToList();
-            if (ok) RemoveSigningCopies();
-            if (ok && left.Count == 0) DeleteRunFiles(resultFile);
-            if (closeWhenDone) { mode = Mode.Removed; Close(); return; }
-            if (!ok)
-            {
-                result.TryGetValue("error", out error);
-                result.TryGetValue("code", out errorCode);
-                var body = SetupForm.TranscriptBody(logFile).Select(l => Regex.Replace(l, "^PS>TerminatingError\\(\\w*\\): \"(.*)\"$", "$1")).ToList();
-                Fail(install, Explain(errorCode, error ?? body.LastOrDefault(l => !l.StartsWith(" ") && !l.StartsWith("+")) ?? Lang.T("It stopped without a message.")),
-                     string.Join("\r\n", body.Skip(Math.Max(0, body.Count - 40))) + "\r\n\r\nLog: " + logFile, errorCode == "rdp-printer");
-                return;
-            }
-            if (left.Count > 0) failureDetails = string.Join("\r\n", SetupForm.TranscriptBody(logFile).Skip(Math.Max(0, SetupForm.TranscriptBody(logFile).Count - 40))) + "\r\n\r\nLog: " + logFile;
-            ShowRemoved(left);
-        }
-
-        // The uninstall's done view: only the done box (and what stayed, with Show details)
-        void ShowRemoved(List<string> left = null)
-        {
-            mode = Mode.Removed;
-            bool rest = left != null && left.Count > 0;
-            headline.Text = Lang.T("The QL printer driver is removed");
-            doneBox.Title = rest ? Lang.T("Done – removed, except:") : Lang.T("Done – everything is removed.");
-            var lines = new List<string>();
-            if (rest) lines.Add(string.Join(", ", left) + " – " + Lang.T("Windows didn't let it go; Show details says why."));
-            if (labelsKept) lines.Add(Lang.F("Your {0} label formats were kept; a later install takes them over.", labelCount));
-            doneBox.Line.Text = string.Join("\n", lines);
-            doneBox.Line.Visible = lines.Count > 0;
-            details.Visible = rest;
-            doneBox.Visible = true;
-            removeList.Visible = keepRow.Visible = intro.Visible = false;
-            foreach (var s in new[] { check, install }) ShowStep(s, false);
-            main.Text = Lang.T("Done");
-            main.Visible = true;
-            close.Visible = false;
-            AcceptButton = main;
-            main.Focus();
-        }
-
-        // The copies of this PC's one-time signing root that signing left among this user's intermediate CAs (package.ps1
-        // removes its own since 2026-10-31; older ones stay until here)
-        static void RemoveSigningCopies()
-        {
-            if (Preview) return;
-            try
-            {
-                using (var store = new System.Security.Cryptography.X509Certificates.X509Store(System.Security.Cryptography.X509Certificates.StoreName.CertificateAuthority,
-                                                                                                 System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser))
-                {
-                    store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite);
-                    foreach (var c in store.Certificates.Cast<System.Security.Cryptography.X509Certificates.X509Certificate2>().ToList())
-                        if (Regex.IsMatch(c.Subject, @"^CN=QL.* driver root CA")) store.Remove(c);
-                }
-            }
-            catch (Exception) { }
-        }
-
-        // ---------- helpers ----------
-
-        // Exit code, output and error output of a hidden, unelevated process.
-        static Tuple<int, string, string> RunHidden(string exe, string arguments)
-        {
-            var psi = new ProcessStartInfo(exe, arguments)
-            {
-                UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
-                StandardOutputEncoding = Encoding.Default, StandardErrorEncoding = Encoding.Default,
-            };
-            using (var p = Process.Start(psi))
-            {
-                var err = p.StandardError.ReadToEndAsync();
-                string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
-                return Tuple.Create(p.ExitCode, output, err.Result);
-            }
-        }
-
-        // A script's failure in one line: PowerShell writes the error's message first, then where it happened (in
-        // Windows' language); without error output the script's last line.
-        internal static string ErrorMessage(string output, string error)
-        {
-            var first = error.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(l => l.Trim().Length > 0);
-            return first != null ? first.Trim()
-                 : output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).LastOrDefault(l => l.Length > 0) ?? Lang.T("no message");
-        }
-
-        // install.ps1's -ResultFile while it is still being written (key=value lines, in order).
-        internal static List<KeyValuePair<string, string>> ReadResult(string file)
-        {
-            var list = new List<KeyValuePair<string, string>>();
-            try
-            {
-                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                using (var r = new StreamReader(fs, Encoding.UTF8))
-                {
-                    string line;
-                    while ((line = r.ReadLine()) != null)
-                    {
-                        int eq = line.IndexOf('=');
-                        if (eq > 0) list.Add(new KeyValuePair<string, string>(line.Substring(0, eq).Trim(), line.Substring(eq + 1).Trim()));
-                    }
-                }
-            }
-            catch (Exception) { }
-            return list;
-        }
     }
 }

@@ -5,7 +5,7 @@
 # -> <Out>\<light|dark>-<de|en>-<window>.png, plus "-live" shots after a live switch to the other scheme.
 param(
     [string]$App = "$PSScriptRoot\..\..\out\tools\QlLabelFormats.exe",
-    [string]$Out = "$PSScriptRoot\..\..\out\theme-shots")
+    [string]$Out = $(if ($env:QL_TEST_OUT) { Join-Path $env:QL_TEST_OUT "theme-shots" } else { "$PSScriptRoot\..\..\out\theme-shots" }))
 
 $ErrorActionPreference = "Stop"
 $Out = [IO.Path]::GetFullPath($Out)

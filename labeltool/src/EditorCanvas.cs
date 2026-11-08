@@ -242,7 +242,7 @@ namespace QlLabels
         public PointF MmToClient(PointF mm) { return ToScreen(mm.X, mm.Y); }
         public PointF ClientToMm(Point p) { return ToMm(p); }
 
-        PointF ToMm(Point p) { var o = Origin; float k = PixelsPerMm; return new PointF((p.X - o.X) / k, (p.Y - o.Y) / k); }
+        internal PointF ToMm(Point p) { var o = Origin; float k = PixelsPerMm; return new PointF((p.X - o.X) / k, (p.Y - o.Y) / k); }
         // An object's outline on the screen (turned with it).
         PointF[] Outline(LabelObject o) { return o.Corners.Select(p => ToScreen(p.X, p.Y)).ToArray(); }
 
@@ -1027,6 +1027,16 @@ namespace QlLabels
                 }
                 else if (handle == 3 || handle == 7) { float cy = (b.Top + b.Bottom) / 2; top = cy - w / 2; bottom = cy + w / 2; }
                 else { float cx = (b.Left + b.Right) / 2; left = cx - h / 2; right = cx + h / 2; }
+            }
+            // Shapes at a corner with Shift: regular (square, circle, equilateral triangle, even polygon or star); the
+            // larger change wins, the opposite corner stays.
+            var shape = selected as ShapeObject;
+            if (shape != null && handle % 2 == 0 && (ModifierKeys & Keys.Shift) != 0)
+            {
+                float ratio = (float)shape.NaturalRatio, w = right - left, h = bottom - top;
+                if (w / h > ratio) h = w / ratio; else w = h * ratio;
+                if (left != b.Left) left = right - w; else right = left + w;
+                if (top != b.Top) top = bottom - h; else bottom = top + h;
             }
             var text = selected as TextObject;
             if (text != null && text.Kind == TextKind.Line) { ScaleText(text, b, right - left, bottom - top); return; }

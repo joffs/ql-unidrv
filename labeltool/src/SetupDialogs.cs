@@ -12,7 +12,7 @@ namespace QlLabels
 {
     enum ResultKind { Ok, Question, Warning, Error, Info }
 
-    sealed class SetupResult : Form
+    sealed class SetupResult : ScaledForm
     {
         // The state colours of the status window and the tray (Brand): OK and questions petrol.
         static readonly Color Green = Theme.Fixed.StateOk, Amber = Theme.Fixed.StateWarning, Red = Theme.Fixed.StateError, Blue = Theme.Fixed.StateOk;
@@ -29,23 +29,10 @@ namespace QlLabels
 
         static Font HeadFont(Font font) { return new Font(font.FontFamily, font.Size * 1.25f, FontStyle.Bold); }
 
-        // Opened on a second screen with other scaling: CenterParent creates it there directly (Brand.MatchScreenDpi).
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            Brand.MatchScreenDpi(this);
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            Brand.MatchScreenDpi(this);
-            base.OnLoad(e);
-        }
-
+        // Opened on a second screen with other scaling: CenterParent creates it there directly (ScaledForm).
         protected override void OnDpiChanged(DpiChangedEventArgs e)
         {
             base.OnDpiChanged(e);
-            Brand.FollowFont(this, Font);
             head.Font = HeadFont(Font);  // larger than the window's font: FollowFont made it the plain bold size
         }
 
@@ -91,7 +78,7 @@ namespace QlLabels
                 {
                     if (string.IsNullOrEmpty(f.Value)) continue;
                     table.Controls.Add(Theme.Fore(new Label { Text = f.Key, AutoSize = true, Margin = new Padding(0, 2, em, 2) }, Role.Dim), 0, rows);
-                    table.Controls.Add(new Label { Text = f.Value, AutoSize = true, MaximumSize = new Size(wide - em * 7, 0), Margin = new Padding(0, 2, 0, 2) }, 1, rows);
+                    table.Controls.Add(new Label { Text = BreakPath(f.Value, wide - em * 7), AutoSize = true, MaximumSize = new Size(wide - em * 7, 0), Margin = new Padding(0, 2, 0, 2) }, 1, rows);
                     rows++;
                 }
             if (rows > 0) body.Controls.Add(table);
@@ -99,7 +86,7 @@ namespace QlLabels
                 body.Controls.Add(new Label { Text = note, AutoSize = true, MaximumSize = new Size(wide, 0), Margin = new Padding(0, 0, 0, em / 2) });
             if (!string.IsNullOrEmpty(details))
             {
-                var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Visible = false,
+                var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true, Visible = false,
                                         Font = new Font(FontFamily.GenericMonospace, Font.Size * 0.9f), Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n"),
                                         Size = new Size(wide, em * 10), Margin = new Padding(0, 0, 0, em / 2) };
                 var links = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
@@ -133,10 +120,28 @@ namespace QlLabels
             Controls.Add(root);
         }
 
+        // A file path too wide for a field breaks after a backslash, never inside a name (a label would break it at any
+        // character). Other values stay as they are. The full path is also in the details (Copy details).
+        string BreakPath(string value, int width)
+        {
+            if (value.Length < 4 || value[1] != ':' || value[2] != '\\' || value.IndexOf('\n') >= 0
+                || TextRenderer.MeasureText(value, Font).Width <= width) return value;
+            var lines = new List<string>();
+            string line = null;
+            foreach (var part in value.Split('\\'))
+            {
+                if (line == null) line = part;
+                else if (TextRenderer.MeasureText(line + "\\" + part, Font).Width > width) { lines.Add(line + "\\"); line = part; }
+                else line += "\\" + part;
+            }
+            lines.Add(line);
+            return string.Join("\n", lines);
+        }
+
         LinkLabel Link(string text)
         {
             var link = new LinkLabel { Text = text, AutoSize = true, LinkBehavior = LinkBehavior.HoverUnderline, Margin = new Padding(0, 0, em, em / 3) };
-            Brand.StyleLink(link);
+            Theme.StyleLink(link);
             return link;
         }
 
@@ -153,7 +158,7 @@ namespace QlLabels
             };
             buttons.Controls.Add(b);
             buttons.Controls.SetChildIndex(b, buttons.Controls.Count - 2);  // before Close
-            if (primary) { Brand.StylePrimary(b); AcceptButton = b; Shown += delegate { b.Focus(); }; }
+            if (primary) { Theme.Primary(b); AcceptButton = b; Shown += delegate { b.Focus(); }; }
             return b;
         }
 
@@ -166,7 +171,7 @@ namespace QlLabels
             buttons.Controls.SetChildIndex(b, buttons.Controls.Count - 2);
             if (primary)
             {
-                Brand.StylePrimary(b);
+                Theme.Primary(b);
                 AcceptButton = b;
                 Shown += delegate { b.Focus(); };
             }
@@ -227,7 +232,7 @@ namespace QlLabels
     }
 
     // "Working..." while a step runs (e.g. install.ps1 as administrator), so the window isn't just greyed out.
-    sealed class SetupProgress : Form
+    sealed class SetupProgress : ScaledForm
     {
         SetupProgress(string title, string headline, string note)
         {
@@ -249,24 +254,6 @@ namespace QlLabels
                 root.Controls.Add(Theme.Fore(new Label { Text = note, AutoSize = true, MaximumSize = new Size(em * 22, 0), Margin = new Padding(0, 0, 0, em / 2) }, Role.Dim));
             root.Controls.Add(new ProgressBar { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 30, Size = new Size(em * 22, em) });
             Controls.Add(root);
-        }
-
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            Brand.MatchScreenDpi(this);
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            Brand.MatchScreenDpi(this);
-            base.OnLoad(e);
-        }
-
-        protected override void OnDpiChanged(DpiChangedEventArgs e)
-        {
-            base.OnDpiChanged(e);
-            Brand.FollowFont(this, Font);
         }
 
         // Runs work off the UI thread and shows this dialog until it ends; exceptions come back to the caller.

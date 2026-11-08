@@ -29,9 +29,9 @@ Install
    Treibersoftware trotzdem installieren").
 Afterwards the Start menu has QL Label Formats, QL Label Maker and QL Printer Status.
 
-Day to day: "QL Label Formats" > menu Printer > Printer setup (German: Drucker >
-Druckereinrichtung): add a network printer or a printer shared by another PC, the printer status
-service, the driver log, uninstall. Or Windows Settings > Apps > Installed apps (German: Installierte
+Day to day: "QL Label Formats" or "QL Label Maker" > menu Printer > Printer setup (German:
+Drucker > Druckereinrichtung): add a network printer or a printer shared by another PC, share a
+printer, remove a printer, the printer status service, the driver log, uninstall. Or Windows Settings > Apps > Installed apps (German: Installierte
 Apps) > "QL Unidrv printer driver" > Modify / Uninstall.
 The programs speak English or German, as Windows does; to switch: QL Label Formats >
 menu Tools > Language / Sprache.
@@ -43,30 +43,33 @@ label list); you can keep your label formats for a later install.
 
 A QL printer on the network, added later (or a second one)
 ---------------------------------------------------------
-In "QL Label Formats": menu Printer > Printer setup > "Add a QL printer on the network" (German:
-Drucker > Druckereinrichtung > "QL-Drucker im Netzwerk hinzufuegen"). The printer is asked which
-model it is. No restart with
+Menu Printer > Printer setup > tab "Network printer" (German: Drucker > Druckereinrichtung >
+"Netzwerkdrucker"): IP address, Add. The printer is asked which model it is. No restart with
 key 7 needed, also on ARM64.
 
 Printing to a QL printer shared by another PC
 ---------------------------------------------
-On the PC the printer is plugged into, share the printer "Brother QL-xxx (Unidrv)" (Printer
-properties -> Sharing; German: Druckereigenschaften -> Freigabe). On this PC:
+On the PC the printer is plugged into: menu Printer > Printer setup > tab "Share a printer"
+(German: Drucker > Druckereinrichtung > "Drucker freigeben"), choose the printer and a share name.
+On this PC:
 1. Open \\host in Explorer (host = that PC's name or address), sign in as an account of that PC
    and tick "Remember my credentials".
 2. Run Setup.exe as above (the driver must be installed here too).
-3. Open the Printer setup window in QL Label Formats and give the share (\\host\QL-xxx) and the model.
+3. Menu Printer > Printer setup > tab "Another PC's printer" (German: "Drucker eines anderen PCs"):
+   give the share (\\host\QL-xxx) and the model.
    It adds a printer that sends to the share; no restart with key 7 needed, also on ARM64. A printer
    of the same name on USB stays; the new one is then called "Brother QL-xxx (Unidrv) on host".
 Printer status on this PC too: on the PC the printer is plugged into, switch on "Printer status
 service for shared printers" (German: "Druckerstatus-Dienst fuer freigegebene Drucker") in Printer
-setup (docs/status-service.md on the project page). Details and limits: docs/sharing.md on the
+setup, tab "Share a printer" (German: "Drucker freigeben"; docs/status-service.md on the project
+page). Details and limits: docs/sharing.md on the
 project page.
 
 Troubleshooting: the driver log
 -------------------------------
 The driver keeps no log unless you switch it on (for a bug report). In "QL Label Formats" open
-menu Printer > Printer setup (German: Drucker > Druckereinrichtung) and tick
+menu Printer > Printer setup > tab "Options" (German: Drucker > Druckereinrichtung > "Optionen")
+and tick
 "Driver log for troubleshooting" (German: "Treiberprotokoll zur Fehlersuche"; one administrator
 prompt). Print again; the log is C:\ProgramData\QLUnidrv\log\plugin.log (at most about 2 MB with
 plugin.old.log). Attach it to your report together with C:\ProgramData\QLUnidrv\log\printer-status.log

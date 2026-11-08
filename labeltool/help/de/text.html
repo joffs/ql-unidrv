@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Text und Textrahmen – QL Label Maker Hilfe</title>
+<title>Grafiktext und Mengentext – QL Label Maker Hilfe</title>
 <link rel="stylesheet" href="../help.css">
 </head>
 <body>
@@ -21,31 +21,31 @@
 <section class="page"><div class="wrap">
   <header>
     <span class="eyebrow">Objekte</span>
-    <h1>Text und Textrahmen</h1>
-    <p class="lead">Ein Text ist entweder einzeilig oder ein Textrahmen mit mehreren Zeilen. Alles Weitere stellen Sie
-      rechts bei den Einstellungen ein.</p>
+    <h1>Grafiktext und Mengentext</h1>
+    <p class="lead">Ein Text ist entweder ein Grafiktext (eine Zeile, der Rahmen folgt dem Text) oder ein Mengentext
+      (mehrere Zeilen, die in ihrem Rahmen umbrechen). Alles Weitere stellen Sie rechts bei den Einstellungen ein.</p>
   </header>
 
   <ul class="blocks">
     <li>
       <div class="step">
-        <h2 id="single-line">Einzeilig</h2>
-        <p>Werkzeug <span class="ui">Text</span> oder <span class="path">Einfügen &gt; Text</span>. Der Rahmen passt sich
+        <h2 id="single-line">Grafiktext</h2>
+        <p>Werkzeug <span class="ui">Grafiktext</span> oder <span class="path">Einfügen &gt; Grafiktext</span>. Der Rahmen passt sich
           immer dem Text an. Ziehen Sie an einem Anfasser, um den Text zu vergrößern oder zu verkleinern; die
           gegenüberliegende Seite bleibt dabei stehen. Oder tippen Sie die <span class="ui">Größe (pt)</span> ein.</p>
         <p>Die Eingabetaste bewirkt hier nichts; eingefügte Zeilenumbrüche werden zu Leerzeichen.</p>
-        <figure class="frame" style="max-width:340px"><img src="../img/de/text-panel.png" width="230" height="173" alt="Einstellungen eines einzeiligen Textes: Text, Feld einfügen, Art Einzeilig, Schriftart, Größe, Fett, Kursiv, Unterstrichen"></figure>
+        <figure class="frame" style="max-width:340px"><img src="../img/de/text-panel.png" width="230" height="173" alt="Einstellungen eines Grafiktexts: Text, Feld einfügen, Art Grafiktext, Schriftart, Größe, Fett, Kursiv, Unterstrichen"></figure>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
-        <div><span><kbd>Strg</kbd> + <kbd>T</kbd></span><span>Text einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>T</kbd></span><span>Grafiktext einfügen</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
-        <h2 id="text-frame">Textrahmen</h2>
-        <p><span class="path">Einfügen &gt; Textrahmen</span>. Den Rahmen legen Sie mit den Anfassern fest; der Text bricht
+        <h2 id="text-frame">Mengentext</h2>
+        <p>Werkzeug <span class="ui">Mengentext</span> oder <span class="path">Einfügen &gt; Mengentext</span>. Den Rahmen legen Sie mit den Anfassern fest; der Text bricht
           an seinem Rand in seiner Schriftgröße um. Ein Wort, das länger als eine Zeile ist, wird zwischen Buchstaben
           getrennt.</p>
         <p>Dazu kommen die Ausrichtung der Zeilen (<span class="ui">Links</span>, <span class="ui">Zentriert</span>,
@@ -55,16 +55,39 @@
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
-        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>T</kbd></span><span>Textrahmen einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>T</kbd></span><span>Mengentext einfügen</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="word-formats">Wörter mit eigenem Format</h2>
+        <p>In einem Mengentext können einzelne Wörter fett, kursiv, unterstrichen oder in einer anderen Schrift oder Größe
+          sein. Markieren Sie sie im Feld <span class="ui">Text</span> und klicken Sie darüber auf <span class="ui">F</span>,
+          <span class="ui">K</span> oder <span class="ui">U</span>, oder ändern Sie <span class="ui">Schriftart</span> und
+          <span class="ui">Größe (pt)</span>. Eine Zeile unter dem Feld sagt, wofür die Einstellungen gelten.</p>
+        <figure class="frame" style="max-width:348px"><img src="../img/de/text-runs-panel.png" width="328" height="320" alt="Einstellungen eines Mengentexts: über dem Textfeld F, K und U; im Feld M4 × 20 fett, verzinkt kursiv, Fach 12 unterstrichen"></figure>
+        <p>Ohne Markierung gelten <span class="ui">F</span>, <span class="ui">K</span> und <span class="ui">U</span> für das,
+          was Sie als Nächstes tippen. Ist das Textfeld nicht aktiv, gelten die Einstellungen für den ganzen Text. Wo sich
+          die markierten Wörter unterscheiden, bleibt die Einstellung leer oder zeigt ■.</p>
+        <p>Eingefügter Text bekommt das Format an der Schreibmarke. Ein Grafiktext hat ein Format für den ganzen Text: Wer
+          einen Mengentext mit Wortformaten dorthin umstellt, wird vorher gefragt; der Text behält das Format des ersten
+          Worts.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>Strg</kbd> + <kbd>B</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>F</kbd></span><span>fett</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>I</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>K</kbd></span><span>kursiv</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>U</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>U</kbd></span><span>unterstrichen</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
         <h2 id="switch-between-the-two">Zwischen beiden wechseln</h2>
-        <p><span class="ui">Art</span> wechselt zwischen <span class="ui">Einzeilig</span> und
-          <span class="ui">Textrahmen</span>. Aus einem Textrahmen wird eine Zeile (Zeilenumbrüche werden zu Leerzeichen),
-          aus einer Zeile ein Rahmen um den Text.</p>
+        <p><span class="ui">Art</span> wechselt zwischen <span class="ui">Grafiktext</span> und
+          <span class="ui">Mengentext</span>. Aus einem Mengentext wird eine Zeile (Zeilenumbrüche werden zu Leerzeichen),
+          aus einem Grafiktext ein Mengentext in einem Rahmen um den Text.</p>
       </div>
     </li>
 
@@ -98,7 +121,7 @@
     </li>
   </ul>
 
-  <nav class="pager" aria-label="Seiten"><a href="length.html">← Etikettenformate und eigene Längen</a><a href="lines-boxes.html">Weiter: Linien und Rahmen →</a></nav>
+  <nav class="pager" aria-label="Seiten"><a href="length.html">← Etikettenformate und eigene Längen</a><a href="lines-boxes.html">Weiter: Linien und Formen →</a></nav>
 </div></section>
 </main>
 
