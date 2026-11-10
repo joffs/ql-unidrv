@@ -13,6 +13,11 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } else { Join-Path $root "out" }) "barcode-test"   # QL_TEST_OUT: a folder per session
 New-Item -ItemType Directory -Force $out | Out-Null
 $deskrun = Join-Path $root "out\tools\uitest\deskrun.exe"
+if (-not (Test-Path $deskrun)) {
+    # a worktree under out\: the main checkout's
+    $main = (& git -C $root rev-parse --path-format=absolute --git-common-dir) -replace '[\\/]\.git$', ''
+    $deskrun = Join-Path $main "out\tools\uitest\deskrun.exe"
+}
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }
 
 python -I (Join-Path $PSScriptRoot "barcode_cases.py") $out

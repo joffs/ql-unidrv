@@ -36,7 +36,7 @@ namespace QlLabels
         public int DpiY;                // 300 or 600 lines per inch
     }
 
-    static class LabelPrinter
+    static partial class LabelPrinter
     {
         [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int index);
         [DllImport("gdi32.dll")]

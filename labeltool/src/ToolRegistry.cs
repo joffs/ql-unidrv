@@ -67,36 +67,36 @@ namespace QlLabels
                 g.Tools.Add(t);
             };
             var text = new ToolGroup("text", Lang.T("Text"), null);
-            add(text, new EditorTool("artistic", ToolIcon.ArtisticText, Lang.T("Artistic text"), Lang.T("Add artistic text (Ctrl+T)"),
+            add(text, new EditorTool("artistic", ToolIcon.ArtisticText, Lang.T("Artistic text"), Lang.T("Write artistic text · Ctrl+T inserts it"),
                                      Lang.T("One line; the handles change the font size"), Lang.T("Click the triangle or press and hold: artistic text"),
                                      Lang.T("&Artistic text"), Keys.Control | Keys.T), AddText);
-            add(text, new EditorTool("paragraph", ToolIcon.ParagraphText, Lang.T("Paragraph text"), Lang.T("Add paragraph text (Ctrl+Shift+T)"),
+            add(text, new EditorTool("paragraph", ToolIcon.ParagraphText, Lang.T("Paragraph text"), Lang.T("Draw a paragraph text frame · Ctrl+Shift+T inserts it"),
                                      Lang.T("Wraps in its box"), Lang.T("Click the triangle or press and hold: paragraph text"),
                                      Lang.T("&Paragraph text"), Keys.Control | Keys.Shift | Keys.T), AddTextFrame);
             groups.Add(text);
             var shapes = new ToolGroup("shapes", Lang.T("Shapes"), Lang.T("Click the triangle or press and hold: more shapes"));
-            add(shapes, new EditorTool("rectangle", ToolIcon.Rectangle, Lang.T("Rectangle"), Lang.T("Add a rectangle (Ctrl+B)"),
+            add(shapes, new EditorTool("rectangle", ToolIcon.Rectangle, Lang.T("Rectangle"), Lang.T("Draw a rectangle · Ctrl+B inserts it"),
                                        Lang.T("Also with round corners"), null, Lang.T("&Rectangle"), Keys.Control | Keys.B), () => AddShape(ShapeKind.Rectangle));
-            add(shapes, new EditorTool("ellipse", ToolIcon.Ellipse, Lang.T("Ellipse"), Lang.T("Add an ellipse (Ctrl+E)"),
+            add(shapes, new EditorTool("ellipse", ToolIcon.Ellipse, Lang.T("Ellipse"), Lang.T("Draw an ellipse · Ctrl+E inserts it"),
                                        Lang.T("Shift while dragging a corner: a circle"), null, Lang.T("&Ellipse"), Keys.Control | Keys.E), () => AddShape(ShapeKind.Ellipse));
-            add(shapes, new EditorTool("triangle", ToolIcon.Triangle, Lang.T("Triangle"), Lang.T("Add a triangle"),
+            add(shapes, new EditorTool("triangle", ToolIcon.Triangle, Lang.T("Triangle"), Lang.T("Draw a triangle"),
                                        Lang.T("Shift while dragging a corner: equilateral"), null, Lang.T("Tr&iangle"), Keys.None), () => AddShape(ShapeKind.Triangle));
-            add(shapes, new EditorTool("polygon", ToolIcon.Polygon, Lang.T("Polygon"), Lang.T("Add a polygon"),
+            add(shapes, new EditorTool("polygon", ToolIcon.Polygon, Lang.T("Polygon"), Lang.T("Draw a polygon"),
                                        Lang.T("3 to 20 corners"), null, Lang.T("P&olygon"), Keys.None), () => AddShape(ShapeKind.Polygon));
-            add(shapes, new EditorTool("star", ToolIcon.Star, Lang.T("Star"), Lang.T("Add a star"),
+            add(shapes, new EditorTool("star", ToolIcon.Star, Lang.T("Star"), Lang.T("Draw a star"),
                                        Lang.T("3 to 20 points, sharp or blunt"), null, Lang.T("&Star"), Keys.None), () => AddShape(ShapeKind.Star));
             groups.Add(shapes);
             var line = new ToolGroup("line", Lang.T("Line"), null);
-            add(line, new EditorTool("line", ToolIcon.Line, Lang.T("Line"), Lang.T("Add a line (Ctrl+L)"), null, null, Lang.T("&Line"), Keys.Control | Keys.L), AddLine);
+            add(line, new EditorTool("line", ToolIcon.Line, Lang.T("Line"), Lang.T("Draw a line · Ctrl+L inserts it"), null, null, Lang.T("&Line"), Keys.Control | Keys.L), AddLine);
             groups.Add(line);
             var picture = new ToolGroup("picture", Lang.T("Picture"), null);
-            add(picture, new EditorTool("picture", ToolIcon.Picture, Lang.T("Picture"), Lang.T("Add a picture: logo, photo, symbol (Ctrl+I)"), null, null,
+            add(picture, new EditorTool("picture", ToolIcon.Picture, Lang.T("Picture"), Lang.T("Place a picture: logo, photo, symbol · Ctrl+I inserts it"), null, null,
                                         Lang.T("Pict&ure..."), Keys.Control | Keys.I), AddPicture);
             groups.Add(picture);
             var code = new ToolGroup("code", Lang.T("Code"), null);
-            add(code, new EditorTool("barcode", ToolIcon.Barcode, Lang.T("Barcode"), Lang.T("Add a barcode (Ctrl+K)"),
+            add(code, new EditorTool("barcode", ToolIcon.Barcode, Lang.T("Barcode"), Lang.T("Draw a barcode · Ctrl+K inserts it"),
                                      Lang.T("Code 128 or EAN-13"), Lang.T("Click the triangle or press and hold: barcode"), Lang.T("&Barcode"), Keys.Control | Keys.K), AddBarcode);
-            add(code, new EditorTool("qr", ToolIcon.QrCode, Lang.T("QR code"), Lang.T("Add a QR code (Ctrl+Q)"),
+            add(code, new EditorTool("qr", ToolIcon.QrCode, Lang.T("QR code"), Lang.T("Draw a QR code · Ctrl+Q inserts it"),
                                      Lang.T("Text, web address, contact, Wi-Fi..."), Lang.T("Click the triangle or press and hold: QR code"), Lang.T("&QR code"), Keys.Control | Keys.Q), AddQrCode);
             groups.Add(code);
             foreach (var g in groups)

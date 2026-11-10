@@ -77,7 +77,7 @@ namespace QlLabels.Tests
                 foreach (int g in new[] { 0, 1, 4 })
                 {
                     var palette = F<ToolStrip>("palette");
-                    var button = (ToolStripButton)palette.Items[g];
+                    var button = palette.Items.OfType<ToolStripButton>().First(b => b.Tag == groups[g]);   // the arrow is first since 0.23
                     Call("ShowFlyout", button, false); Pump(500);
                     var flyout = F<ContextMenuStrip>("flyout");
                     Shot(form, p + "flyout-" + groups[g].Id, flyout);

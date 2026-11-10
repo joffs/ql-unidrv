@@ -29,7 +29,7 @@ namespace QlLabels
 
         Font TitleFont()
         {
-            return new Font("Segoe UI Semibold", Font.SizeInPoints * 1.6f, FontStyle.Regular, GraphicsUnit.Point);
+            return UiFont.Create("Segoe UI Semibold", Font.SizeInPoints * 1.6f, FontStyle.Regular, GraphicsUnit.Point);
         }
 
         protected override void OnTextChanged(EventArgs e) { base.OnTextChanged(e); AccessibleName = Text; UpdateHeight(); Invalidate(); }

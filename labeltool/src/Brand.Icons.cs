@@ -81,7 +81,7 @@ namespace QlLabels
             {
                 switch (icon)
                 {
-                    case ToolIcon.Select:
+                    case ToolIcon.Select:      // the select tool: an outline pointer, tip top left (2026-11-10: variant A)
                         g.DrawPolygon(pen, new[] { new PointF(6, 3.5f), new PointF(6, 18.5f), new PointF(9.8f, 15), new PointF(12.4f, 20.5f),
                                                    new PointF(14.8f, 19.4f), new PointF(12.2f, 14), new PointF(17.5f, 14) });
                         break;
@@ -292,7 +292,7 @@ namespace QlLabels
                     case ArrangeIcon.ResetRotation:
                     {
                         // "0°": back to no rotation (between the two rotate icons).
-                        using (var f = new Font("Segoe UI", 11f * k, FontStyle.Bold, GraphicsUnit.Pixel))
+                        using (var f = UiFont.Create("Segoe UI", 11f * k, FontStyle.Bold, GraphicsUnit.Pixel))
                         using (var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
                         {
                             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;

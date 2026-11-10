@@ -16,6 +16,11 @@ if (-not $Out) { $Out = Join-Path $(if ($env:QL_TEST_OUT) { $env:QL_TEST_OUT } e
 New-Item -ItemType Directory -Force $Out | Out-Null
 $Out = (Resolve-Path $Out).Path   # absolute: the build runs inside -Src
 $deskrun = Join-Path $root "out\tools\uitest\deskrun.exe"
+if (-not (Test-Path $deskrun)) {
+    # a worktree under out\: the main checkout's
+    $main = (& git -C $root rev-parse --path-format=absolute --git-common-dir) -replace '[\\/]\.git$', ''
+    $deskrun = Join-Path $main "out\tools\uitest\deskrun.exe"
+}
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }
 $csc = Join-Path $env:WINDIR "Microsoft.NET\FrameworkArm64\v4.0.30319\csc.exe"
 if (-not (Test-Path $csc)) { $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe" }

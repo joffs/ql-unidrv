@@ -67,7 +67,7 @@ namespace QlLabels
             StartupTrace.Mark("printers: listed");
             string version = AboutForm.DriverVersion();
             string before = shownPrinter;  // not testPrinter: the printer box sets that before calling this
-            if (testPrinter == null || !printers.Contains(testPrinter)) testPrinter = printers.FirstOrDefault();
+            testPrinter = QlPrinters.Choose(printers, testPrinter);   // still there, else the last one chosen, else the first
             shownPrinter = testPrinter;
             if (testPrinter != before || testModel == null)
             {

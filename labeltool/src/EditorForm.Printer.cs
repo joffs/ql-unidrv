@@ -18,7 +18,7 @@ namespace QlLabels
         void RefreshPrinters()
         {
             printers = QlPrinters.OurPrinters();
-            string keep = printers.Contains(printer) ? printer : printers.FirstOrDefault();
+            string keep = QlPrinters.Choose(printers, printer);
             if (keep != printer) ChangePrinter(keep);
             FillPrinterBox();
             UpdateCommands();
@@ -215,15 +215,16 @@ namespace QlLabels
         async void CheckRoll()
         {
             string p = printer;
+            var tab = current;
             lastRollCheck = DateTime.Now;
             if (p == null || !QlDevice.HasStatus(QlDevice.PortOf(p))) { roll = null; ShowRoll(); return; }
             PrinterCheck c = null;
             try { c = await Task.Run(() => PrinterCheck.Run(p, true)); }
             catch (Exception) { }
             if (IsDisposed || p != printer) return;
-            roll = c;
-            // A new, empty label: start on the loaded roll.
-            if (c != null && c.Media != null && doc.Objects.Count == 0 && path == null && label != null && c.Media.Fits(label.Media) == false)
+            roll = c;   // the printer's roll, also when another tab on it is shown now
+            // A new, empty label: start on the loaded roll (only the tab that asked).
+            if (tab == current && c != null && c.Media != null && doc.Objects.Count == 0 && path == null && label != null && c.Media.Fits(label.Media) == false)
             {
                 var fit = choices.FirstOrDefault(ch => c.Media.Fits(ch.Media) == true);
                 if (fit != null) SelectLabel(fit);
@@ -253,11 +254,13 @@ namespace QlLabels
             {
                 rollStatus.Text = printer != null && QlDevice.HasStatus(QlDevice.PortOf(printer)) ? Lang.T("Loaded roll: click to check") : "";
                 Theme.ItemFore(rollStatus, Role.Text);
+                RollToDialog();
                 return;
             }
             bool? fits = c.Media != null && label != null ? c.Media.Fits(label.Media) : null;
             rollStatus.Text = c.Short + (fits == false ? " – " + Lang.T("doesn't fit this label") : "");
             Theme.ItemFore(rollStatus, c.Health == Health.Error || fits == false ? Role.ErrorText : c.Health == Health.Warning ? Role.WarningText : Role.Text);
+            RollToDialog();
             rollStatus.ToolTipText = (c.Detail ?? c.Headline) + (c.Advice.Count > 0 ? "\n" + string.Join("\n", c.Advice) : "") + "\n" + Lang.T("Click to check again.");
         }
 
@@ -266,6 +269,7 @@ namespace QlLabels
         async void Print()
         {
             if (printer == null || label == null || printing) return;
+            canvas.EndEdit();   // the fields print their values
             if (lengthError.Text.Length > 0)
             {
                 QlMessage.Show(this, lengthError.Text, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -337,12 +341,12 @@ namespace QlLabels
         }
 
         // As the label tool's test print (PrintReadiness): offline queue, printer errors and a roll that doesn't fit stop here.
-        Task<bool> ConfirmPrinterReady()
+        Task<bool> ConfirmPrinterReady(IWin32Window owner = null)
         {
             string p = printer, shown = null;
             return PrintReadiness.Confirm(new PrintReadiness.Request
             {
-                Owner = this,
+                Owner = owner ?? this,   // the Print with data dialog asks over itself
                 Title = AppTitle,
                 Printer = p,
                 Last = roll,

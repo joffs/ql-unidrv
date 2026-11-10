@@ -34,7 +34,40 @@ namespace QlLabels.Tests
             Files();
             Brother();
             Seeds();
+            LastPrinter();
             return failures;
+        }
+
+        // The printer the programs start on (QlPrinters.Choose): --printer / the one shown, else the last one chosen, else the
+        // first. Stored per user in HKCU; here under a key of its own, removed afterwards.
+        static void LastPrinter()
+        {
+            var two = new List<string> { "Brother QL-800 (Unidrv)", "Brother QL-570 (Unidrv)" };
+            Check(QlPrinters.Pick(two, null, null) == two[0], "last printer: none chosen yet: the first");
+            Check(QlPrinters.Pick(two, null, two[1]) == two[1], "last printer: the last one chosen");
+            Check(QlPrinters.Pick(two, null, "brother ql-570 (unidrv)") == two[1], "last printer: case doesn't matter, the list's spelling");
+            Check(QlPrinters.Pick(two, null, "Brother QL-1100 (Unidrv)") == two[0], "last printer: gone: the first still there");
+            Check(QlPrinters.Pick(two, two[0], two[1]) == two[0], "last printer: --printer wins");
+            Check(QlPrinters.Pick(two, "Gone", two[1]) == two[1], "last printer: --printer gone: the last one chosen");
+            Check(QlPrinters.Pick(new List<string>(), null, two[1]) == null, "last printer: no QL printer: none");
+
+            string key = QlPrinters.LastKey;
+            QlPrinters.LastKey = Lang.SettingsKey + @"\UnitTest-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                Check(QlPrinters.LastChosen() == null && QlPrinters.Choose(two, null) == two[0], "last printer: nothing stored: the first");
+                QlPrinters.Remember(two[1]);
+                Check(QlPrinters.LastChosen() == two[1] && QlPrinters.Choose(two, null) == two[1], "last printer: stored and read back");
+                Check(QlPrinters.Choose(two, two[0]) == two[0], "last printer: the one shown stays while it is there");
+                Check(QlPrinters.Choose(new List<string> { two[0] }, null) == two[0], "last printer: stored one removed: the first");
+                QlPrinters.Remember(null);
+                Check(QlPrinters.LastChosen() == two[1], "last printer: nothing chosen keeps the last one");
+            }
+            finally
+            {
+                try { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(QlPrinters.LastKey, false); } catch (Exception) { }
+                QlPrinters.LastKey = key;
+            }
         }
 
         static void Validation()

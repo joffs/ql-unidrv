@@ -18,6 +18,7 @@ Installation and quick start: [../README.md](../README.md).
 | [sharing.md](sharing.md) | Printing from another PC through a shared printer |
 | [status-service.md](status-service.md) | The optional service "QL printer status": printer status for PCs that print through a share |
 | [label-editor.md](label-editor.md) | QL Label Maker: design and print labels (text, lines, boxes, pictures), `.qllabel` files |
+| [print-command-line.md](print-command-line.md) | `QlLabelPrint.exe`: print a `.qllabel` with data from CSV, JSON or a script; options, exit codes, JSON answer |
 
 
 ## Verification data

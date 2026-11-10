@@ -43,14 +43,17 @@ namespace QlLabels
         {
             var menu = new MenuStrip();
             var file = new ToolStripMenuItem(Lang.T("&File"));
-            file.DropDownItems.Add(Item(Lang.T("&New"), Keys.Control | Keys.N, delegate { NewLabel(); }));
+            file.DropDownItems.Add(Item(Lang.T("&New"), Keys.Control | Keys.N, delegate { NewTab(); }));
             file.DropDownItems.Add(Item(Lang.T("&Open..."), Keys.Control | Keys.O, delegate { OpenDialog(); }));
+            file.DropDownItems.Add(RecentMenu(file));   // EditorForm.Recent.cs
             file.DropDownItems.Add(Item(Lang.T("&Save"), Keys.Control | Keys.S, delegate { Save(false); }));
             file.DropDownItems.Add(Item(Lang.T("Save &as..."), Keys.Control | Keys.Shift | Keys.S, delegate { Save(true); }));
             file.DropDownItems.Add(new ToolStripSeparator());
             file.DropDownItems.Add(Item(Lang.T("&Print"), Keys.Control | Keys.P, delegate { Print(); }));
+            file.DropDownItems.Add(Item(Lang.T("Print with &data..."), PrintWithDataKeys, delegate { PrintWithData(); }));   // EditorForm.PrintData.cs
             file.DropDownItems.Add(new ToolStripSeparator());
-            file.DropDownItems.Add(Item(Lang.T("&Close"), Keys.None, delegate { Close(); }));
+            file.DropDownItems.Add(Item(Lang.T("&Close label"), Keys.Control | Keys.W, delegate { CloseTab(tabs.IndexOf(current)); }));   // the label (tab); the window: Exit
+            file.DropDownItems.Add(new ToolStripMenuItem(Lang.T("E&xit"), null, delegate { Close(); }) { ShortcutKeyDisplayString = "Alt+F4" });
 
             var edit = new ToolStripMenuItem(Lang.T("&Edit"));
             undoItem.Text = Lang.T("&Undo"); undoItem.ShortcutKeys = Keys.Control | Keys.Z; undoItem.Click += delegate { Undo(false); };
@@ -60,7 +63,10 @@ namespace QlLabels
             edit.DropDownItems.Add(new ToolStripSeparator());
             AddClipboardItems(edit);
             edit.DropDownItems.Add(new ToolStripSeparator());
-            edit.DropDownItems.Add(Item(Lang.T("D&uplicate"), Keys.Control | Keys.D, delegate { Duplicate(); }));
+            var duplicateItem = Item(Lang.T("D&uplicate"), Keys.Control | Keys.D, delegate { Duplicate(); });
+            edit.DropDownItems.Add(duplicateItem);
+            edit.DropDownOpening += delegate { duplicateItem.Enabled = canvas.Editing == null; };
+            edit.DropDown.Closed += delegate { duplicateItem.Enabled = true; };
             edit.DropDownItems.Add(new ToolStripMenuItem(Lang.T("&Delete"), null, delegate { Delete(); }) { ShortcutKeyDisplayString = Lang.T("Del") });
             edit.DropDownItems.Add(new ToolStripSeparator());
             edit.DropDownItems.Add(Item(Lang.T("Select &all"), Keys.Control | Keys.A, delegate { SelectAll(); }));
@@ -80,11 +86,16 @@ namespace QlLabels
             arrange.DropDownItems.Add(resetItem);
             arrange.DropDownItems.Add(new ToolStripSeparator());
             arrange.DropDownItems.AddRange(LayerItems().ToArray());
-            arrange.DropDownOpening += delegate { UpdateAlignItems(arrange.DropDownItems); UpdateLayerItems(arrange.DropDown); resetItem.Enabled = Turned; };
+            arrange.DropDownOpening += delegate
+            {
+                UpdateAlignItems(arrange.DropDownItems); UpdateLayerItems(arrange.DropDown); resetItem.Enabled = Turned;
+                LockObjectItems(arrange.DropDownItems);   // while a text is edited
+            };
 
             // The view: direction and zoom (the label settings in the panel and the zoom in the status bar do the same).
             var view = new ToolStripMenuItem(Lang.T("&View"));
             view.DropDownItems.Add(ToolNamesItem());
+            view.DropDownItems.Add(OverflowItem());   // EditorForm.TextEdit.cs
             view.DropDownItems.Add(new ToolStripSeparator());
             view.DropDownItems.Add(Item(Lang.T("&Turn view"), Keys.Control | Keys.Shift | Keys.R, delegate { TurnView(); }));
             view.DropDownItems.Add(new ToolStripSeparator());

@@ -271,6 +271,8 @@ namespace QlLabels
                   "QL Label Formats oder QL Label Maker war geöffnet. Schließen Sie das Programm, dann klicken Sie auf „Erneut versuchen“." },
                 { "Another setup is running on this PC. Wait until it has finished, then click Try again.",
                   "Auf diesem PC läuft schon eine Einrichtung. Warten Sie, bis sie fertig ist, dann klicken Sie auf „Erneut versuchen“." },
+                { "Labels are still being printed from the command line (QlLabelPrint). Wait until they are done, then click Try again.",
+                  "Es werden noch Etiketten von der Kommandozeile (QlLabelPrint) gedruckt. Warten Sie, bis sie fertig sind, und klicken Sie dann auf „Erneut versuchen“." },
                 { "A setup is already running on this PC (perhaps from a window you closed). Wait until it has finished, then open this window again.",
                   "Auf diesem PC läuft schon eine Einrichtung (vielleicht aus einem Fenster, das Sie geschlossen haben). Warten Sie, bis sie fertig ist, und öffnen Sie dieses Fenster dann erneut." },
                 { "Another setup is running.", "Eine andere Einrichtung läuft." },

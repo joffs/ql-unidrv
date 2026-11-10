@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mit Daten drucken – QL Label Maker Hilfe</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Hilfe · Etiketten gestalten und drucken</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Hilfe"><div class="wrap">
+  <a href="index.html">Inhalt</a>
+  <a href="appendix.html">Tasten und Kommandozeile</a>
+  <a class="lang" href="../en/print-data.html" hreflang="en" lang="en">English</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Drucken und Dateien</span>
+    <h1>Mit Daten drucken</h1>
+    <p class="lead">Ein Etikett, viele Varianten: Felder im Etikett werden aus einer Datendatei (CSV oder JSON)
+      gefüllt, eine Zeile je Etikett. Sie wählen aus, welche gedruckt werden, und sehen jedes vorher so, wie es gedruckt wird.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="fields">Felder im Etikett</h2>
+        <p>Ein Feld ist ein Name in geschweiften Klammern, z. B. <code>{Artikel}</code>, in einem Text, im Inhalt eines
+          Barcodes oder in einem Feld eines QR-Codes. Beim Drucken steht dort der Wert aus der Spalte gleichen Namens;
+          Groß- und Kleinschreibung zählen nicht.</p>
+        <dl class="terms">
+          <dt><code>{Artikel}</code></dt><dd>der Wert aus der Spalte „Artikel“</dd>
+          <dt><code>{Lagerort|Halle 1}</code></dt><dd>mit Standardwert nach dem senkrechten Strich: gilt, wenn die Spalte
+            fehlt oder die Zelle leer ist</dd>
+          <dt><code>{Zusatz|}</code></dt><dd>nichts nach dem Strich: Ohne Wert bleibt die Stelle leer</dd>
+        </dl>
+        <p><code>{date}</code> und <code>{time}</code> bleiben Datum und Uhrzeit (<a href="text.html#date-and-time">Datum
+          und Uhrzeit</a>). Ein Wert aus den Daten wird gedruckt, wie er ist, auch wenn er Klammern enthält.</p>
+        <p><span class="ui">Feld einfügen ▾ &gt; Eigenes Feld…</span> fragt nach dem Feldnamen und danach, was ohne Wert
+          gelten soll: <span class="ui">Beim Drucken melden</span>, <span class="ui">Leer lassen</span> oder ein
+          <span class="ui">Standardwert</span>. Es fügt das Feld richtig geschrieben ein; danach lässt es sich wie jeder Text bearbeiten.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="csv">Die Datendatei</h2>
+        <p>Die erste Zeile nennt die Spalten, jede weitere Zeile ist ein Etikett. Excel speichert so etwas mit
+          <span class="path">Speichern unter &gt; CSV (Trennzeichen-getrennt)</span>.</p>
+        <pre>Artikel;Nummer;Lagerort
+Schraube M4 × 20;4711;Regal 3
+Mutter M4;4712;Regal 3</pre>
+        <p>Trennzeichen Semikolon, Komma oder Tabulator; als Zeichensatz UTF-8, UTF-16 oder Windows-1252 (so speichert Excel ohne UTF-8). Spalten, die das
+          Etikett nicht braucht, stören nicht. Eine Spalte <code>copies</code> legt die Anzahl je Zeile fest; 0 lässt die
+          Zeile aus.</p>
+        <p>Eine Spalte <code>labelname</code> gibt jedem Etikett einen Namen, z. B. einen Kurznamen wie <code>A1234</code>:
+          Er steht in der Vorschau neben der Nummer, die Suche findet ihn, und Meldungen nennen ihn. Ist die Zelle leer,
+          steht dort nur die Nummer; ohne die Spalte der erste Wert der Zeile. Das Etikett kann ihn auch als Feld
+          <code>{labelname}</code> drucken.</p>
+        <p>Statt einer CSV-Datei funktioniert auch eine JSON-Datei: eine Liste von Objekten, jeder Wert ein Text, eine
+          Zahl, <code>true</code>/<code>false</code> oder <code>null</code> (leer), ohne verschachtelte Objekte oder Listen.
+          Jeder Name ist eine Spalte; fehlt er in einem Objekt, ist die Zelle leer.</p>
+        <pre>[
+  { "labelname": "A1234", "Artikel": "Schraube M4 × 20", "Nummer": 4711, "copies": 2 },
+  { "labelname": "A1235", "Artikel": "Mutter M4", "Nummer": 4712 }
+]</pre>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="dialog">Daten wählen</h2>
+        <p><span class="path">Datei &gt; Mit Daten drucken…</span> (oder <span class="ui">Drucken ▾</span>,
+          <kbd>Strg</kbd>+<kbd>Umschalt</kbd>+<kbd>P</kbd>) nimmt das geöffnete Etikett als Vorlage. Oben stehen drei
+          Kacheln: <span class="ui">Drucker</span> mit seinem Zustand und der eingelegten Rolle (ein Klick öffnet die
+          Liste; wählen Sie dort einen anderen Drucker, wechselt QL Label Maker mit), <span class="ui">Vorlage</span>
+          und <span class="ui">Daten</span>. Ein farbiger Rand links zeigt, ob alles passt; gelb ist, was Sie ansehen
+          sollten, zum Beispiel eine falsche Rolle. Wählen Sie mit <span class="ui">+ Datendatei wählen…</span> die
+          Daten, eine andere später mit <span class="ui">Ändern…</span>. Die Zeile <span class="ui">Felder</span>
+          zeigt, was zusammenpasst: ✗ fehlende Felder zuerst, dann ✓ die gefundenen, danach die Spalten, die das
+          Etikett nicht nutzt. Was nicht in die Zeile passt, zeigt <span class="ui">+N weitere</span>.</p>
+        <figure class="frame" style="max-width:800px"><img src="../img/de/print-data-dialog.png" width="780" height="660" alt="Mit Daten drucken: oben drei Kacheln, Drucker Brother QL-800 (Unidrv), bereit, 62 mm Endlosband; Vorlage Regal 3.qllabel, 62 mm, 3 Felder; Daten teile.csv, CSV, 20 Zeilen, mit Ändern…; Felder: Lagerort bleibt leer, Artikel und Nummer gefunden, Preis nicht im Etikett; Fehlende Felder leer lassen eingeschaltet; die Vorschau der Etiketten, Etikett 4 ausgewählt; unten Exemplare je Etikett und Drucken (1 Etikett)"></figure>
+        <p>Ein fehlendes Feld ohne Standardwert verhindert das Drucken: Ergänzen Sie die Spalte, oder schalten Sie
+          <span class="ui">Fehlende Felder leer lassen</span> ein. Ein Standardwert gilt auch dann.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="select">Etiketten auswählen</h2>
+        <p>Jedes Etikett erscheint als kleine Vorschau mit seiner Zeilennummer und seinem
+          <code>labelname</code> (oder dem ersten Wert der Zeile). Am Anfang sind alle ausgewählt; ein Klick
+          auf eines wählt nur dieses; <span class="ui">Alle</span> und <span class="ui">Keine</span> oben rechts wählen alle sichtbaren oder keines. <span class="ui">Suchen</span> blendet die Etiketten aus, die den Text nicht
+          enthalten, z. B. für die eine Variante von zwanzig; das ✕ am Ende leert die Suche. <span class="ui">Zoom</span>
+          macht die Vorschauen größer oder kleiner, auch mit dem Mausrad über dem Regler.</p>
+        <p>Ein Doppelklick zeigt ein Etikett groß, schraffiert, wo der Drucker nicht drucken kann. Dort druckt
+          <span class="ui">Drucken</span> nur dieses Etikett, so oft wie <span class="ui">Kopien</span> sagt.</p>
+        <p><span class="ui">Drucken (N Etiketten)</span> druckt die ausgewählten, sichtbaren Etiketten, jedes so oft wie
+          <span class="ui">Exemplare je Etikett</span> sagt, als ein Druckauftrag. Der Dialog bleibt danach offen, damit Sie
+          weitere oder dieselben Etiketten noch einmal drucken können; <span class="ui">Schließen</span> beendet ihn.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span>Klick</span><span>nur dieses Etikett</span></div>
+        <div><span><kbd>Strg</kbd> + Klick</span><span>hinzufügen oder abwählen</span></div>
+        <div><span><kbd>Umschalt</kbd> + Klick</span><span>bis hierher</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>A</kbd></span><span>alle sichtbaren</span></div>
+        <div><span>Pfeiltasten, <kbd>Leertaste</kbd></span><span>bewegen, aus- oder abwählen</span></div>
+        <div><span><kbd>Strg</kbd> + Mausrad</span><span>Vorschauen größer, kleiner</span></div>
+        <div><span><kbd>Esc</kbd> in der Suche</span><span>Suche leeren</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="before-printing">Vor dem Drucken</h2>
+        <p>Wie beim normalen Drucken wird zuerst der Drucker gefragt, ob er bereit ist und die passende Rolle eingelegt
+          ist (<a href="printing.html">Drucken</a>). Etiketten mit einem Barcode, der sich vielleicht nicht lesen lässt,
+          oder mit Text, der am Rahmen abgeschnitten wird, werden vorher aufgelistet; Sie entscheiden, ob sie trotzdem
+          gedruckt werden.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="command-line">Ohne Fenster: QlLabelPrint.exe</h2>
+        <p>Dasselbe funktioniert aus Skripten mit <code>QlLabelPrint.exe</code> in <code>C:\Program Files\QLUnidrv</code>.
+          Es druckt eine <code>.qllabel</code>-Datei mit einer CSV- oder JSON-Datei und fragt nichts, sondern meldet
+          Probleme mit einem Rückgabewert. Mit <code>--name A1234</code> druckt es nur das Etikett mit
+          diesem <code>labelname</code>. <code>QlLabelPrint.exe --help</code> zeigt alle Optionen.</p>
+        <pre>"C:\Program Files\QLUnidrv\QlLabelPrint.exe" --print Regal.qllabel --data teile.csv --dry-run</pre>
+      </div>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Seiten"><a href="printing.html">← Drucken</a><a href="files.html">Weiter: Speichern und Öffnen →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Hilfe · QL Unidrv</div></footer>
+</body>
+</html>

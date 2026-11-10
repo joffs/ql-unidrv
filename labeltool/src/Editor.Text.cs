@@ -21,35 +21,50 @@ using System;
 
 namespace QlLabels
 {
-    enum TextAlign { Left, Center, Right }
+    enum TextAlign { Left, Center, Right, Justify }   // Justify: a paragraph text's wrapped lines fill the frame (the last line of a paragraph stays left, as in Word)
 
     // A single-line text: the box always fits the text, the handles make the font larger or smaller. A text frame:
     // the box is set with the handles, the text wraps inside it at its font size (what doesn't fit is cut off).
     enum TextKind { Line, Frame }
 
-    // One stretch of a text with its own format (step 4: words in bold, another font or size). A null field means "as
-    // the text object". Line breaks are "\n" inside Text. Immutable: TextObject.Clone shares the runs list, so a change
-    // always makes a new list (SetRuns).
+    // One stretch of a text with its own format (step 4: words in bold, another font or size; letter spacing and
+    // white on black per selection, Word's character spacing and shading). A null field means "as the text object".
+    // Line breaks are "\n" inside Text. Immutable: TextObject.Clone shares the runs list, so a change always makes a
+    // new list (SetRuns).
     sealed class TextRun
     {
         public readonly string Text;
         public readonly string Font;          // null: the object's font
         public readonly double? Size;         // points; null: the object's size
         public readonly bool? Bold, Italic, Underline;
+        public readonly double? Spacing;      // letter spacing, points (after each character); null: the object's
+        public readonly bool? Invert;         // white on black behind these characters; null: the object's
 
-        public TextRun(string text, string font = null, double? size = null, bool? bold = null, bool? italic = null, bool? underline = null)
+        public TextRun(string text, string font = null, double? size = null, bool? bold = null, bool? italic = null, bool? underline = null,
+                       double? spacing = null, bool? invert = null)
         {
-            Text = text ?? ""; Font = font; Size = size; Bold = bold; Italic = italic; Underline = underline;
+            Text = text ?? ""; Font = font; Size = size; Bold = bold; Italic = italic; Underline = underline; Spacing = spacing; Invert = invert;
         }
 
-        public TextRun WithText(string text) { return new TextRun(text, Font, Size, Bold, Italic, Underline); }
+        public TextRun WithText(string text) { return new TextRun(text, Font, Size, Bold, Italic, Underline, Spacing, Invert); }
+
+        // The same run with the fields given (the others as they are).
+        public TextRun With(string font = null, double? size = null, bool? bold = null, bool? italic = null, bool? underline = null,
+                            double? spacing = null, bool? invert = null)
+        {
+            return new TextRun(Text, font ?? Font, size ?? Size, bold ?? Bold, italic ?? Italic, underline ?? Underline, spacing ?? Spacing, invert ?? Invert);
+        }
 
         public bool SameFormat(TextRun o)
         {
-            return o != null && Font == o.Font && Size == o.Size && Bold == o.Bold && Italic == o.Italic && Underline == o.Underline;
+            return o != null && Font == o.Font && Size == o.Size && Bold == o.Bold && Italic == o.Italic && Underline == o.Underline &&
+                   Spacing == o.Spacing && Invert == o.Invert;
         }
 
-        public bool Plain { get { return Font == null && Size == null && Bold == null && Italic == null && Underline == null; } }
+        public bool Plain
+        {
+            get { return Font == null && Size == null && Bold == null && Italic == null && Underline == null && Spacing == null && Invert == null; }
+        }
 
         internal Dictionary<string, object> ToJson()
         {
@@ -60,6 +75,8 @@ namespace QlLabels
             if (Bold != null) d["bold"] = Bold.Value;
             if (Italic != null) d["italic"] = Italic.Value;
             if (Underline != null) d["underline"] = Underline.Value;
+            if (Spacing != null) d["spacing"] = LabelObject.R(Spacing.Value);
+            if (Invert != null) d["invert"] = Invert.Value;
             return d;
         }
 
@@ -69,9 +86,10 @@ namespace QlLabels
             var d = o as Dictionary<string, object>;
             if (d == null || !(LabelObject.Str(d, "t", null) is string)) return null;
             Func<string, bool?> b = k => d.ContainsKey(k) && d[k] is bool ? (bool?)d[k] : null;
-            double size = LabelObject.Num(d, "size", double.NaN);
+            double size = LabelObject.Num(d, "size", double.NaN), spacing = LabelObject.Num(d, "spacing", double.NaN);
             return new TextRun(LabelObject.Str(d, "t", ""), LabelObject.Str(d, "font", null),
-                               double.IsNaN(size) ? (double?)null : Math.Min(400, Math.Max(2, size)), b("bold"), b("italic"), b("underline"));
+                               double.IsNaN(size) ? (double?)null : Math.Min(400, Math.Max(2, size)), b("bold"), b("italic"), b("underline"),
+                               double.IsNaN(spacing) ? (double?)null : Math.Min(TextObject.MaxSpacing, Math.Max(TextObject.MinSpacing, spacing)), b("invert"));
         }
     }
 
@@ -113,10 +131,13 @@ namespace QlLabels
             var f = part[0];
             Func<Func<TextRun, object>, bool> same = get => part.All(x => Equals(get(x), get(f)));
             return new TextRun("", same(x => x.Font) ? f.Font : null, same(x => x.Size) ? f.Size : null, same(x => x.Bold) ? f.Bold : null,
-                               same(x => x.Italic) ? f.Italic : null, same(x => x.Underline) ? f.Underline : null);
+                               same(x => x.Italic) ? f.Italic : null, same(x => x.Underline) ? f.Underline : null,
+                               same(x => x.Spacing) ? f.Spacing : null, same(x => x.Invert) ? f.Invert : null);
         }
 
         // The runs' pieces between two character positions (empty pieces left out).
+        public static List<TextRun> Slice(List<TextRun> full, int from, int to) { return Cut(full, from, to); }
+
         static List<TextRun> Cut(List<TextRun> full, int from, int to)
         {
             var r = new List<TextRun>();
@@ -140,8 +161,10 @@ namespace QlLabels
         public TextAlign Align = TextAlign.Left;
         public TextKind Kind = TextKind.Line;
         public double LineHeight = 1;    // frame text: line pitch as a multiple of the font's (0.5-3)
-        public double Spacing;           // extra space between characters, points (-5 to +20)
-        public bool Invert;              // white on a black box (the box + EditorRender.InvertPad on each side)
+        public double Spacing;           // extra space between characters, points (-5 to +20); runs may have their own
+        public bool Invert;              // all of it white on black: an artistic text in a black box (the box +
+                                         // EditorRender.InvertPad on each side), a paragraph text in bands behind its lines
+                                         // (InvertBox); only part of it: its runs (black behind their characters, Word's shading)
         // Words with their own format (step 4), null when the whole text has one. Joined they are exactly Text; a Text
         // changed without them (an older program, the plain text box) drops them: see FormatRuns.
         public IList<TextRun> Runs;
@@ -149,6 +172,10 @@ namespace QlLabels
         public const double MinLineHeight = 0.5, MaxLineHeight = 3, MinSpacing = -5, MaxSpacing = 20;
 
         public override string Type { get { return "text"; } }
+
+        // The whole text in a black box 1 mm beyond its frame: an inverted artistic text. An inverted paragraph text gets
+        // black bands behind its lines instead, the empty part of its frame stays white (2026-11-09).
+        public bool InvertBox { get { return Invert && Kind == TextKind.Line; } }
         protected override string[] Keys { get { return new[] { "text", "font", "size", "bold", "italic", "underline", "align", "kind", "lineHeight", "spacing", "invert", "runs" }; } }
 
         public FontStyle Style
@@ -160,7 +187,7 @@ namespace QlLabels
         {
             d["text"] = Text; d["font"] = Font; d["size"] = R(Size);
             d["bold"] = Bold; d["italic"] = Italic; d["underline"] = Underline;
-            d["align"] = Align == TextAlign.Center ? "center" : Align == TextAlign.Right ? "right" : "left";
+            d["align"] = Align == TextAlign.Center ? "center" : Align == TextAlign.Right ? "right" : Align == TextAlign.Justify ? "justify" : "left";
             d["kind"] = Kind == TextKind.Frame ? "frame" : "line";
             d["lineHeight"] = R(LineHeight);
             d["spacing"] = R(Spacing);
@@ -175,30 +202,49 @@ namespace QlLabels
             get { return Runs != null && string.Concat(Runs.Select(r => r.Text)) == Text ? Runs : null; }
         }
 
-        // The whole text as runs with every field filled (font, size, bold, italic, underline): one run when it has one format.
+        // The whole text as runs with every field filled (font, size, bold, italic, underline, spacing, invert): one run
+        // when it has one format.
         public List<TextRun> FullRuns()
         {
             var runs = FormatRuns ?? new[] { new TextRun(Text) };
-            return runs.Select(r => new TextRun(r.Text, r.Font ?? Font, r.Size ?? Size, r.Bold ?? Bold, r.Italic ?? Italic, r.Underline ?? Underline)).ToList();
+            return runs.Select(Fill).ToList();
         }
 
-        // Sets the text from runs (filled or not): the object's own format becomes the one most characters have, the runs
-        // keep only what differs, neighbours with the same format merge, empty runs go. Runs stays null for one format.
+        // A run (null: none) with the fields it leaves open taken from the object.
+        public TextRun Fill(TextRun r)
+        {
+            if (r == null) r = new TextRun("");
+            return new TextRun(r.Text, r.Font ?? Font, r.Size ?? Size, r.Bold ?? Bold, r.Italic ?? Italic, r.Underline ?? Underline, r.Spacing ?? Spacing, r.Invert ?? Invert);
+        }
+
+        // The object's own format from a filled run (an empty text's format, an undo step).
+        public void SetOwn(TextRun f)
+        {
+            Font = f.Font; Size = f.Size.Value; Bold = f.Bold.Value; Italic = f.Italic.Value; Underline = f.Underline.Value;
+            Spacing = f.Spacing.Value; Invert = f.Invert.Value;
+        }
+
+        // Sets the text from runs (filled or not): the object's own format becomes the one most characters have (Invert:
+        // only when all of them have it, the black box with its margin is the whole text's), the runs keep only what
+        // differs, neighbours with the same format merge, empty runs go. Runs stays null for one format.
         public void SetRuns(IEnumerable<TextRun> runs)
         {
-            var full = runs.Where(r => r != null && r.Text.Length > 0)
-                           .Select(r => new TextRun(r.Text, r.Font ?? Font, r.Size ?? Size, r.Bold ?? Bold, r.Italic ?? Italic, r.Underline ?? Underline)).ToList();
+            var full = runs.Where(r => r != null && r.Text.Length > 0).Select(Fill).ToList();
             Text = string.Concat(full.Select(r => r.Text));
             Runs = null;
             if (full.Count == 0) return;
-            var main = full.GroupBy(r => r.Font + "|" + r.Size.Value.ToString("R", CultureInfo.InvariantCulture) + "|" + r.Bold + r.Italic + r.Underline)
+            var main = full.GroupBy(r => r.Font + "|" + r.Size.Value.ToString("R", CultureInfo.InvariantCulture) + "|" + r.Bold + r.Italic + r.Underline + "|" +
+                                         r.Spacing.Value.ToString("R", CultureInfo.InvariantCulture))
                            .OrderByDescending(g => g.Sum(r => r.Text.Length)).First().First();
             Font = main.Font; Size = main.Size.Value; Bold = main.Bold.Value; Italic = main.Italic.Value; Underline = main.Underline.Value;
+            Spacing = main.Spacing.Value;
+            Invert = full.All(r => r.Invert.Value);
             var list = new List<TextRun>();
             foreach (var r in full)
             {
                 var d = new TextRun(r.Text, r.Font == Font ? null : r.Font, r.Size == Size ? null : r.Size, r.Bold == Bold ? null : r.Bold,
-                                    r.Italic == Italic ? null : r.Italic, r.Underline == Underline ? null : r.Underline);
+                                    r.Italic == Italic ? null : r.Italic, r.Underline == Underline ? null : r.Underline,
+                                    r.Spacing == Spacing ? null : r.Spacing, r.Invert == Invert ? null : r.Invert);
                 if (list.Count > 0 && list[list.Count - 1].SameFormat(d)) list[list.Count - 1] = d.WithText(list[list.Count - 1].Text + d.Text);
                 else list.Add(d);
             }
@@ -211,7 +257,7 @@ namespace QlLabels
             Size = Math.Min(400, Math.Max(2, Num(d, "size", Size)));
             Bold = Bool(d, "bold", false); Italic = Bool(d, "italic", false); Underline = Bool(d, "underline", false);
             string a = Str(d, "align", "left");
-            Align = a == "center" ? TextAlign.Center : a == "right" ? TextAlign.Right : TextAlign.Left;
+            Align = a == "center" ? TextAlign.Center : a == "right" ? TextAlign.Right : a == "justify" ? TextAlign.Justify : TextAlign.Left;
             LineHeight = Math.Min(MaxLineHeight, Math.Max(MinLineHeight, Num(d, "lineHeight", 1)));
             Spacing = Math.Min(MaxSpacing, Math.Max(MinSpacing, Num(d, "spacing", 0)));
             Invert = Bool(d, "invert", false);
@@ -250,6 +296,15 @@ namespace QlLabels
                 catch (FormatException) { return m.Value; }
                 catch (ArgumentOutOfRangeException) { return m.Value; }
             });
+        }
+
+        // Where the fields are in a text (start, length), not the {{ and }} escapes: the canvas marks them while editing.
+        public static List<KeyValuePair<int, int>> Ranges(string text)
+        {
+            var list = new List<KeyValuePair<int, int>>();
+            foreach (System.Text.RegularExpressions.Match m in Field.Matches(text ?? ""))
+                if (m.Value != "{{" && m.Value != "}}") list.Add(new KeyValuePair<int, int>(m.Index, m.Length));
+            return list;
         }
 
         public static bool HasFields(string text) { return text != null && Expand(text, new DateTime(2000, 1, 1)) != text; }
@@ -291,16 +346,21 @@ namespace QlLabels
         sealed class Seg
         {
             public string Text;
-            public int Font;    // index into TextLayout.Fonts
-            public Seg(string text, int font) { Text = text; Font = font; }
+            public int Font;    // index into TextLayout.Fonts (a font with its letter spacing and invert: a style)
+            public int Start;   // where its first character is in the stored text (caret map; -1: not known)
+            public Seg(string text, int font, int start = -1) { Text = text; Font = font; Start = start; }
         }
 
         sealed class TextLayout : IDisposable
         {
             public readonly List<Font> Fonts = new List<Font>();
             public readonly List<float> FontAscents = new List<float>(), FontSizes = new List<float>();   // per font: ascent, line height
+            public readonly List<float> Spacings = new List<float>();   // per font: letter spacing (mm, after each character)
+            public readonly List<bool> Inverts = new List<bool>();      // per font: white on black
             public readonly List<List<Seg>> Lines = new List<List<Seg>>();
             public readonly List<float> Widths = new List<float>();
+            public readonly List<float> AlignWidths = new List<float>();   // per line with the spaces at its end (alignment)
+            public readonly List<bool> Ends = new List<bool>();            // per line: the last line of its paragraph (not justified)
             public readonly List<float> Ascents = new List<float>(), Pitches = new List<float>(), LineSizes = new List<float>();   // per line
             public float Width { get { return Widths.Count == 0 ? 0 : Widths.Max(); } }
             public float Height
@@ -318,7 +378,10 @@ namespace QlLabels
             public void Dispose() { foreach (var f in Fonts) f.Dispose(); }
         }
 
-        static float SpacingMm(TextObject t) { return (float)(t.Spacing * 25.4 / 72); }
+        // The text being edited on the canvas: its fields are laid out and drawn as their codes ({date+30:dd.MM.}), so every
+        // stored character has its place (the caret moves through them 1:1). Null outside editing. The screen only: printing,
+        // saving and copying end editing first.
+        internal static TextObject Codes { get; set; }
 
         // Measured on a 300 dpi surface, the same for the screen and both print resolutions. Fields are filled in per run
         // (now). wrap: the width a line may take (mm), 0 = no wrapping. space: an empty text measures as one space.
@@ -337,7 +400,8 @@ namespace QlLabels
                     Func<TextRun, int> fontOf = r =>
                     {
                         var style = (r.Bold.Value ? FontStyle.Bold : 0) | (r.Italic.Value ? FontStyle.Italic : 0) | (r.Underline.Value ? FontStyle.Underline : 0);
-                        string key = r.Font + "|" + r.Size.Value.ToString("R", CultureInfo.InvariantCulture) + "|" + (int)style;
+                        string key = r.Font + "|" + r.Size.Value.ToString("R", CultureInfo.InvariantCulture) + "|" + (int)style + "|" +
+                                     r.Spacing.Value.ToString("R", CultureInfo.InvariantCulture) + "|" + r.Invert.Value;
                         int i = keys.IndexOf(key);
                         if (i >= 0) return i;
                         var font = FontOf(r.Font, r.Size.Value, style);
@@ -346,15 +410,23 @@ namespace QlLabels
                         lay.Fonts.Add(font);
                         lay.FontSizes.Add(font.Size * family.GetLineSpacing(font.Style) / em);
                         lay.FontAscents.Add(font.Size * family.GetCellAscent(font.Style) / em);
+                        lay.Spacings.Add((float)(r.Spacing.Value * 25.4 / 72));
+                        lay.Inverts.Add(r.Invert.Value);
                         keys.Add(key);
                         return keys.Count - 1;
                     };
                     var runs = t.FullRuns();
                     int main = fontOf(runs[0]);
-                    var pieces = runs.Select(r => new Seg(Fields.Expand(r.Text, now).Replace("\r\n", "\n"), fontOf(r))).ToList();
+                    bool codes = t == Codes;
+                    var pieces = new List<Seg>();
+                    int at = 0;
+                    foreach (var r in runs)
+                    {
+                        pieces.Add(new Seg(codes ? r.Text : Fields.Expand(r.Text, now).Replace("\r\n", "\n"), fontOf(r), at));
+                        at += r.Text.Length;
+                    }
                     if (space && pieces.All(p => p.Text.Length == 0)) pieces = new List<Seg> { new Seg(" ", main) };
-                    float spacing = SpacingMm(t);
-                    Func<List<Seg>, float> width = line => LineWidth(g, lay.Fonts, fmt, line, spacing);
+                    Func<List<Seg>, float> width = line => LineWidth(g, lay, fmt, line);
 
                     // Paragraphs at the line breaks; an empty one keeps the font it is in (its height).
                     var paras = new List<List<Seg>> { new List<Seg>() };
@@ -362,25 +434,33 @@ namespace QlLabels
                     foreach (var p in pieces)
                     {
                         var parts = p.Text.Split('\n');
+                        int from = p.Start;
                         for (int k = 0; k < parts.Length; k++)
                         {
                             if (k > 0) { paras.Add(new List<Seg>()); leads.Add(p.Font); }
-                            Append(paras[paras.Count - 1], parts[k], p.Font);
+                            Append(paras[paras.Count - 1], parts[k], p.Font, from);
+                            from += parts[k].Length + 1;
                         }
                     }
                     float lh = (float)(t.Kind == TextKind.Frame ? t.LineHeight : 1);
                     for (int k = 0; k < paras.Count; k++)
-                        foreach (var line in wrap > 0 ? Wrap(paras[k], wrap, width) : new List<List<Seg>> { paras[k] })
+                    {
+                        var wrapped = wrap > 0 ? Wrap(paras[k], wrap, width) : new List<List<Seg>> { paras[k] };
+                        for (int m = 0; m < wrapped.Count; m++)
                         {
+                            var line = wrapped[m];
                             var used = line.Where(s => s.Text.Length > 0).Select(s => s.Font).Distinct().ToList();
                             if (used.Count == 0) used.Add(line.Count > 0 ? line[0].Font : leads[k]);
                             float size = used.Max(f => lay.FontSizes[f]);
                             lay.Lines.Add(line);
-                            lay.Widths.Add(width(line));
+                            lay.Widths.Add(width(wrap > 0 ? TrimEnd(line) : line));   // a frame: spaces at a line's end don't overflow it
+                            lay.AlignWidths.Add(width(line));
                             lay.Ascents.Add(used.Max(f => lay.FontAscents[f]));
                             lay.LineSizes.Add(size);
                             lay.Pitches.Add(size * lh);
+                            lay.Ends.Add(m == wrapped.Count - 1);
                         }
+                    }
                 }
             }
             return lay;
@@ -391,17 +471,22 @@ namespace QlLabels
             return new Font(family, (float)(points * 25.4 / 72), style, GraphicsUnit.World);   // world unit = mm
         }
 
-        // Adds text in a font to a line: to its last stretch when that has the same font.
-        static void Append(List<Seg> line, string text, int font)
+        // Adds text in a font to a line: to its last stretch when that has the same font (start: where the text is in the
+        // stored text; an empty stretch takes the new one's).
+        static void Append(List<Seg> line, string text, int font, int start = -1)
         {
-            if (line.Count > 0 && line[line.Count - 1].Font == font) line[line.Count - 1] = new Seg(line[line.Count - 1].Text + text, font);
-            else if (text.Length > 0 || line.Count == 0) line.Add(new Seg(text, font));
+            if (line.Count > 0 && line[line.Count - 1].Font == font)
+            {
+                var last = line[line.Count - 1];
+                line[line.Count - 1] = new Seg(last.Text + text, font, last.Text.Length == 0 && start >= 0 ? start : last.Start);
+            }
+            else if (text.Length > 0 || line.Count == 0) line.Add(new Seg(text, font, start));
         }
 
         static List<Seg> Concat(List<Seg> a, List<Seg> b)
         {
             var line = new List<Seg>();
-            foreach (var s in a.Concat(b)) Append(line, s.Text, s.Font);
+            foreach (var s in a.Concat(b)) Append(line, s.Text, s.Font, s.Start);
             return line;
         }
 
@@ -410,7 +495,7 @@ namespace QlLabels
         // Without the spaces at the end (an empty line keeps its first stretch's font).
         static List<Seg> TrimEnd(List<Seg> line)
         {
-            var r = line.Select(s => new Seg(s.Text, s.Font)).ToList();
+            var r = line.Select(s => new Seg(s.Text, s.Font, s.Start)).ToList();
             while (r.Count > 0)
             {
                 var last = r[r.Count - 1];
@@ -421,18 +506,19 @@ namespace QlLabels
             return r;
         }
 
-        static float LineWidth(Graphics g, List<Font> fonts, StringFormat fmt, List<Seg> line, float spacing)
+        // The letter spacing goes after each character but the line's last.
+        static float LineWidth(Graphics g, TextLayout lay, StringFormat fmt, List<Seg> line)
         {
             if (!HasText(line)) return 0;
-            float w = 0;
-            int elements = 0;
+            float w = 0, extra = 0, last = 0;
             foreach (var s in line)
             {
                 if (s.Text.Length == 0) continue;
-                w += g.MeasureString(s.Text, fonts[s.Font], PointF.Empty, fmt).Width;
-                elements += Elements(s.Text).Count;
+                w += g.MeasureString(s.Text, lay.Fonts[s.Font], PointF.Empty, fmt).Width;
+                last = lay.Spacings[s.Font];
+                extra += last * Elements(s.Text).Count;
             }
-            return Math.Max(0, w + spacing * (elements - 1));
+            return Math.Max(0, w + extra - last);
         }
 
         // The characters as the user sees them (a letter with its accents, a surrogate pair: one element).
@@ -452,12 +538,16 @@ namespace QlLabels
             var tokens = new List<List<Seg>>();
             var cur = new List<Seg>();
             foreach (var s in para)
+            {
+                int off = 0;
                 foreach (var part in Regex.Split(s.Text, "(?<= )"))
                 {
                     if (part.Length == 0) continue;
-                    Append(cur, part, s.Font);
+                    Append(cur, part, s.Font, s.Start < 0 ? -1 : s.Start + off);
+                    off += part.Length;
                     if (part.EndsWith(" ")) { tokens.Add(cur); cur = new List<Seg>(); }
                 }
+            }
             if (HasText(cur)) tokens.Add(cur);
 
             int lead = para.Count > 0 ? para[0].Font : 0;
@@ -471,20 +561,40 @@ namespace QlLabels
                     line = new List<Seg>();
                 }
                 var word = token;
-                while (!HasText(line) && width(TrimEnd(word)) > max)
+                if (!HasText(line) && width(TrimEnd(word)) > max)
                 {
-                    var chars = TrimEnd(word).SelectMany(s => Elements(s.Text).Select(e => new Seg(e, s.Font))).ToList();
-                    if (chars.Count < 2) break;
-                    int n = 1;
-                    while (n < chars.Count && width(Concat(new List<Seg>(), chars.Take(n + 1).ToList())) <= max) n++;
-                    var head = Concat(new List<Seg>(), chars.Take(n).ToList());
-                    lines.Add(head);
-                    word = Drop(word, chars.Take(n).Sum(c => c.Text.Length));
+                    // A word wider than a line, broken at characters: walked once (measuring the whole rest of the word
+                    // for every line was quadratic: 40,000 characters without a space took 7 s; parser_fuzz).
+                    var chars = TrimEnd(word).SelectMany(CharSegs).ToList();
+                    int at = 0, dropped = 0;
+                    while (chars.Count - at >= 2)
+                    {
+                        int n = 1;
+                        while (at + n < chars.Count && width(Concat(new List<Seg>(), chars.GetRange(at, n + 1))) <= max) n++;
+                        if (at + n == chars.Count) break;   // the rest fits on a line
+                        lines.Add(Concat(new List<Seg>(), chars.GetRange(at, n)));
+                        for (int k = 0; k < n; k++) dropped += chars[at + k].Text.Length;
+                        at += n;
+                    }
+                    word = Drop(word, dropped);
                 }
                 line = Concat(line, word);
             }
-            lines.Add(HasText(line) ? TrimEnd(line) : new List<Seg> { new Seg("", line.Count > 0 ? line[0].Font : lead) });
+            // The paragraph's last line keeps the spaces at its end: each typed space has its caret place (they hang
+            // beyond the line as in Word; Layout measures the line without them).
+            lines.Add(HasText(line) ? line : new List<Seg> { new Seg("", line.Count > 0 ? line[0].Font : lead, para.Count > 0 ? para[0].Start : -1) });
             return lines;
+        }
+
+        // A stretch as one stretch per character (element), each with its place in the stored text.
+        static IEnumerable<Seg> CharSegs(Seg s)
+        {
+            int off = 0;
+            foreach (var e in Elements(s.Text))
+            {
+                yield return new Seg(e, s.Font, s.Start < 0 ? -1 : s.Start + off);
+                off += e.Length;
+            }
         }
 
         // The stretches without their first 'chars' characters.
@@ -495,67 +605,238 @@ namespace QlLabels
             {
                 int cut = Math.Min(chars, s.Text.Length);
                 chars -= cut;
-                if (cut < s.Text.Length) r.Add(new Seg(s.Text.Substring(cut), s.Font));
+                if (cut < s.Text.Length) r.Add(new Seg(s.Text.Substring(cut), s.Font, s.Start < 0 ? -1 : s.Start + cut));
             }
             return r;
         }
 
-        static void DrawText(Graphics g, TextObject t, RectangleF box, DateTime now, Brush ink)
+        // The edited text scrolled up inside its frame by this much (mm), so the caret's line shows (View > Show overflow
+        // while editing off). Screen only, as Codes.
+        internal static float CodesScroll { get; set; }
+
+        // overflow: only what a frame cuts off (below or beside it), for the canvas to show in grey while editing.
+        // Inverted characters (runs, or all of a paragraph text: not in a black box, InvertBox) get a band of ink behind
+        // them, as high as their line with half the room to its neighbours (the bands of lines below each other touch), from
+        // their first to their last character that isn't a space, TextPad wider at the line's ends; they are drawn in the
+        // paper's colour. An empty line gets none. The bands are drawn before any text, so that none covers the line above.
+        static void DrawText(Graphics g, TextObject t, RectangleF box, DateTime now, Brush ink, bool overflow = false)
         {
             var inner = RectangleF.Inflate(box, -TextPad, -TextPad);
             bool frame = t.Kind == TextKind.Frame;
+            Brush paper = ReferenceEquals(ink, Brushes.White) ? Brushes.Black : Brushes.White;   // colours: fixed (the label as printed)
             using (var lay = Layout(t, now, frame ? Math.Max(0.1f, inner.Width / WidthMargin) : 0))
             using (var fmt = Format())
             {
-                float spacing = SpacingMm(t);
                 // A frame cuts off what doesn't fit (the canvas marks it); a single line sits in the middle of its box.
-                if (frame) g.IntersectClip(box);
-                float y = frame ? inner.Top : inner.Top + (inner.Height - lay.Height) / 2;
+                if (frame && overflow) using (var outside = new Region(box)) g.ExcludeClip(outside);
+                else if (frame) g.IntersectClip(box);
+                float y0 = frame ? inner.Top : inner.Top + (inner.Height - lay.Height) / 2;
+                if (frame && t == Codes && !overflow) y0 -= CodesScroll;
                 var plain = new Dictionary<int, Font>();   // the fonts without underline (drawn character by character)
+                bool boxed = t.InvertBox;
+                bool shaded = lay.Inverts.Any(v => v != boxed);
                 try
                 {
-                    for (int i = 0; i < lay.Lines.Count; y += lay.Pitches[i], i++)
+                    for (int pass = shaded ? 0 : 1; pass < 2; pass++)
                     {
-                        var line = lay.Lines[i];
-                        float w = lay.Widths[i];
-                        float x = t.Align == TextAlign.Center ? inner.Left + (inner.Width - w) / 2 : t.Align == TextAlign.Right ? inner.Right - w : inner.Left;
-                        int c = 0;   // characters before this stretch in the line (the spacing before each)
-                        int segs = line.Count(s => s.Text.Length > 0);
-                        foreach (var s in line)
+                        float y = y0;
+                        for (int i = 0; i < lay.Lines.Count; y += lay.Pitches[i], i++)
                         {
-                            if (s.Text.Length == 0) continue;
-                            var font = lay.Fonts[s.Font];
-                            float asc = lay.FontAscents[s.Font];
-                            float top = asc == lay.Ascents[i] ? y : y + (lay.Ascents[i] - asc);   // on the line's baseline
-                            float sw = g.MeasureString(s.Text, font, PointF.Empty, fmt).Width;
-                            if (spacing == 0)
+                            var line = lay.Lines[i];
+                            float aw = AlignWidth(lay, i, inner), gap = Gap(t, lay, i, inner);
+                            float x = t.Align == TextAlign.Center ? inner.Left + (inner.Width - aw) / 2 : t.Align == TextAlign.Right ? inner.Right - aw : inner.Left;
+                            float cum = 0;   // the letter spacing after the characters before this stretch in the line
+                            int sp = 0;      // spaces before this stretch in the line (a justified line's gap after each)
+                            int lastInk = line.FindLastIndex(q => q.Text.TrimEnd(' ').Length > 0);   // the last stretch with more than spaces
+                            int firstText = line.FindIndex(q => q.Text.Length > 0);
+                            // the band: the line, with half the room to the line above and below it (the bands of two lines
+                            // meet in the middle; the text stays in the middle of its band at any line spacing)
+                            float bandTop = i > 0 ? y - Math.Max(0, lay.Pitches[i - 1] - lay.LineSizes[i - 1]) / 2 : y;
+                            float bandBottom = y + lay.LineSizes[i] + (i < lay.Lines.Count - 1 ? Math.Max(0, lay.Pitches[i] - lay.LineSizes[i]) / 2 : 0);
+                            for (int j = 0; j < line.Count; j++)
                             {
-                                g.DrawString(s.Text, font, ink, x, top, fmt);
+                                var s = line[j];
+                                if (s.Text.Length == 0) continue;
+                                var font = lay.Fonts[s.Font];
+                                float asc = lay.FontAscents[s.Font], spacing = lay.Spacings[s.Font];
+                                bool flip = lay.Inverts[s.Font] != boxed;
+                                var brush = flip ? paper : ink;
+                                float top = asc == lay.Ascents[i] ? y : y + (lay.Ascents[i] - asc);   // on the line's baseline
+                                float sw = g.MeasureString(s.Text, font, PointF.Empty, fmt).Width;
+                                Font p;
+                                if (!plain.TryGetValue(s.Font, out p)) plain[s.Font] = p = new Font(font, font.Style & ~FontStyle.Underline);
+                                var chars = Elements(s.Text);
+                                float start = x + cum + sp * gap;
+                                // the stretch's width with the spacing after each of its characters; the line's last stretch up to
+                                // its last character that is not a space (no spacing after it): spaces at the line's end aren't
+                                // underlined or shaded
+                                float span;
+                                if (j < lastInk) span = sw + spacing * chars.Count + gap * Spaces(s.Text);
+                                else
+                                {
+                                    string inked = s.Text.TrimEnd(' ');
+                                    int n = Elements(inked).Count;
+                                    span = n == 0 ? 0 : g.MeasureString(inked, p, PointF.Empty, fmt).Width + spacing * (n - 1) + gap * Spaces(inked);
+                                }
+                                if (pass == 0)
+                                {
+                                    if (flip && span > 0)
+                                    {
+                                        float left = j == firstText ? TextPad : 0, right = j == lastInk ? TextPad : 0;
+                                        g.FillRectangle(ink, start - left, bandTop, span + left + right, bandBottom - bandTop);
+                                    }
+                                }
+                                else if (spacing == 0 && gap == 0)
+                                    DrawStretch(g, s.Text, font, brush, start, top, sw, fmt, j < lastInk);
+                                else
+                                {
+                                    // Character by character: each at its place in the line plus the spacing before it (and a
+                                    // justified line's gap after each space before it).
+                                    string before = "";
+                                    for (int k = 0; k < chars.Count; k++)
+                                    {
+                                        float at = before.Length == 0 ? 0 : g.MeasureString(before, p, PointF.Empty, fmt).Width;
+                                        g.DrawString(chars[k], p, brush, x + at + cum + k * spacing + (sp + Spaces(before)) * gap, top, fmt);
+                                        before += chars[k];
+                                    }
+                                    if (font.Underline && span > 0)
+                                        g.FillRectangle(brush, start, top + asc + font.Size * 0.1f, span, Math.Max(font.Size * 0.06f, 0.1f));
+                                }
                                 x += sw;
-                                continue;
+                                cum += spacing * chars.Count;
+                                sp += Spaces(s.Text);
                             }
-                            // Character by character: each at its place in the line plus the spacing before it.
-                            Font p;
-                            if (!plain.TryGetValue(s.Font, out p)) plain[s.Font] = p = new Font(font, font.Style & ~FontStyle.Underline);
-                            var chars = Elements(s.Text);
-                            string before = "";
-                            for (int k = 0; k < chars.Count; k++)
-                            {
-                                float at = before.Length == 0 ? 0 : g.MeasureString(before, p, PointF.Empty, fmt).Width;
-                                g.DrawString(chars[k], p, ink, x + at + (c + k) * spacing, top, fmt);
-                                before += chars[k];
-                            }
-                            // the stretch's width with the spacing after each of its characters (not after the line's last)
-                            float span = segs == 1 ? w : sw + spacing * chars.Count - (s == line.Last(q => q.Text.Length > 0) ? spacing : 0);
-                            if (font.Underline && span > 0)
-                                g.FillRectangle(ink, x + c * spacing, top + asc + font.Size * 0.1f, span, Math.Max(font.Size * 0.06f, 0.1f));
-                            x += sw;
-                            c += chars.Count;
                         }
                     }
                 }
                 finally { foreach (var f in plain.Values) f.Dispose(); }
             }
+        }
+
+        // Justify: the room each space between the words of a wrapped line gets added, so that the line fills the frame
+        // (mm; 0 for the last line of a paragraph, a line without spaces, artistic text and the other alignments).
+        static float Gap(TextObject t, TextLayout lay, int i, RectangleF inner)
+        {
+            if (t.Kind != TextKind.Frame || t.Align != TextAlign.Justify || lay.Ends[i]) return 0;
+            int spaces = TrimEnd(lay.Lines[i]).Sum(s => Spaces(s.Text));
+            return spaces == 0 ? 0 : Math.Max(0, (inner.Width - lay.Widths[i]) / spaces);
+        }
+
+        static int Spaces(string s) { int n = 0; foreach (char ch in s) if (ch == ' ') n++; return n; }
+
+        // The width a line is aligned with: with the spaces typed at its end (a centred or right-aligned line moves left
+        // with each one, so the caret moves too), in a frame at most the frame's width (more spaces hang beyond it).
+        static float AlignWidth(TextLayout lay, int i, RectangleF inner)
+        {
+            return Math.Max(lay.Widths[i], Math.Min(lay.AlignWidths[i], inner.Width));
+        }
+
+        // A stretch in one font (no letter spacing). GDI+ underlines a drawn string without its leading and trailing spaces:
+        // an underlined stretch starting with spaces, or ending in spaces with more text after it on the line (the next word
+        // in another format), is drawn with a full stop before or after it, clipped away, so that its spaces get the
+        // underline in one line with its letters. Spaces at the line's end stay without (as in Word).
+        static void DrawStretch(Graphics g, string text, Font font, Brush ink, float x, float top, float sw, StringFormat fmt, bool more)
+        {
+            bool lead = font.Underline && text.StartsWith(" ") && (more || text.Trim(' ').Length > 0);
+            bool trail = font.Underline && text.EndsWith(" ") && more;
+            if (!lead && !trail) { g.DrawString(text, font, ink, x, top, fmt); return; }
+            float stop = g.MeasureString(".", font, PointF.Empty, fmt).Width;
+            float left = lead ? x : x - 4 * font.Size, right = trail ? x + sw : x + sw + 4 * font.Size;
+            var state = g.Save();
+            try
+            {
+                g.IntersectClip(new RectangleF(left, top - 4 * font.Size, right - left, 8 * font.Size));
+                g.DrawString((lead ? "." : "") + text + (trail ? "." : ""), font, ink, lead ? x - stop : x, top, fmt);
+            }
+            finally { g.Restore(state); }
+        }
+
+        // The edited text's cut-off part in the object's own frame (g: mm, centred on the box, turned with it), for the
+        // canvas to draw it light grey below the frame while editing.
+        internal static void DrawOverflow(Graphics g, TextObject t, Brush ink)
+        {
+            if (t.Kind != TextKind.Frame) return;
+            bool turned = t.Rotation == 90 || t.Rotation == 270;
+            float w = (float)(turned ? t.H : t.W), h = (float)(turned ? t.W : t.H);
+            DrawText(g, t, new RectangleF(-w / 2, -h / 2, w, h), DateTime.Now, ink, true);
+        }
+
+        // Where every character of a text is drawn (the caret map, for editing on the canvas): per laid-out line its top,
+        // height and each character boundary's x with its index in the stored text, in the object's own frame (mm, centred
+        // on the box, not turned), measured as DrawText draws (the same Graphics, format, spacing). For the text being
+        // edited (Codes) the fields are their codes, so the indexes match the stored text 1:1.
+        internal static CaretMap MapText(TextObject t)
+        {
+            bool turned = t.Rotation == 90 || t.Rotation == 270;
+            float w = (float)(turned ? t.H : t.W), h = (float)(turned ? t.W : t.H);
+            var box = new RectangleF(-w / 2, -h / 2, w, h);
+            var inner = RectangleF.Inflate(box, -TextPad, -TextPad);
+            bool frame = t.Kind == TextKind.Frame;
+            var map = new CaretMap { Box = box, Frame = frame, Length = t.Text.Length };
+            using (var lay = Layout(t, DateTime.Now, frame ? Math.Max(0.1f, inner.Width / WidthMargin) : 0))
+            using (var bmp = new Bitmap(1, 1))
+            {
+                bmp.SetResolution(300, 300);
+                using (var g = Graphics.FromImage(bmp))
+                using (var fmt = Format())
+                {
+                    g.PageUnit = GraphicsUnit.Millimeter;
+                    g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
+                    // spaces typed at a frame line's end hang beyond it (as in Word): their places stop at the frame's edge
+                    Func<float, float> Edge = v => frame ? Math.Min(v, inner.Right) : v;
+                    float y = frame ? inner.Top : inner.Top + (inner.Height - lay.Height) / 2;
+                    int next = 0;   // where the line after the last one starts at the earliest
+                    for (int i = 0; i < lay.Lines.Count; y += lay.Pitches[i], i++)
+                    {
+                        var line = lay.Lines[i];
+                        float lw = AlignWidth(lay, i, inner), gap = Gap(t, lay, i, inner);
+                        float x = t.Align == TextAlign.Center ? inner.Left + (inner.Width - lw) / 2 : t.Align == TextAlign.Right ? inner.Right - lw : inner.Left;
+                        var index = new List<int>();
+                        var xs = new List<float>();
+                        int sp = 0;
+                        float cum = 0;   // the letter spacing after the characters before this stretch
+                        foreach (var s in line)
+                        {
+                            if (s.Text.Length == 0) continue;
+                            var font = lay.Fonts[s.Font];
+                            float spacing = lay.Spacings[s.Font];
+                            var chars = Elements(s.Text);
+                            string before = "";
+                            int off = 0;
+                            for (int k = 0; k < chars.Count; k++)
+                            {
+                                float at = before.Length == 0 ? 0 : g.MeasureString(before, font, PointF.Empty, fmt).Width;
+                                index.Add(s.Start + off);
+                                xs.Add(Edge(x + at + cum + k * spacing + (sp + Spaces(before)) * gap));
+                                before += chars[k];
+                                off += chars[k].Length;
+                            }
+                            x += g.MeasureString(s.Text, font, PointF.Empty, fmt).Width;
+                            cum += spacing * chars.Count;
+                            sp += Spaces(s.Text);
+                            index.Add(s.Start + off);
+                            xs.Add(Edge(x + cum - spacing + sp * gap));   // the stretch's end: after its last character
+                        }
+                        if (index.Count == 0)
+                        {
+                            int start = line.Count > 0 && line[0].Start >= 0 ? line[0].Start : next;
+                            index.Add(start);
+                            xs.Add(x);
+                        }
+                        // a stretch's end and the next one's start are the same place: the next one's start counts
+                        var ci = new List<int>();
+                        var cx = new List<float>();
+                        for (int k = 0; k < index.Count; k++)
+                        {
+                            if (ci.Count > 0 && ci[ci.Count - 1] == index[k]) { cx[cx.Count - 1] = xs[k]; continue; }
+                            ci.Add(index[k]); cx.Add(xs[k]);
+                        }
+                        map.Lines.Add(new CaretLine { Index = ci.ToArray(), X = cx.ToArray(), Top = y, Height = lay.LineSizes[i], Ascent = lay.Ascents[i] });
+                        next = ci[ci.Count - 1] + 1;
+                    }
+                }
+            }
+            return map;
         }
 
         // A frame text whose lines don't all fit its box: the rest is cut off (the canvas marks the box in red).
@@ -574,7 +855,7 @@ namespace QlLabels
             bool turned = t.Rotation == 90 || t.Rotation == 270;
             float w = (float)(turned ? t.H : t.W) - 2 * TextPad;
             using (var lay = Layout(t, DateTime.Now, t.Kind == TextKind.Frame ? Math.Max(0.1f, w / WidthMargin) : 0))
-                return lay.Lines.Select(l => string.Concat(l.Select(x => x.Text))).ToList();
+                return lay.Lines.Select(l => string.Concat(l.Select(x => x.Text))).Select(l => t.Kind == TextKind.Frame ? l.TrimEnd(' ') : l).ToList();   // a frame: without the spaces at a line's end, as before
         }
 
         // Sets the box around the text at its size, without wrapping (keeps the box's centre for rotated text, its
@@ -598,131 +879,52 @@ namespace QlLabels
         // colours: fixed end
     }
 
-    // The B / I / U bar above the text box: the shared look without the frame a free-standing tool strip gets.
-    sealed class StyleBarRenderer : ThemeRenderer
-    {
-        public StyleBarRenderer() { RoundedEdges = false; }
-        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
-    }
-
-    // The panel's text box: a RichTextBox, so a paragraph text shows its word formats. Ctrl+B/I/U (and Ctrl+Shift+F/K/U as
-    // in German Word) go to FormatKey before the menu (else Ctrl+B would insert a box); RichEdit's own formatting keys
-    // (alignment, line spacing, sub/superscript, bullets, capitals) do nothing; a paste is the text only.
-    sealed class RunsBox : RichTextBox
-    {
-        public Action<string> FormatKey;   // "bold", "italic", "underline"
-
-        public RunsBox() { DetectUrls = false; HideSelection = false; }
-
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            string format = keyData == (Keys.Control | Keys.B) || keyData == (Keys.Control | Keys.Shift | Keys.F) ? "bold"
-                          : keyData == (Keys.Control | Keys.I) || keyData == (Keys.Control | Keys.Shift | Keys.K) ? "italic"
-                          : keyData == (Keys.Control | Keys.U) || keyData == (Keys.Control | Keys.Shift | Keys.U) ? "underline" : null;
-            if (format != null && FormatKey != null) { FormatKey(format); return true; }
-            if (keyData == (Keys.Shift | Keys.Insert)) { PasteText(); return true; }
-            if (base.ProcessCmdKey(ref msg, keyData)) return true;
-            Keys key = keyData & Keys.KeyCode, mods = keyData & Keys.Modifiers;
-            if (mods != Keys.Control && mods != (Keys.Control | Keys.Shift)) return false;
-            return key == Keys.E || key == Keys.R || key == Keys.J || key == Keys.L || key == Keys.D1 || key == Keys.D2 || key == Keys.D5
-                || key == Keys.Oemplus || key == Keys.OemPeriod || key == Keys.Oemcomma || (key == Keys.A && mods != Keys.Control);
-        }
-
-        protected override void WndProc(ref Message m)
-        {
-            if (m.Msg == 0x0302) { PasteText(); return; }   // WM_PASTE (Edit > Paste): the text only, in the format at the caret
-            base.WndProc(ref m);
-        }
-
-        void PasteText()
-        {
-            string text = null;
-            try { if (Clipboard.ContainsText()) text = Clipboard.GetText(); }
-            catch (Exception) { }   // another program holds the clipboard
-            if (text != null) SelectedText = text.Replace("\r\n", "\n");
-        }
-    }
-
     sealed partial class EditorForm
     {
         // The settings rows of a text (BuildProperties: they come in this order).
+        // The font box's list (once): the installed families, the typed text kept
+        void FillFonts()
+        {
+            if (fontBox.Items.Count > 0) return;
+            string text = fontBox.Text;
+            fontBox.BeginUpdate();
+            foreach (var f in FontFamily.Families) fontBox.Items.Add(f.Name);
+            fontBox.EndUpdate();
+            if (fontBox.Text != text) fontBox.Text = text;
+        }
+
         void BuildTextRows()
         {
             Func<LabelObject, bool> text = o => o is TextObject;
             Func<LabelObject, bool> oneLine = o => o is TextObject && ((TextObject)o).Kind == TextKind.Line,
                 frame = o => o is TextObject && ((TextObject)o).Kind == TextKind.Frame;
-            // B / I / U above the text box (paragraph text): on the selected words, with none on what is typed next.
-            styleBar = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden, CanOverflow = false, Dock = DockStyle.None, AutoSize = true, Padding = new Padding(0),
-                                       Renderer = new StyleBarRenderer() };
-            Func<string, FontStyle, string, string, ToolStripButton> styleButton = (letter, look, tip, format) =>
-            {
-                var b = new ToolStripButton(letter) { DisplayStyle = ToolStripItemDisplayStyle.Text, ToolTipText = tip, Tag = look };
-                b.Click += delegate { ToggleStyle(b, format, true); };
-                styleBar.Items.Add(b);
-                return b;
-            };
-            boldButton = styleButton(Lang.T("B"), FontStyle.Bold, Lang.T("Bold (Ctrl+B)"), "bold");
-            italicButton = styleButton(Lang.T("I"), FontStyle.Italic, Lang.T("Italic (Ctrl+I)"), "italic");
-            underlineButton = styleButton(Lang.T("U"), FontStyle.Underline, Lang.T("Underline (Ctrl+U)"), "underline");
-            Row("", styleBar, frame);
-            // Multi-line for a paragraph text; one line for an artistic text (Enter does nothing, pasted line breaks
-            // become spaces). It shows a paragraph text's word formats; the text object stays what counts (TypedText).
-            textBox = new RunsBox { Multiline = true, Height = S(64), ScrollBars = RichTextBoxScrollBars.Vertical, Dock = DockStyle.Fill };
-            textBox.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter && oneLine(canvas.Selected)) e.SuppressKeyPress = true; };
-            textBox.TextChanged += (s, e) => TypedText(s);
-            textBox.SelectionChanged += (s, e) =>
-            {
-                // the caret moved without typing: typing continues in the format before it
-                if (loading || textBox.TextLength != boxText.Length || textBox.Text != boxText) return;
-                typing = null;
-                var t = canvas.Selected as TextObject;
-                if (t != null) { loading = true; try { FillStyleRows(t); } finally { loading = false; } }
-            };
-            textBox.FormatKey = format => ToggleStyle(textBox, format, true);
-            BarFonts();
-            // A new font (another screen's scaling) sets the whole box to it: the word formats again, B/I/U at its size.
-            textBox.FontChanged += delegate
-            {
-                boxShown = null;
-                BarFonts();
-                if (!textBox.IsHandleCreated) return;
-                textBox.BeginInvoke((MethodInvoker)delegate
-                {
-                    var t = canvas.Selected as TextObject;
-                    if (t == null || IsDisposed) return;
-                    loading = true;
-                    try { ShowRuns(t); } finally { loading = false; }
-                });
-            };
-            Row(Lang.T("Text:"), textBox, text);
-            Row("", FieldButton(textBox), text);
+            // The text is typed on the label: the panel says how and has a button for it; the
+            // fields go in at the caret.
+            SpanRow(Hint(Lang.T("Double-click the text on the label to edit it.")), o => text(o) && canvas.EditedText != o);
+            var editButton = new System.Windows.Forms.Button { Text = Lang.T("Edit text (F2)"), AutoSize = true };
+            editButton.Click += delegate { StartEditing(); };
+            Row("", editButton, o => text(o) && canvas.EditedText != o);
+            Row("", FieldButton(InsertField), text);
             textKindBox = Combo(Lang.T("Artistic text"), Lang.T("Paragraph text"));
-            textKindBox.SelectedIndexChanged += (s, e) =>
-            {
-                // To artistic text with word formats: asks first (they go; Undo brings them back).
-                var t = canvas.Selected as TextObject;
-                if (!loading && t != null && (TextKind)textKindBox.SelectedIndex == TextKind.Line && t.FormatRuns != null && !AskOneFormat())
-                {
-                    loading = true;
-                    try { textKindBox.SelectedIndex = (int)t.Kind; } finally { loading = false; }
-                    return;
-                }
-                Edit(s, o => SetTextKind((TextObject)o, (TextKind)textKindBox.SelectedIndex));
-            };
+            textKindBox.SelectedIndexChanged += (s, e) => Edit(s, o => SetTextKind((TextObject)o, (TextKind)textKindBox.SelectedIndex));
             Row(Lang.T("Kind:"), textKindBox, text);
             tips.SetToolTip(textKindBox, Lang.T("Artistic text: one line, the box follows the text, the handles change its size.\n" +
-                                                "Paragraph text: you set the box, the text wraps inside it; selected words can have their own format."));
+                                                "Paragraph text: you set the box, the text wraps inside it.\n" +
+                                                "In both, selected words can have their own format."));
             SpanRow(Hint(Lang.T("Drag a handle to make the text larger or smaller.")), oneLine);
             SpanRow(Hint(Lang.T("The text wraps in its box. Selected words can be formatted on their own.")), frame);
             // What the font, size, bold, italic and underline rows act on: the selected words, else the whole text.
             scopeHint = Theme.Fore(Hint(""), Role.Accent);
-            SpanRow(scopeHint, o => frame(o) && textBox.SelectionLength > 0);
+            SpanRow(scopeHint, o => frame(o) && canvas.EditedText == o && canvas.Editing.HasSelection);
             // While the text doesn't fit (the canvas draws the box's edge in red).
             var overflow = Hint(Lang.T("The text doesn't fit the box and is cut off: make the box larger or the text smaller."));
             Theme.Fore(overflow, Role.ErrorText);
             SpanRow(overflow, o => o is TextObject && EditorRender.Overflows((TextObject)o));
             fontBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown, Dock = DockStyle.Fill, AutoCompleteMode = AutoCompleteMode.SuggestAppend, AutoCompleteSource = AutoCompleteSource.ListItems };
-            foreach (var f in FontFamily.Families) fontBox.Items.Add(f.Name);
+            // The installed fonts are listed when the box is first used: listing them loads GDI+'s table of every installed
+            // font (seconds after a restart with many fonts), which the window's start doesn't need (UiFont.cs).
+            fontBox.Enter += delegate { FillFonts(); };
+            fontBox.DropDown += delegate { FillFonts(); };
             fontBox.SelectedIndexChanged += (s, e) => { string name = fontBox.Text; Style(s, r => With(r, font: name), false); };
             fontBox.Leave += (s, e) =>
             {
@@ -733,127 +935,36 @@ namespace QlLabels
             sizeNum = Number(2, 400, 1, 1);
             sizeNum.ValueChanged += (s, e) => { double size = (double)sizeNum.Value; Style(s, r => With(r, size: size), false); };
             Row(Lang.T("Size (pt):"), sizeNum, text);
-            var style = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
-            boldCheck = Check(Lang.T("Bold"), (s, e) => ToggleStyle(s, "bold", false));
-            italicCheck = Check(Lang.T("Italic"), (s, e) => ToggleStyle(s, "italic", false));
-            underlineCheck = Check(Lang.T("Underline"), (s, e) => ToggleStyle(s, "underline", false));
-            style.Controls.AddRange(new Control[] { boldCheck, italicCheck, underlineCheck });
-            Row("", style, text);
-            // wraps only when its column is too narrow: the panel's scroll bar took the room "Underline" needed (German,
-            // 96-144 dpi)
-            props.Layout += (s, e) =>
-            {
-                var widths = props.GetColumnWidths();
-                int room = props.Width - (widths.Length > 0 ? widths[0] : 0);
-                int needed = style.Controls.Cast<Control>().Sum(c => c.PreferredSize.Width + c.Margin.Horizontal);
-                bool wrap = room < needed;
-                var most = wrap ? new Size(Math.Max(S(80), room), 0) : Size.Empty;
-                if (style.WrapContents != wrap) style.WrapContents = wrap;
-                if (style.MaximumSize != most) style.MaximumSize = most;
-            };
-            textInvertCheck = Check(Lang.T("Invert"), (s, e) => Edit(s, o => ((TextObject)o).Invert = textInvertCheck.Checked));
-            tips.SetToolTip(textInvertCheck, Lang.T("White on black: a black box 1 mm larger than the text's frame, the text white in it. It covers what lies below."));
-            Row("", textInvertCheck, text);
-            alignBox = Combo(Lang.T("Left"), Lang.T("Centre"), Lang.T("Right"));
-            alignBox.SelectedIndexChanged += (s, e) => Edit(s, o => ((TextObject)o).Align = (TextAlign)alignBox.SelectedIndex);
-            Row(Lang.T("Lines:"), alignBox, frame);
-            lineHeightNum = Number((decimal)TextObject.MinLineHeight, (decimal)TextObject.MaxLineHeight, 0.1m, 1);
-            lineHeightNum.ValueChanged += (s, e) => Edit(s, o => ((TextObject)o).LineHeight = (double)lineHeightNum.Value);
-            Row(Lang.T("Line spacing (×):"), lineHeightNum, frame);
-            spacingNum = Number((decimal)TextObject.MinSpacing, (decimal)TextObject.MaxSpacing, 0.5m, 1);
-            spacingNum.ValueChanged += (s, e) => Edit(s, o => ((TextObject)o).Spacing = (double)spacingNum.Value);
-            Row(Lang.T("Letter spacing (pt):"), spacingNum, text);
+            // bold, italic, underline, invert, alignment and the spacings: the toolbar's text group (EditorForm.TextBar.cs)
         }
 
-        // ---------- the text box and the format rows (step 4: words with their own format) ----------
+        // ---------- the format rows (words with their own format: the selection while editing on the label) ----------
 
-        RunsBox textBox;
-        ToolStrip styleBar;
-        ToolStripButton boldButton, italicButton, underlineButton;
         Label scopeHint;
-        string boxText = "";      // the text box's text as last applied to the object ("\n" breaks)
-        string boxShown;          // the formats the box shows (to set them again only when they changed)
-        TextRun typing;           // B/I/U at the caret with nothing selected: what is typed there next (filled), else null
-        bool[] mixedBefore = new bool[3];   // bold, italic, underline were mixed when the rows were filled
 
-        // B / I / U in the text box's font (a tool strip doesn't follow the window's font), bold, italic, underlined.
-        void BarFonts()
-        {
-            foreach (ToolStripButton b in styleBar.Items)
-            {
-                var old = b.Font;
-                b.Font = new Font(textBox.Font, (FontStyle)b.Tag);
-                if (old != null && old != styleBar.Font) old.Dispose();
-            }
-        }
-
-        // The object's runs with "\n" breaks, every field filled (what the text box works on).
+        // The object's runs with "\n" breaks, every field filled.
         static List<TextRun> BoxRuns(TextObject t) { return RunEdit.Normalized(t.FullRuns()); }
 
-        static TextRun Filled(TextRun r, TextObject t)
-        {
-            return new TextRun("", r == null || r.Font == null ? t.Font : r.Font, r == null || r.Size == null ? t.Size : r.Size,
-                               r == null || r.Bold == null ? t.Bold : r.Bold, r == null || r.Italic == null ? t.Italic : r.Italic,
-                               r == null || r.Underline == null ? t.Underline : r.Underline);
-        }
+        static TextRun Filled(TextRun r, TextObject t) { return t.Fill(r == null ? null : r.WithText("")); }
 
         static TextRun With(TextRun r, string font = null, double? size = null, bool? bold = null, bool? italic = null, bool? underline = null)
         {
-            return new TextRun(r.Text, font ?? r.Font, size ?? r.Size, bold ?? r.Bold, italic ?? r.Italic, underline ?? r.Underline);
+            return r.With(font, size, bold, italic, underline);
         }
 
-        // Typed, deleted or pasted in the text box: the same edit on the runs (the new characters take the format before
-        // them, or the one chosen at the caret).
-        void TypedText(object sender)
-        {
-            var t = canvas.Selected as TextObject;
-            if (loading || t == null) return;
-            string now = textBox.Text;
-            if (t.Kind == TextKind.Line && now.IndexOfAny(new[] { '\r', '\n' }) >= 0)
-            {
-                int at = textBox.SelectionStart;
-                textBox.Text = OneLine(now);   // comes back here and is applied
-                textBox.SelectionStart = Math.Min(at, textBox.TextLength);
-                return;
-            }
-            string was = boxText;
-            int p = 0;
-            while (p < was.Length && p < now.Length && was[p] == now[p]) p++;
-            int q = 0;
-            while (q < was.Length - p && q < now.Length - p && was[was.Length - 1 - q] == now[now.Length - 1 - q]) q++;
-            string inserted = now.Substring(p, now.Length - p - q);
-            int removed = was.Length - p - q;
-            var typed = typing;
-            boxText = now;
-            typing = null;
-            Edit(sender, o =>
-            {
-                var x = (TextObject)o;
-                var full = BoxRuns(x);
-                x.SetRuns(RunEdit.Splice(full, p, removed, inserted, typed ?? Filled(RunEdit.Common(full, p, 0), x)));
-            });
-        }
-
-        // Font and size: on the selected words of a paragraph text, else on the whole text.
+        // Font, size, bold, italic, underline, letter spacing, invert: while the text is edited on the label on its
+        // selection (with nothing selected on what is typed next), else on the whole text.
         void Style(object sender, Func<TextRun, TextRun> change, bool caret)
         {
             var t = canvas.Selected as TextObject;
             if (loading || t == null) return;
-            int start = 0, length = -1;
-            if (t.Kind == TextKind.Frame && textBox.SelectionLength > 0) { start = textBox.SelectionStart; length = textBox.SelectionLength; }
-            else if (t.Kind == TextKind.Frame && caret && textBox.Focused)
+            if (canvas.EditedText == t)
             {
-                // nothing selected: the next characters typed at the caret
-                typing = change(typing ?? Filled(RunEdit.Common(BoxRuns(t), textBox.SelectionStart, 0), t));
-                loading = true;
-                try
-                {
-                    using (var f = BoxFont(typing, t)) textBox.SelectionFont = f;
-                    FillStyleRows(t);
-                }
-                finally { loading = false; }
+                canvas.EditChange(e => e.Restyle(change));
+                if (sender is CheckBox) canvas.Focus();   // typing goes on in the text (a space would toggle the check)
                 return;
             }
+            int start = 0, length = -1;
             Edit(sender, o =>
             {
                 var x = (TextObject)o;
@@ -863,163 +974,93 @@ namespace QlLabels
             });
         }
 
-        // Bold, italic, underline: off when all of it has it, else on (a mixed check box turns it on).
+        // Bold, italic, underline, invert: off when all of it has it, else on (a mixed one turns it on for all, as in Word).
         void ToggleStyle(object sender, string format, bool caret)
         {
             var t = canvas.Selected as TextObject;
             if (loading || t == null) return;
-            int i = format == "bold" ? 0 : format == "italic" ? 1 : 2;
-            var box = sender as CheckBox;
-            bool on;
-            if (box != null) on = mixedBefore[i] || box.Checked;
-            else
-            {
-                var now = Current(t);
-                bool? has = i == 0 ? now.Bold : i == 1 ? now.Italic : now.Underline;
-                on = has != true;
-            }
-            Style(sender, r => i == 0 ? With(r, bold: on) : i == 1 ? With(r, italic: on) : With(r, underline: on), caret);
+            int i = format == "bold" ? 0 : format == "italic" ? 1 : format == "underline" ? 2 : 3;
+            var now = Current(t);
+            bool? has = i == 0 ? now.Bold : i == 1 ? now.Italic : i == 2 ? now.Underline : now.Invert;
+            bool on = has != true;
+            Style(sender, r => i == 0 ? r.With(bold: on) : i == 1 ? r.With(italic: on) : i == 2 ? r.With(underline: on) : r.With(invert: on), caret);
         }
 
-        // The format the rows show: the selected words', with none at a focused caret what is typed next, else the whole text's.
+        // The format the rows show: while editing the selection's (with nothing selected what is typed next), else the
+        // whole text's.
         TextRun Current(TextObject t)
         {
+            if (canvas.EditedText == t) return canvas.Editing.Current;
             var full = BoxRuns(t);
-            if (t.Kind == TextKind.Frame && textBox.SelectionLength > 0) return RunEdit.Common(full, textBox.SelectionStart, textBox.SelectionLength) ?? Filled(null, t);
-            if (t.Kind == TextKind.Frame && textBox.Focused) return typing ?? Filled(RunEdit.Common(full, textBox.SelectionStart, 0), t);
             return RunEdit.Common(full, 0, full.Sum(r => r.Text.Length)) ?? Filled(null, t);
         }
 
         // The text rows for a text object (FillProps; skip: the control the user is typing in).
         void FillText(TextObject t, object skip)
         {
-            bool one = t.Kind == TextKind.Line;
-            if (skip != textBox) ShowRuns(t);
-            int height = one ? TextRenderer.MeasureText("Ag", textBox.Font).Height + S(8) : S(64);
-            if (textBox.Height != height) textBox.Height = height;
-            textBox.ScrollBars = one ? RichTextBoxScrollBars.None : RichTextBoxScrollBars.Vertical;
-            textBox.WordWrap = !one;
             textKindBox.SelectedIndex = (int)t.Kind;
-            if (skip != lineHeightNum) lineHeightNum.Value = Clamp(lineHeightNum, t.LineHeight);
-            if (skip != spacingNum) spacingNum.Value = Clamp(spacingNum, t.Spacing);
-            textInvertCheck.Checked = t.Invert;
-            alignBox.SelectedIndex = (int)t.Align;
             FillStyleRows(t, skip);
         }
 
-        // Font, size, bold, italic, underline and the line above them: mixed values blank or ■.
+        // Font, size and the line above them: mixed values blank (bold, italic, underline: the toolbar, hatched).
         void FillStyleRows(TextObject t, object skip = null)
         {
             var c = Current(t);
             if (skip != fontBox && fontBox.Text != (c.Font ?? "")) fontBox.Text = c.Font ?? "";
+            // the box selects the name it was given: no blue name in a box the user isn't in (the text on the label is)
+            if (skip != fontBox && !fontBox.Focused && fontBox.IsHandleCreated && fontBox.SelectionLength > 0) fontBox.SelectionLength = 0;
             if (skip != sizeNum)
             {
                 // the text too: after a mixed (blank) value the same Value doesn't write it again
                 if (c.Size != null) { sizeNum.Value = Clamp(sizeNum, c.Size.Value); sizeNum.Text = sizeNum.Value.ToString("F" + sizeNum.DecimalPlaces, CultureInfo.CurrentCulture); }
                 else sizeNum.Text = "";
             }
-            var checks = new[] { boldCheck, italicCheck, underlineCheck };
-            var values = new[] { c.Bold, c.Italic, c.Underline };
-            var buttons = new[] { boldButton, italicButton, underlineButton };
-            for (int i = 0; i < 3; i++)
-            {
-                mixedBefore[i] = values[i] == null;
-                checks[i].CheckState = values[i] == null ? CheckState.Indeterminate : values[i].Value ? CheckState.Checked : CheckState.Unchecked;
-                buttons[i].Checked = values[i] == true;
-            }
-            bool selected = t.Kind == TextKind.Frame && textBox.SelectionLength > 0;
+            var e = canvas.EditedText == t ? canvas.Editing : null;
+            bool selected = e != null && e.HasSelection;
             if (selected)
             {
-                string words = textBox.SelectedText.Replace("\n", " ").Trim();
+                string words = e.SelectedText.Replace("\n", " ").Trim();
                 if (words.Length > 24) words = words.Substring(0, 23) + "…";
-                scopeHint.Text = textBox.SelectionLength >= textBox.TextLength ? Lang.T("All text selected: mixed values stay blank or ■")
-                                                                               : Lang.F("Applies to the selection: “{0}”", words);
+                scopeHint.Text = e.SelectionLength >= e.Length ? Lang.T("All text selected: mixed values stay blank")
+                                                               : Lang.F("Applies to the selection: “{0}”", words);
             }
             if (scopeHint.Visible != selected) scopeHint.Visible = selected;
         }
 
-        // The text and, for a paragraph text, its word formats in the text box (the selection stays).
-        void ShowRuns(TextObject t)
-        {
-            var full = BoxRuns(t);
-            string text = string.Concat(full.Select(r => r.Text));
-            bool frame = t.Kind == TextKind.Frame;
-            string shown = frame ? string.Join("|", full.Select(r => r.Text.Length + ":" + r.Size + r.Bold + r.Italic + r.Underline)) + "|" + t.Size : "";
-            if (textBox.Text == text && shown == boxShown) { boxText = text; return; }
-            int start = textBox.SelectionStart, length = textBox.SelectionLength;
-            bool keep = textBox.Text == text;
-            if (!keep) { textBox.Text = text; typing = null; }
-            textBox.SelectAll();
-            textBox.SelectionFont = textBox.Font;
-            if (frame)
-            {
-                int at = 0;
-                foreach (var r in full)
-                {
-                    textBox.Select(at, r.Text.Length);
-                    using (var f = BoxFont(r, t)) textBox.SelectionFont = f;
-                    at += r.Text.Length;
-                }
-            }
-            if (keep) textBox.Select(start, length);
-            else textBox.Select(textBox.TextLength, 0);
-            boxText = textBox.Text;
-            boxShown = shown;
-        }
+        void AddText() { AddNewText(NewText(FreeSpot())); }
 
-        // How a run looks in the text box: the panel's font with its bold/italic/underline, a little larger or smaller
-        // for a larger or smaller size (the box is no preview: the canvas shows the real fonts).
-        Font BoxFont(TextRun r, TextObject t)
-        {
-            var style = (r.Bold == true ? FontStyle.Bold : 0) | (r.Italic == true ? FontStyle.Italic : 0) | (r.Underline == true ? FontStyle.Underline : 0);
-            double ratio = r.Size == null || t.Size <= 0 ? 1 : Math.Min(1.4, Math.Max(0.85, r.Size.Value / t.Size));
-            return new Font(textBox.Font.FontFamily, (float)(textBox.Font.Size * ratio), style, textBox.Font.Unit);
-        }
+        void AddTextFrame() { AddNewText(NewTextFrame(FreeSpot())); }
 
-        // "Convert to artistic text?" for a paragraph text with word formats. True: convert.
-        bool AskOneFormat()
+        static TextObject NewText(PointF at)
         {
-            using (var d = new SetupResult(AppTitle, ResultKind.Warning, Lang.T("Convert to artistic text?"), new KeyValuePair<string, string>[0],
-                                           Lang.T("Artistic text has one format for the whole text. Bold, italic, font and size of single words are removed; the whole text gets the first word's format."),
-                                           closeText: Lang.T("Cancel")))
-            {
-                d.AddChoice(Lang.T("Convert"), DialogResult.OK);
-                HelpPages.SetPage(d, "text.html");
-                return d.ShowDialog(this) == DialogResult.OK;
-            }
-        }
-
-        void AddText()
-        {
-            var at = FreeSpot();
             var t = new TextObject { X = at.X, Y = at.Y, Text = Lang.T("Text"), Size = 14 };
             EditorRender.FitText(t);
-            Add(t);
-            FocusField(textBox);
+            return t;
         }
 
-        void AddTextFrame()
+        TextObject NewTextFrame(PointF at)
         {
-            var at = FreeSpot();
             double w = layout != null ? Math.Max(10, Math.Min(40, layout.Printable.Width - 2)) : 40;
-            Add(new TextObject { X = at.X, Y = at.Y, W = w, H = 12, Text = Lang.T("Text"), Size = 12, Kind = TextKind.Frame });
-            FocusField(textBox);
+            return new TextObject { X = at.X, Y = at.Y, W = w, H = 12, Text = Lang.T("Text"), Size = 12, Kind = TextKind.Frame };
         }
 
-        // Single line: line breaks become spaces, the box follows the text (Edit). Text frame: starts with the box
-        // around the text, then keeps the box it is given.
+        // A new text is only selected, as every new object: it can be moved first, also off something it covers (
+        // 2026-11-09; it started editing before). Editing starts as on every text; typing on it replaces its placeholder.
+        void AddNewText(TextObject t)
+        {
+            Add(t);
+            newText = t;
+            if (ActiveForm == this) canvas.Focus();   // arrow keys move it, typing goes to it (not from automation)
+        }
+
+        // Single line: line breaks become spaces (the words keep their formats), the box follows the text (Edit). Text
+        // frame: starts with the box around the text, then keeps the box it is given.
         static void SetTextKind(TextObject t, TextKind kind)
         {
             if (t.Kind == kind) return;
-            // artistic text has one format: the first word's (AskOneFormat asked)
-            if (kind == TextKind.Line && t.FormatRuns != null)
-            {
-                var first = t.FullRuns()[0];
-                t.Runs = null;
-                t.Font = first.Font; t.Size = first.Size.Value; t.Bold = first.Bold.Value; t.Italic = first.Italic.Value; t.Underline = first.Underline.Value;
-            }
             t.Kind = kind;
-            if (kind == TextKind.Line) t.Text = OneLine(t.Text);
+            if (kind == TextKind.Line && t.FormatRuns != null) t.SetRuns(t.FullRuns().Select(r => r.WithText(OneLine(r.Text))).ToList());
+            else if (kind == TextKind.Line) t.Text = OneLine(t.Text);
             else EditorRender.FitBox(t);
         }
     }

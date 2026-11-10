@@ -331,7 +331,7 @@ namespace QlLabels
                 }
             }
             catch (ArgumentException) { emRatio = 1 / 1.2f; }   // not installed: typical proportions
-            float emMm = Math.Abs(font.Height) * scale * (font.Height > 0 ? emRatio : 1);
+            float emMm = Math.Abs((float)font.Height) * scale * (font.Height > 0 ? emRatio : 1);
             if (font.Height == 0) emMm = 12 / 72f * 25.4f;
             if (!(emMm > 0.05f && emMm <= 500)) return null;   // (NaN from a damaged transform too)
             // width: the dx array (logical units along the baseline), else measured
@@ -472,7 +472,6 @@ namespace QlLabels
             }
             var t = Make(p.Lines[0].Runs[0], "", p.Lines.Count > 1 ? TextKind.Frame : TextKind.Line, p.Align);
             t.SetRuns(runs);
-            if (t.Runs != null) t.Kind = TextKind.Frame;   // words in another format: only a paragraph text has them
             Place(t, p, p.Lines);
             return new List<TextObject> { t };
         }

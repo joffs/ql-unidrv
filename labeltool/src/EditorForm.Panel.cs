@@ -331,6 +331,7 @@ namespace QlLabels
             change(o);
             var t = o as TextObject;
             if (t != null) EditorRender.FitText(t);
+            if (t != null && canvas.EditedText == t) canvas.EditSync();   // kind, alignment, spacing while editing
             Touched();
             FillProps(sender);
         }

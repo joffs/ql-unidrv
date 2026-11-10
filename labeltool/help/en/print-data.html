@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Print with data – QL Label Maker Help</title>
+<link rel="stylesheet" href="../help.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <img class="mark" src="../img/mark.svg" alt="">
+  <div><div class="title">QL Label Maker</div><div class="sub">Help · Design and print labels</div></div>
+</div></div>
+<nav class="toc-mini" aria-label="Help"><div class="wrap">
+  <a href="index.html">Contents</a>
+  <a href="appendix.html">Keys and command line</a>
+  <a class="lang" href="../de/print-data.html" hreflang="de" lang="de">Deutsch</a>
+</div></nav>
+
+<main>
+<section class="page"><div class="wrap">
+  <header>
+    <span class="eyebrow">Printing and files</span>
+    <h1>Print with data</h1>
+    <p class="lead">One label, many variants: fields in the label are filled from a data file (CSV or JSON), one row
+      per label. You
+      choose which ones to print and see each one beforehand exactly as it will be printed.</p>
+  </header>
+
+  <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="fields">Fields in the label</h2>
+        <p>A field is a name in braces, e.g. <code>{Item}</code>, in a text, in a barcode's content or in a field of a QR
+          code. When printing, it is replaced by the value from the column of the same name; upper and lower case don't
+          matter.</p>
+        <dl class="terms">
+          <dt><code>{Item}</code></dt><dd>the value from the column "Item"</dd>
+          <dt><code>{Place|Hall 1}</code></dt><dd>with a default after the vertical bar: used when the column is
+            missing or the cell is empty</dd>
+          <dt><code>{Extra|}</code></dt><dd>nothing after the bar: without a value the place stays empty</dd>
+        </dl>
+        <p><code>{date}</code> and <code>{time}</code> stay the date and time (<a href="text.html#date-and-time">Date and
+          time</a>). A value from the data is printed as it is, also when it contains braces.</p>
+        <p><span class="ui">Insert field ▾ &gt; Custom field...</span> asks for the field's name and what applies without a
+          value: <span class="ui">Report when printing</span>, <span class="ui">Leave empty</span> or a
+          <span class="ui">Default value</span>. It inserts the field correctly written; afterwards you can edit it like any text.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="csv">The data file</h2>
+        <p>The first row names the columns, every further row is one label. Excel saves such a file with
+          <span class="path">Save as &gt; CSV (Comma delimited)</span>.</p>
+        <pre>Item,Number,Place
+Screw M4 × 20,4711,Shelf 3
+Nut M4,4712,Shelf 3</pre>
+        <p>Separated by semicolon, comma or tab; UTF-8, UTF-16 or Windows-1252 (how Excel saves without UTF-8). Columns the
+          label doesn't use do no harm. A column <code>copies</code> sets the number per row; 0 leaves the row out.</p>
+        <p>A column <code>labelname</code> gives each label a name, e.g. a short name such as <code>A1234</code>: it shows
+          next to the number in the preview, the search finds it, and messages name it. When the cell is empty, only the
+          number shows; without the column, the row's first value. The label can print it as a field
+          <code>{labelname}</code> too.</p>
+        <p>A JSON file works instead of a CSV file: a list of objects, each value a text, a number,
+          <code>true</code>/<code>false</code> or <code>null</code> (empty), without nested objects or lists. Each name is
+          a column; when an object lacks it, the cell is empty.</p>
+        <pre>[
+  { "labelname": "A1234", "Item": "Screw M4 × 20", "Number": 4711, "copies": 2 },
+  { "labelname": "A1235", "Item": "Nut M4", "Number": 4712 }
+]</pre>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="dialog">Choose the data</h2>
+        <p><span class="path">File &gt; Print with data…</span> (or <span class="ui">Print ▾</span>,
+          <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) takes the open label as the template. At the top are three
+          tiles: <span class="ui">Printer</span> with its state and loaded roll (a click opens the list; choose another
+          printer there and QL Label Maker switches with it), <span class="ui">Template</span> and
+          <span class="ui">Data</span>. A coloured edge on the left shows whether all is well; amber is something to
+          look at, such as a wrong roll. Choose the data with <span class="ui">+ Choose data file…</span>, another file
+          later with <span class="ui">Change…</span>. The <span class="ui">Fields</span> line shows what matches:
+          ✗ missing fields first, then ✓ the ones found, then the columns the label doesn't use. What doesn't fit in
+          the line is behind <span class="ui">+N more</span>.</p>
+        <figure class="frame" style="max-width:800px"><img src="../img/en/print-data-dialog.png" width="780" height="660" alt="Print with data: three tiles at the top, printer Brother QL-800 (Unidrv), ready, 62 mm continuous; template Regal 3.qllabel, 62 mm, 3 fields; data teile.csv, CSV, 20 rows, with Change…; fields: Lagerort stays empty, Artikel and Nummer found, Preis not on the label; Leave missing fields empty switched on; the previews of the labels, label 4 selected; at the bottom Copies per label and Print (1 label)"></figure>
+        <p>A missing field without a default stops printing: add the column, or switch on
+          <span class="ui">Leave missing fields empty</span>. A field's default still applies then.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="select">Choose the labels</h2>
+        <p>Each label shows as a small preview with its row number and its
+          <code>labelname</code> (or the row's first value). At the start all are selected; a click on one selects
+          only that one; <span class="ui">All</span> and <span class="ui">None</span> at the top right select all visible labels or none. <span class="ui">Search</span> hides the labels that don't contain the text, e.g. to find the one
+          variant out of twenty; the ✕ at its end clears the search. <span class="ui">Zoom</span> makes the previews
+          larger or smaller, also with the mouse wheel over the slider.</p>
+        <p>A double-click shows a label large, hatched where the printer can't print. There <span class="ui">Print</span>
+          prints only this label, as often as <span class="ui">Copies</span> says.</p>
+        <p><span class="ui">Print (N labels)</span> prints the selected, visible labels, each as often as
+          <span class="ui">Copies per label</span> says, as one print job. The dialog stays open afterwards, so you can print
+          more labels or the same ones again; <span class="ui">Close</span> ends it.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span>Click</span><span>only this label</span></div>
+        <div><span><kbd>Ctrl</kbd> + click</span><span>add or remove</span></div>
+        <div><span><kbd>Shift</kbd> + click</span><span>up to here</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>A</kbd></span><span>all visible</span></div>
+        <div><span>Arrow keys, <kbd>Space</kbd></span><span>move, select or deselect</span></div>
+        <div><span><kbd>Ctrl</kbd> + mouse wheel</span><span>previews larger, smaller</span></div>
+        <div><span><kbd>Esc</kbd> in the search</span><span>clear the search</span></div>
+      </aside>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="before-printing">Before printing</h2>
+        <p>As for normal printing, the printer is asked first whether it is ready and has the right roll loaded
+          (<a href="printing.html">Printing</a>). Labels with a barcode that may not scan, or with text cut off at its
+          box, are listed first; you decide whether to print them anyway.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step">
+        <h2 id="command-line">Without a window: QlLabelPrint.exe</h2>
+        <p>The same works from scripts with <code>QlLabelPrint.exe</code> in <code>C:\Program Files\QLUnidrv</code>. It
+          prints a <code>.qllabel</code> file with a CSV or JSON file and never asks: it reports problems with an exit
+          code. With <code>--name A1234</code> it prints only the label with that
+          <code>labelname</code>. <code>QlLabelPrint.exe --help</code> shows all options.</p>
+        <pre>"C:\Program Files\QLUnidrv\QlLabelPrint.exe" --print Shelf.qllabel --data parts.csv --dry-run</pre>
+      </div>
+    </li>
+  </ul>
+
+  <nav class="pager" aria-label="Pages"><a href="printing.html">← Printing</a><a href="files.html">Next: Saving and opening →</a></nav>
+</div></section>
+</main>
+
+<footer><div class="wrap">QL Label Maker · Help · QL Unidrv</div></footer>
+</body>
+</html>

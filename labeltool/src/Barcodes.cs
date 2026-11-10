@@ -340,7 +340,7 @@ namespace QlLabels
 
         public static string Check(string text, int level)
         {
-            if (string.IsNullOrEmpty(text)) return Lang.T("Enter the barcode's content.");
+            if (string.IsNullOrEmpty(text)) return Lang.T("Enter the QR code's content.");
             int n = Encoding.UTF8.GetByteCount(text);
             if (VersionFor(n, level) < 0) return Lang.F("Too long for a QR code: {0} bytes, at most {1}.", n, Capacity(40, level));
             return null;

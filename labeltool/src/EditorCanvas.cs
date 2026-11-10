@@ -18,7 +18,7 @@ using System.Windows.Forms;
 
 namespace QlLabels
 {
-    sealed class EditorCanvas : Control
+    sealed partial class EditorCanvas : Control
     {
         public LabelDoc Doc;
         public LabelLayout Geometry;
@@ -48,7 +48,7 @@ namespace QlLabels
         double lengthDrag;
 
         // mouse
-        enum Drag { None, Move, Resize, Frame, Turn, Length }
+        enum Drag { None, Move, Resize, Frame, Turn, Length, Text }
         Drag drag;
         int handle;                // 0..7 clockwise from top left; line ends: 0 = start, 1 = end
         PointF downMm;
@@ -58,6 +58,7 @@ namespace QlLabels
         List<LabelObject> frameBase;               // selected before the frame (Ctrl/Shift: the frame adds)
         bool startRising;          // a line's direction when the drag began
         double startSize;          // a single-line text's font size when the drag began
+        List<TextRun> startRuns;   // and its words' formats (null: one format)
         bool changeStarted;
         float? guideX, guideY;     // snap guides (mm)
         double turnFrom;           // turn: the object's angle and the mouse's direction when the drag began (degrees)
@@ -71,6 +72,7 @@ namespace QlLabels
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.UserPaint | ControlStyles.Selectable, true);
             Theme.Back(this, Role.Desk);
+            blink.Tick += OnBlink;
         }
 
         public Bitmap Rendered
@@ -105,7 +107,8 @@ namespace QlLabels
         }
 
         // The rendered bitmap was drawn again inside part (mm, EditorRender.RenderPart): the scaled copy there too.
-        public void RenderedPart(RectangleF part)
+        // invalidate false: the caller repaints the part itself (editing a text: EditorCanvas.Editing InvalidateEdit).
+        public void RenderedPart(RectangleF part, bool invalidate = true)
         {
             if (view != null && rendered != null)
             {
@@ -119,7 +122,7 @@ namespace QlLabels
                     DrawRendered(g, new RectangleF(viewAt.X - (int)Math.Floor(viewAt.X), viewAt.Y - (int)Math.Floor(viewAt.Y), viewAt.Width, viewAt.Height));
                 }
             }
-            Invalidate();
+            if (invalidate) Invalidate();
         }
 
         // The rendered label: dot for dot (sharp) at whole screen pixels per printer dot; smoothed otherwise, as uneven
@@ -146,6 +149,7 @@ namespace QlLabels
         public void Select(IEnumerable<LabelObject> objects)
         {
             var list = objects.Where(o => o != null).Distinct().ToList();
+            if (editing != null && !(list.Count == 1 && list[0] == editing.Target)) EndEdit();   // another object, nothing
             if (list.SequenceEqual(selection)) return;
             selection.Clear();
             selection.AddRange(list);
@@ -360,6 +364,7 @@ namespace QlLabels
             using (var light = new Pen(Theme.Fixed.PetrolLight, 1f) { DashStyle = DashStyle.Dash })
                 foreach (var o in selection)
                 {
+                    if (editing != null && o == editing.Target) continue;
                     var p = Inverted(o) ? light : pen;
                     var ln = o as LineObject;
                     if (ln != null)
@@ -384,7 +389,8 @@ namespace QlLabels
                         var r = ToScreen(t.Box);
                         g.DrawRectangle(cut, r.X, r.Y, r.Width, r.Height);
                     }
-            if (Selected != null)
+            DrawEditing(g);
+            if (Selected != null && editing == null)
             {
                 PointF stem, grip;
                 if (Grip(Selected, out stem, out grip))
@@ -410,6 +416,7 @@ namespace QlLabels
                 using (var fill = new SolidBrush(Color.FromArgb(40, Theme.Fixed.PetrolLight))) g.FillRectangle(fill, r);
                 using (var pen = new Pen(Theme.Of(Role.Accent), 1f) { DashStyle = DashStyle.Dash }) g.DrawRectangle(pen, r.X, r.Y, r.Width, r.Height);
             }
+            PaintDrawing(g);
         }
 
         Rectangle FrameRect
@@ -421,7 +428,7 @@ namespace QlLabels
         static bool Inverted(LabelObject o)
         {
             var t = o as TextObject; var b = o as BarcodeObject;
-            return t != null ? t.Invert : b != null && b.Invert && b.Kind == Symbology.Qr;
+            return t != null ? t.InvertBox : b != null && b.Invert && b.Kind == Symbology.Qr;
         }
 
         // The label's length: a measure along its end-to-end side, the value in a tag; the grip on its end; while
@@ -630,8 +637,8 @@ namespace QlLabels
 
         void DrawHint(Graphics g, RectangleF label)
         {
-            string text = Lang.T("Empty label. Add text, a line, a box, a picture, a barcode or a QR code with the tools on the left.\n" +
-                                 "Drag to move, use the handles to resize. Hatched: the printer can't print there.");
+            string text = Lang.T("Empty label. Choose a tool on the left and drag on the label.\n" +
+                                 "Hatched: the printer can't print there.");
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
             using (var b = new SolidBrush(Theme.Fixed.PaperHint))
                 g.DrawString(text, Font, b, RectangleF.Inflate(label, -6, -6), fmt);
@@ -741,6 +748,8 @@ namespace QlLabels
             Focus();
             if (Doc == null || Geometry == null) return;
             var mm = ToMm(e.Location);
+            if (DrawMouseDown(e, mm)) return;   // a tool on: drawing (EditorCanvas.Draw.cs)
+            if (EditMouseDown(e, mm)) return;
             // Right button: the object under the mouse (its context menu opens on release; a selected one keeps the
             // selection), or nothing.
             if (e.Button == MouseButtons.Right)
@@ -813,6 +822,7 @@ namespace QlLabels
                 startRising = line != null && line.Rising;
                 var text = o as TextObject;
                 startSize = text != null ? text.Size : 0;
+                startRuns = text != null && text.FormatRuns != null ? text.FullRuns() : null;
             }
             changeStarted = false;
             Capture = true;
@@ -831,6 +841,8 @@ namespace QlLabels
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            if (DrawMouseMove(e)) return;
+            if (EditMouseMove(e)) return;
             if (drag == Drag.None)
             {
                 Cursor = Cursors.Default;
@@ -867,6 +879,7 @@ namespace QlLabels
                 if (BeforeChange != null) BeforeChange(this, EventArgs.Empty);
             }
             bool free = (ModifierKeys & Keys.Alt) != 0;   // Alt: no snapping
+            if (free) altInDrag = true;   // its release opens no menu (EditorForm.AltKey.cs)
             turnMouse = e.Location;
             if (drag == Drag.Turn) TurnTo(mm, free);
             else if (drag == Drag.Move) MoveTo(startBox.X + dx, startBox.Y + dy, free);
@@ -878,6 +891,8 @@ namespace QlLabels
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
+            if (DrawMouseUp(e)) return;
+            if (drag == Drag.Text) { drag = Drag.None; Capture = false; return; }
             bool length = drag == Drag.Length;
             drag = Drag.None;
             if (length && LengthDragged != null) LengthDragged(Math.Round(lengthDrag, 1));
@@ -1051,7 +1066,9 @@ namespace QlLabels
         {
             float fw = w / b.Width, fh = h / b.Height;
             float f = handle == 1 || handle == 5 ? fh : handle == 3 || handle == 7 ? fw : Math.Abs(fw - 1) > Math.Abs(fh - 1) ? fw : fh;
-            t.Size = Math.Round(Math.Min(400, Math.Max(2, startSize * f)) * 10) / 10;
+            Func<double, double> scaled = size => Math.Round(Math.Min(400, Math.Max(2, size * f)) * 10) / 10;
+            if (startRuns != null) t.SetRuns(startRuns.Select(r => r.With(size: scaled(r.Size.Value))).ToList());
+            else t.Size = scaled(startSize);
             EditorRender.FitBox(t);
             double x = handle == 0 || handle == 6 || handle == 7 ? b.Right - t.W : handle == 2 || handle == 3 || handle == 4 ? b.Left : b.Left + (b.Width - t.W) / 2;
             double y = handle == 0 || handle == 1 || handle == 2 ? b.Bottom - t.H : handle == 4 || handle == 5 || handle == 6 ? b.Top : b.Top + (b.Height - t.H) / 2;
@@ -1066,6 +1083,7 @@ namespace QlLabels
 
         protected override bool IsInputKey(Keys keyData)
         {
+            if (editing != null) return true;   // every key goes to the text (the window routes them first: EditKey)
             switch (keyData & Keys.KeyCode)
             {
                 case Keys.Left: case Keys.Right: case Keys.Up: case Keys.Down: return true;
@@ -1076,9 +1094,11 @@ namespace QlLabels
         protected override void Dispose(bool disposing)
         {
             if (disposing && rendered != null) rendered.Dispose();
+            if (disposing && shiftWatch != null) shiftWatch.Dispose();
             if (disposing) DropView();
             if (disposing) DropGreyed();
             if (disposing) zoneTip.Dispose();
+            if (disposing) blink.Dispose();
             base.Dispose(disposing);
         }
     }

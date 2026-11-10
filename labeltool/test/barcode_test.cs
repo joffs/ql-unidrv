@@ -64,6 +64,15 @@ namespace QlLabels.Tests
             Check(Code128.Modules("1234").Length == 11 * 4 + 13, "module count");
             Check(Code128.Check("Größe") != null && Code128.Check("ABC-123") == null && Code128.Check("A\tB") == null && Code128.Check(F + "01") == null,
                   "Check: ASCII 0-127 and FNC1 only");
+
+            // a typed QR code saved without its data (written by a script, e.g. samples\print-data): built from its
+            // fields on loading; an empty QR code says "QR code", not "barcode" (2026-11-09)
+            var doc = LabelDoc.FromJson("{\"format\": \"QL label\", \"version\": 2, \"label\": {\"paperId\": 259, \"length01\": 500}, \"objects\": [" +
+                "{\"type\": \"barcode\", \"symbology\": \"qr\", \"x\": 4, \"y\": 4, \"w\": 20, \"h\": 20, \"data\": \"\", \"qrType\": \"contact\", " +
+                "\"qrFields\": {\"firstName\": \"{Vorname}\", \"lastName\": \"Muster\"}}]}");
+            var qr = (BarcodeObject)doc.Objects[0];
+            Check(qr.Data.Contains("BEGIN:VCARD") && qr.Data.Contains("{Vorname}") && qr.Problem(DateTime.Now) == null, "typed QR without data: built from its fields: " + qr.Problem(DateTime.Now));
+            Check(QrCode.Check("", 1) == Lang.T("Enter the QR code's content."), "empty QR code: the QR text");
         }
 
         static void Gs1()

@@ -55,6 +55,19 @@ namespace QlLabels
             }
         }
 
+        // Buttons with their own words (e.g. "Remove" / "Cancel"), the first the default; Esc gives Cancel if there is one.
+        public static DialogResult Choose(IWin32Window owner, string title, string headline, string text, MessageBoxIcon icon,
+                                          params KeyValuePair<string, DialogResult>[] choices)
+        {
+            using (var box = new MessageForm(title, headline, text, MessageBoxButtons.OK, icon, MessageBoxDefaultButton.Button1, null, choices))
+            {
+                if (owner == null) box.StartPosition = FormStartPosition.CenterScreen;
+                return box.ShowDialog(owner);
+            }
+        }
+
+        public static KeyValuePair<string, DialogResult> Choice(string text, DialogResult result) { return new KeyValuePair<string, DialogResult>(text, result); }
+
         // ---- the text ----
 
         public sealed class Parts { public string Headline, Text, Details; }
@@ -147,16 +160,19 @@ namespace QlLabels
 
             static Font HeadFont(Font font) { return new Font(font.FontFamily, font.Size * 1.25f, FontStyle.Bold); }
 
+            readonly IList<KeyValuePair<string, DialogResult>> choices;   // Choose: buttons with their own words
+
             public MessageForm(string title, string headline, string text, MessageBoxButtons kind, MessageBoxIcon icon,
-                               MessageBoxDefaultButton defaultButton, string details)
+                               MessageBoxDefaultButton defaultButton, string details, IList<KeyValuePair<string, DialogResult>> choices = null)
             {
+                this.choices = choices != null && choices.Count > 0 ? choices : null;
                 this.icon = icon;
                 this.headline = headline ?? "";
                 this.text = string.IsNullOrEmpty(text) ? null : text.Replace("\r\n", "\n");
                 this.details = string.IsNullOrEmpty(details) ? null : details;
                 Text = title;
                 Theme.Use(this);
-                Font = SystemFonts.MessageBoxFont;
+                Font = UiFont.MessageBox;
                 AutoScaleMode = AutoScaleMode.Dpi;
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = MinimizeBox = false;
@@ -239,7 +255,8 @@ namespace QlLabels
             void AddButtons(MessageBoxButtons kind, MessageBoxDefaultButton defaultButton)
             {
                 var list = new List<KeyValuePair<string, DialogResult>>();
-                switch (kind)
+                if (choices != null) list.AddRange(choices);
+                else switch (kind)
                 {
                     case MessageBoxButtons.OK: list.Add(Pair("OK", DialogResult.OK)); break;
                     case MessageBoxButtons.OKCancel: list.Add(Pair("OK", DialogResult.OK)); list.Add(Pair(Lang.T("Cancel"), DialogResult.Cancel)); break;
@@ -271,7 +288,7 @@ namespace QlLabels
             void AddDetails()
             {
                 var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Visible = false,
-                                        Font = new Font(FontFamily.GenericMonospace, Font.Size * 0.9f), Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n"),
+                                        Font = UiFont.Monospace(Font.Size * 0.9f), Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n"),
                                         Size = new Size(wide, em * 8), Margin = new Padding(0, 0, 0, em / 2) };
                 var links = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
                 var show = Link(Lang.T("Show details"));

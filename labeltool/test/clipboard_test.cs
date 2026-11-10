@@ -332,8 +332,13 @@ namespace QlLabels.Tests
                   "rtf runs: one text frame with runs, its own format the most frequent");
             var one = RtfRuns.Object(RtfRuns.Read(@"{\rtf1{\fonttbl{\f0 Arial;}}\f0\fs28 Nur Text\par}", out missing));
             Check(one.Kind == TextKind.Line && one.Runs == null && one.Font == "Arial" && one.Size == 14 && one.Text == "Nur Text", "rtf runs: one format on one line is a single-line text");
+            var oneMixed = RtfRuns.Object(RtfRuns.Read(@"{\rtf1{\fonttbl{\f0 Arial;}}\f0\fs28 Schrauben {\b M4}\par}", out missing));
+            Check(oneMixed.Kind == TextKind.Line && oneMixed.Text == "Schrauben M4" && oneMixed.FormatRuns != null && oneMixed.FullRuns().Last().Bold == true && oneMixed.W > 0,
+                  "rtf runs: words in another format on one line: an artistic text with its runs");
             var mixedAlign = RtfRuns.Read(@"{\rtf1 \qc A\par\pard\qr B\par}", out missing);
             Check(mixedAlign.Align == TextAlign.Left, "rtf runs: mixed alignment is left");
+            var justified = RtfRuns.Read(@"{\rtf1 \qj Ein Absatz im Blocksatz\par\qj Zweiter\par}", out missing);
+            Check(justified.Align == TextAlign.Justify, "rtf runs: \\qj is justify");
             var gone = RtfRuns.Read(@"{\rtf1{\fonttbl{\f0 QL No Such Font 123;}}\f0 X}", out missing);
             Check(missing.Count == 1 && missing[0] == "QL No Such Font 123" && gone.Runs[0].Font == RtfRuns.DefaultFont, "rtf runs: missing font noted");
             Check(RtfRuns.Read(@"{\rtf1 \ulc1 a\ul b\ul0 c\ulnone}", out missing).Runs.Count(x => x.Underline == true) == 1, "rtf runs: \\ulc is a colour, \\ul0 ends");
@@ -530,10 +535,13 @@ namespace QlLabels.Tests
             // one line, baseline reference, Arial 40 px
             var one = MakeEmf(dc => { SetTextAlign(dc, 24); Text(dc, "Arial", -40, 400, 0, 100, 120, "Hallo"); });
             float k = PxPerMm(one), ky = PxPerMmY(one);
+            // font sizes: the reader takes the mean of both directions (EmfText: the transform's mean scale) and rounds to
+            // 0.5 pt; on a screen whose pixels per mm differ across and down, k alone was off by up to 0.6 pt
+            float km = (float)Math.Sqrt(k * ky);
             Check(EmfPicture.What(one).Kind == EmfPicture.Content.TextOnly, "emf text: text only");
             var p = EmfText.Read(one, out missing);
             var r = p.Count == 1 ? p[0].Lines[0].Runs[0] : null;
-            Check(r != null && r.Text == "Hallo" && r.Font == "Arial" && Math.Abs(r.SizePt - Pt(40 / k)) <= 0.5 && missing.Count == 0, "emf text: one run, " + (r != null ? r.Font + " " + r.SizePt + " pt" : "none"));
+            Check(r != null && r.Text == "Hallo" && r.Font == "Arial" && Math.Abs(r.SizePt - Pt(40 / km)) <= 0.5 && missing.Count == 0, "emf text: one run, " + (r != null ? r.Font + " " + r.SizePt + " pt" : "none"));
             Check(r != null && Math.Abs(r.Start.X - 100 / k) < 0.1 && Math.Abs(r.Start.Y - 120 / ky) < 0.1 && r.Width > 0 && Math.Abs(r.Angle) < 0.1, "emf text: baseline start " + (r != null ? r.Start.ToString() : ""));
             var objs = EmfText.Objects(p[0]);
             Check(objs.Count == 1 && objs[0].Kind == TextKind.Line && objs[0].Runs == null && objs[0].Text == "Hallo" && objs[0].W > 0, "emf text: one line in one format is a single-line text without runs");
@@ -570,7 +578,7 @@ namespace QlLabels.Tests
             var mixed = EmfText.Objects(p[0]);
             Check(mixed.Count == 1 && mixed[0].Text == "Schrauben M4" && !mixed[0].Bold && mixed[0].FormatRuns != null && mixed[0].FormatRuns.Count == 2 && mixed[0].FormatRuns[1].Bold == true,
                   "emf text: one object, the bold word a run");
-            Check(mixed[0].Kind == TextKind.Frame, "emf text: words in another format make a paragraph text, also on one line");
+            Check(mixed[0].Kind == TextKind.Line && mixed[0].W > 0, "emf text: words in another format on one line: an artistic text");
 
             // turned: escapement 90 degrees counter-clockwise = -90 clockwise
             var up = MakeEmf(dc => { SetTextAlign(dc, 24); Text(dc, "Arial", -30, 400, 900, 100, 200, "Hoch"); });
@@ -599,7 +607,7 @@ namespace QlLabels.Tests
                 Text(dc, "Arial", -20, 400, 0, 50, 60, "Doppelt");
             });
             var rw = EmfText.Read(world, out missing)[0].Lines[0].Runs[0];
-            Check(Math.Abs(rw.SizePt - Pt(40 / k)) <= 0.5 && Math.Abs(rw.Start.X - 100 / k) < 0.1, "emf text: world transform " + rw.SizePt + " pt");
+            Check(Math.Abs(rw.SizePt - Pt(40 / km)) <= 0.5 && Math.Abs(rw.Start.X - 100 / k) < 0.1, "emf text: world transform " + rw.SizePt + " pt (" + Pt(40 / km).ToString("0.00") + " expected)");
             // and a rotation in the world transform (30 degrees clockwise as seen)
             var turned = MakeEmf(dc =>
             {
@@ -611,7 +619,7 @@ namespace QlLabels.Tests
                 Text(dc, "Arial", -30, 400, 0, 0, 0, "Schräg");
             });
             var rr = EmfText.Read(turned, out missing)[0].Lines[0].Runs[0];
-            Check(Math.Abs(rr.Angle - 30) < 0.5 && Math.Abs(rr.SizePt - Pt(30 / k)) <= 0.5, "emf text: turned by the world transform " + rr.Angle);
+            Check(Math.Abs(rr.Angle - 30) < 0.5 && Math.Abs(rr.SizePt - Pt(30 / km)) <= 0.5, "emf text: turned by the world transform " + rr.Angle);
 
             // CorelDRAW's shape: a page of 0.01 mm units first, then one word in pixels (MM_TEXT) and one after a
             // 1:1 page that still has its size and place in 0.01 mm (lands far outside; read with the first page)

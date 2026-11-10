@@ -73,8 +73,13 @@ namespace QlLabels
         void AddLine()
         {
             var at = FreeSpot();
+            Add(NewLine(new PointF(at.X, at.Y + 2)));
+        }
+
+        LineObject NewLine(PointF at)
+        {
             double len = layout != null ? Math.Min(30, layout.Printable.Width - 2) : 30;
-            Add(new LineObject { X = at.X, Y = at.Y + 2, W = Math.Max(5, len), H = 0 });
+            return new LineObject { X = at.X, Y = at.Y, W = Math.Max(5, len), H = 0 };
         }
     }
 }

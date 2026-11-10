@@ -18,6 +18,8 @@ set "RES="
 rem The tray monitor's state icons (Brand.cs reads them by these names; it falls back to the exe's icon without them)
 set "TRAY=/resource:assets\tray-ok.ico,tray-ok.ico /resource:assets\tray-warning.ico,tray-warning.ico"
 set "TRAY=%TRAY% /resource:assets\tray-error.ico,tray-error.ico /resource:assets\tray-offline.ico,tray-offline.ico"
+rem QL Label Maker's own mouse pointers (EditorCursors.cs reads them by these names; Windows' own without them)
+set "CURSORS=/resource:assets\pan-move.cur,pan-move.cur"
 rem The exes' version information (file properties, Task Manager): version\Common.cs, a title per exe, and the version
 rem (the release in version\VERSION + days since 2026 + minute of day) generated here.
 set "OBJ=%OUT%\obj\labeltool"
@@ -33,7 +35,7 @@ rem One source folder, one exe per program: each build picks its Main with /main
 copy /y app.config "%TOOLS%\QlLabelFormats.exe.config" >nul
 rem The label editor "QL Label Maker" (.qllabel files open here)
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\QlLabelMaker.exe" ^
-   /main:QlLabels.EditorProgram /win32icon:assets\qllabelmaker.ico /win32manifest:app.manifest %TRAY% ^
+   /main:QlLabels.EditorProgram /win32icon:assets\qllabelmaker.ico /win32manifest:app.manifest %TRAY% %CURSORS% ^
    %REFS% src\*.cs %VER% version\QlLabelMaker.cs || goto :fail
 copy /y app.config "%TOOLS%\QlLabelMaker.exe.config" >nul
 rem "QL Printer Status": status window, tray monitor, the service "QL printer status"
@@ -41,6 +43,12 @@ rem "QL Printer Status": status window, tray monitor, the service "QL printer st
    /main:QlLabels.PrinterStatusProgram /win32icon:assets\qlstatus.ico /win32manifest:app.manifest %TRAY% ^
    %REFS% src\*.cs %VER% version\QlPrinterStatus.cs || goto :fail
 copy /y app.config "%TOOLS%\QlPrinterStatus.exe.config" >nul
+rem "Print from data" on the command line: a console exe from the same sources, so
+rem scripts get its output and exit code; no window, no message boxes
+"%CSC%" /nologo /target:exe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\QlLabelPrint.exe" ^
+   /main:QlLabels.PrintProgram /win32icon:assets\qllabelmaker.ico /win32manifest:app.manifest %TRAY% ^
+   %REFS% src\*.cs %VER% version\QlLabelPrint.cs || goto :fail
+copy /y app.config "%TOOLS%\QlLabelPrint.exe.config" >nul
 rem The setup window of the release zip: the label tool's code (Program.cs opens the setup window when the exe is
 rem named Setup.exe) with the setup icon. Not installed; tools\make-release.ps1 puts it into the zip.
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 /out:"%TOOLS%\Setup.exe" ^
@@ -77,8 +85,18 @@ rem Unit test: the setup window's helpers (result file, error messages, zip view
 rem Unit test: the label editor's model and 1-bit rendering (no printer needed)
 "%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_editor_test.exe" ^
    /main:QlLabels.Tests.EditorTest %REFS% ^
-   src\*.cs test\editor_test.cs || goto :fail
+   src\*.cs test\editor_test.cs test\textedit_test.cs || goto :fail
 "%TESTOUT%\labeltool_editor_test.exe" || goto :fail
+rem Unit test: print from data (data fields, CSV reader, the job's checks; no printer needed)
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_printdata_test.exe" ^
+   /main:QlLabels.Tests.PrintDataTest %REFS% ^
+   src\*.cs test\printdata_test.cs || goto :fail
+"%TESTOUT%\labeltool_printdata_test.exe" || goto :fail
+rem Unit test: QlLabelPrint.exe's options, exit codes, printer choice and roll check (fakes; no printer, no spooler)
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_printcli_test.exe" ^
+   /main:QlLabels.Tests.PrintCliTest %REFS% ^
+   src\*.cs test\printcli_test.cs || goto :fail
+"%TESTOUT%\labeltool_printcli_test.exe" || goto :fail
 
 rem Unit test: paste and drop in the label editor (format order, SVG, EMF, PNG/DIB, RTF; fixtures made by the test)
 "%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_clipboard_test.exe" ^
@@ -109,13 +127,19 @@ rem hand-made worst cases: test\parser_fuzz.ps1)
    src\*.cs test\parser_fuzz.cs || goto :fail
 "%TESTOUT%\labeltool_parser_fuzz.exe" 200 20261108 --quick || goto :fail
 
+rem Unit test: QL Label Maker's tab strip and close question (layout, overflow, hit test, events; no window shown)
+"%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_tabs_test.exe" ^
+   /main:QlLabels.Tests.TabsTest %REFS% ^
+   src\*.cs test\tabs_test.cs || goto :fail
+"%TESTOUT%\labeltool_tabs_test.exe" || goto :fail
+
 rem Unit test: Code 128 sets A/B/C, Shift, FNC1 and GS1-128 element strings
 "%CSC%" /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 /out:"%TESTOUT%\labeltool_barcode_test.exe" ^
    /main:QlLabels.Tests.BarcodeTest %REFS% ^
    src\*.cs test\barcode_test.cs || goto :fail
 "%TESTOUT%\labeltool_barcode_test.exe" || goto :fail
 
-for %%i in ("%TOOLS%\QlLabelFormats.exe" "%TOOLS%\QlLabelMaker.exe" "%TOOLS%\QlPrinterStatus.exe" "%TOOLS%\Setup.exe") do echo Build OK: %%~fi
+for %%i in ("%TOOLS%\QlLabelFormats.exe" "%TOOLS%\QlLabelMaker.exe" "%TOOLS%\QlPrinterStatus.exe" "%TOOLS%\QlLabelPrint.exe" "%TOOLS%\Setup.exe") do echo Build OK: %%~fi
 popd
 exit /b 0
 

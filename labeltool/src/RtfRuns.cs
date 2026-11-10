@@ -1,8 +1,10 @@
-// Formatted text from RTF (Word, WordPad, Outlook and others): the text with its font, size, bold, italic and
-// underline as runs for a text object, without a RichTextBox. Read: the font table (names and character sets), \f,
-// \fs, \b, \i, \ul (and its kinds), \plain, \v (hidden text left out), \par/\line (new lines), \tab, \cell/\row,
-// \pard and \ql/\qc/\qr, \'hh in the font's or the document's code page, \uN with \uc fallback skipped, and the
-// symbols Word writes as controls. Colours, spacing, lists, tables' shapes, pictures and objects are left out.
+// Formatted text from RTF (Word, WordPad, Outlook and others): the text with its font, size, bold, italic, underline,
+// letter spacing and invert as runs for a text object, without a RichTextBox. Read: the font table (names and
+// character sets), the colour table, \f, \fs, \b, \i, \ul (and its kinds), \expnd/\expndtw (letter spacing),
+// \highlight/\chcbpat/\cb (a dark background: inverted, white on black), \plain, \v (hidden text left out),
+// \par/\line (new lines), \tab, \cell/\row, \pard and \ql/\qc/\qr/\qj, \'hh in the font's or the document's code
+// page, \uN with \uc fallback skipped, and the symbols Word writes as controls. Other colours, line spacing, lists,
+// tables' shapes, pictures and objects are left out.
 using System;
 using System.Collections.Generic;
 using System.Drawing.Text;
@@ -26,7 +28,7 @@ namespace QlLabels
         // Destinations whose text isn't part of the document.
         static readonly HashSet<string> Skipped = new HashSet<string>
         {
-            "colortbl", "stylesheet", "info", "pict", "header", "footer", "headerl", "headerr", "headerf", "footerl",
+            "stylesheet", "info", "pict", "header", "footer", "headerl", "headerr", "headerf", "footerl",
             "footerr", "footerf", "listtable", "listoverridetable", "rsidtbl", "generator", "xmlnstbl", "themedata",
             "colorschememapping", "latentstyles", "datastore", "object", "fldinst", "filetbl", "revtbl", "mmathPr",
             "pgdsctbl", "nonshppict", "shp", "objdata", "footnote", "annotation", "bkmkstart", "bkmkend", "xe", "tc",
@@ -45,13 +47,16 @@ namespace QlLabels
             public int Font = -1;
             public double Size = 12;
             public bool Bold, Italic, Underline, Hidden;
+            public double Spacing;      // points
+            public int Back = -1;       // background colour (highlight or shading): an index into the colour table
             public Fmt Copy() { return (Fmt)MemberwiseClone(); }
         }
 
         sealed class Group
         {
             public Fmt Fmt;
-            public bool Skip, FontTable, FontTableRoot;   // root: the onttbl group itself (its groups are entries)
+            public bool Skip, FontTable, FontTableRoot;   // root: the fonttbl group itself (its groups are entries)
+            public bool ColorTable;
             public int Uc;
         }
 
@@ -75,7 +80,7 @@ namespace QlLabels
                 var r = doc.Runs[i];
                 if (installed.Contains(r.Font)) continue;
                 if (!missing.Contains(r.Font)) missing.Add(r.Font);
-                doc.Runs[i] = new TextRun(r.Text, DefaultFont, r.Size, r.Bold, r.Italic, r.Underline);
+                doc.Runs[i] = r.With(font: DefaultFont);
             }
             return doc;
         }
@@ -83,12 +88,12 @@ namespace QlLabels
         // The text only (the paragraphs as "\n").
         public static string PlainText(string rtf) { return Parse(rtf).Text; }
 
-        // One text object: a text frame for several lines or words in another format, else a single-line text.
+        // One text object: a text frame for several lines, else a single-line text (words in another format: its runs, in both).
         public static TextObject Object(RtfDoc doc)
         {
             var t = new TextObject { Align = doc.Align };
             t.SetRuns(doc.Runs);
-            t.Kind = t.Text.Contains("\n") || t.Runs != null ? TextKind.Frame : TextKind.Line;
+            t.Kind = t.Text.Contains("\n") ? TextKind.Frame : TextKind.Line;
             EditorRender.FitBox(t);
             return t;
         }
@@ -105,6 +110,8 @@ namespace QlLabels
             var aligns = new HashSet<TextAlign>();
             TextAlign align = TextAlign.Left;
             bool paragraphHasText = false;
+            var colors = new List<int>();   // the colour table: RGB, -1 for "auto"
+            int red = -1, green = 0, blue = 0;
 
             Func<Fmt, string> fontName = f =>
             {
@@ -122,9 +129,12 @@ namespace QlLabels
                 if (g.Fmt.Hidden) return;
                 if (s != "\n") paragraphHasText = true;
                 var f = g.Fmt;
-                var run = new TextRun(s, fontName(f), f.Size, f.Bold, f.Italic, f.Underline);
+                // inverted: a dark highlight or shading (Word draws its "auto" text white on it)
+                int back = f.Back > 0 && f.Back < colors.Count ? colors[f.Back] : -1;
+                bool invert = back >= 0 && ((back >> 16) * 299 + ((back >> 8) & 255) * 587 + (back & 255) * 114) / 1000 < 128;
+                var run = new TextRun(s, fontName(f), f.Size, f.Bold, f.Italic, f.Underline, f.Spacing, invert);
                 var last = doc.Runs.Count > 0 ? doc.Runs[doc.Runs.Count - 1] : null;
-                if (last != null && last.Font == run.Font && last.Size == run.Size && last.Bold == run.Bold && last.Italic == run.Italic && last.Underline == run.Underline)
+                if (last != null && last.SameFormat(run))
                     tail.Append(s);
                 else { commit(); doc.Runs.Add(run); tail.Clear().Append(s); }
             };
@@ -170,6 +180,12 @@ namespace QlLabels
                     if (ucSkip > 0) { ucSkip--; i++; continue; }
                     flush();
                     if (g.FontTable && ch == ';') { if (entry != null) entry.Done = true; i++; continue; }
+                    if (g.ColorTable)
+                    {
+                        if (ch == ';') { colors.Add(red < 0 ? -1 : red << 16 | green << 8 | blue); red = -1; green = blue = 0; }
+                        i++;
+                        continue;
+                    }
                     emit(ch.ToString());
                     i++;
                     continue;
@@ -209,6 +225,15 @@ namespace QlLabels
                 if (k < rtf.Length && rtf[k] == ' ') k++;
                 i = k;
                 if (word == "fonttbl") { g.FontTable = g.FontTableRoot = true; entry = null; continue; }
+                if (word == "colortbl") { g.ColorTable = true; continue; }
+                if (g.ColorTable)
+                {
+                    int v = hasNum ? Math.Min(255, Math.Max(0, num)) : 0;
+                    if (word == "red") red = v;
+                    else if (word == "green") { green = v; if (red < 0) red = 0; }
+                    else if (word == "blue") { blue = v; if (red < 0) red = 0; }
+                    continue;
+                }
                 if (Skipped.Contains(word)) { g.Skip = true; continue; }
                 if (g.FontTable)
                 {
@@ -244,8 +269,12 @@ namespace QlLabels
                     case "ulthldash": case "ululdbwave": case "ulw": case "ulwave":
                         g.Fmt.Underline = on; break;
                     case "v": g.Fmt.Hidden = on; break;
+                    case "expnd": if (hasNum) g.Fmt.Spacing = Math.Min(TextObject.MaxSpacing, Math.Max(TextObject.MinSpacing, num / 4.0)); break;
+                    case "expndtw": if (hasNum) g.Fmt.Spacing = Math.Min(TextObject.MaxSpacing, Math.Max(TextObject.MinSpacing, num / 20.0)); break;
+                    case "highlight": case "chcbpat": case "cb": if (hasNum) g.Fmt.Back = num; break;
                     case "pard": align = TextAlign.Left; break;
-                    case "ql": case "qj": case "qd": align = TextAlign.Left; break;
+                    case "ql": case "qd": align = TextAlign.Left; break;
+                    case "qj": align = TextAlign.Justify; break;
                     case "qc": align = TextAlign.Center; break;
                     case "qr": align = TextAlign.Right; break;
                     case "par": case "sect": case "page": case "row": endParagraph(); emit("\n"); break;

@@ -32,6 +32,7 @@ namespace QlLabels
         {
             var field = FocusedField();
             if (field != null) { field.Cut(); return; }
+            if (canvas.Editing != null) { canvas.EditCopy(true); return; }
             if (CopyObjects()) Delete();
         }
 
@@ -39,6 +40,7 @@ namespace QlLabels
         {
             var field = FocusedField();
             if (field != null) { field.Copy(); return; }
+            if (canvas.Editing != null) { canvas.EditCopy(false); return; }
             CopyObjects();
         }
 
@@ -52,6 +54,7 @@ namespace QlLabels
                 else field.Paste();
                 return;
             }
+            if (canvas.Editing != null && at == null) { canvas.EditPaste(plainText); return; }
             var source = EditorClipboard.FromClipboard();
             if (source == null) { labelStatus.Text = Lang.T("Another program is using the clipboard. Try again."); return; }
             ClipContent c;
@@ -302,7 +305,7 @@ namespace QlLabels
                 case ClipKind.Picture: list.Add(AsCopied(ImageObject.FromBitmap(c.Picture), c.SizeMm)); break;
                 case ClipKind.Files:
                     var label = c.Files.FirstOrDefault(f => string.Equals(Path.GetExtension(f), LabelDoc.Extension, StringComparison.OrdinalIgnoreCase));
-                    if (label != null) { if (!printing && ConfirmDiscard()) Open(label); return null; }
+                    if (label != null) { if (!printing) OpenFile(label); return null; }
                     foreach (var f in c.Files)
                     {
                         var img = LoadPicture(this, f);

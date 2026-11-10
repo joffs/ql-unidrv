@@ -47,16 +47,21 @@ namespace QlLabels
         // The type list's order
         static readonly Symbology[] LinearKinds = { Symbology.Code128, Symbology.Gs1_128, Symbology.Ean13 };
 
-        // "Insert field" for a text or barcode content box: today's date, a date in N days, the time.
+        // "Insert field" for a text or barcode content box: today's date, a date in N days, the time, a custom data field.
         System.Windows.Forms.Button FieldButton(TextBoxBase target)
         {
-            var button = new System.Windows.Forms.Button { Text = Lang.T("Insert field ▾"), AutoSize = true };
-            var menu = new ContextMenuStrip();
-            Action<string, string> add = (caption, token) => menu.Items.Add(caption + "   " + token, null, delegate
+            return FieldButton(token =>
             {
                 target.Focus();
                 target.SelectedText = token;   // TextChanged applies it
             });
+        }
+
+        System.Windows.Forms.Button FieldButton(Action<string> insert)
+        {
+            var button = new System.Windows.Forms.Button { Text = Lang.T("Insert field ▾"), AutoSize = true };
+            var menu = new ContextMenuStrip();
+            Action<string, string> add = (caption, token) => menu.Items.Add(caption + "   " + token, null, delegate { insert(token); });
             add(Lang.T("Today's date"), "{date}");
             add(Lang.T("Date in 30 days"), "{date+30}");
             add(Lang.T("Date as 2026-10-29"), "{date:yyyy-MM-dd}");
@@ -65,6 +70,14 @@ namespace QlLabels
             // Two short grey lines (one long line made the menu very wide).
             menu.Items.Add(new ToolStripMenuItem(Lang.T("Filled in when shown and printed.")) { Enabled = false });
             menu.Items.Add(new ToolStripMenuItem(Lang.T("Also: {date+7}, {date-1}, {date:dd.MM.yy}")) { Enabled = false });
+            menu.Items.Add(new ToolStripSeparator());
+            // A data field for print with data, {Name} or {Name|default} (OwnFieldDialog.cs)
+            menu.Items.Add(Lang.T("Custom field..."), null, delegate
+            {
+                string field = OwnFieldDialog.Ask(this);
+                if (field != null) insert(field);
+            });
+            button.Tag = menu;   // tests reach the menu here
             button.Click += delegate { menu.Show(button, 0, button.Height); };
             return button;
         }
@@ -98,6 +111,7 @@ namespace QlLabels
 
         void Duplicate()
         {
+            if (canvas.Editing != null) return;
             var these = SelectedObjects;
             if (these.Count == 0) return;
             PushUndo(null);
@@ -109,6 +123,7 @@ namespace QlLabels
 
         void Delete()
         {
+            if (canvas.Editing != null) { canvas.EditChange(e => e.Delete(false)); return; }   // the character after the caret
             var these = SelectedObjects;
             if (these.Count == 0) return;
             PushUndo(null);
@@ -123,6 +138,7 @@ namespace QlLabels
             var field = ActiveControl as TextBoxBase;
             if (field == null) { var up = ActiveControl as UpDownBase; if (up != null) field = up.Controls.OfType<TextBoxBase>().FirstOrDefault(); }
             if (field != null) { field.SelectAll(); return; }
+            if (canvas.Editing != null) { canvas.EditChange(e => e.SelectAll()); canvas.Focus(); return; }   // the whole text
             canvas.Select(doc.Objects);
             canvas.Focus();
         }
@@ -150,6 +166,7 @@ namespace QlLabels
         // quarters: clockwise quarter turns (3 = one to the left).
         void Rotate(int quarters)
         {
+            if (canvas.Editing != null) return;
             var these = SelectedObjects.Where(o => !(o is LineObject)).ToList();
             if (these.Count == 0) return;
             PushUndo(null);

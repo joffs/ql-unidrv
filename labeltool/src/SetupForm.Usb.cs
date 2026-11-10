@@ -34,7 +34,7 @@ namespace QlLabels
                 row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
                 row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
                 row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                var icon = Theme.Fore(new Label { Text = "\uE749", AutoSize = true, Font = new Font("Segoe MDL2 Assets", Font.SizeInPoints * 1.15f), Anchor = AnchorStyles.Left,
+                var icon = Theme.Fore(new Label { Text = "\uE749", AutoSize = true, Font = UiFont.Create("Segoe MDL2 Assets", Font.SizeInPoints * 1.15f), Anchor = AnchorStyles.Left,
                                                   Margin = new Padding(0, 2, em / 4, 0) }, Role.Text);
                 var text = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, em / 4, 0) };
                 var first = candidates[0];
@@ -77,7 +77,7 @@ namespace QlLabels
             {
                 // the symbol follows the text's size (a font set on a control isn't scaled at a DPI change)
                 float size = t[0].Controls[0].Font.SizeInPoints * 1.15f;
-                if (Math.Abs(t[1].Font.SizeInPoints - size) > 0.1f) t[1].Font = new Font("Segoe MDL2 Assets", size);
+                if (Math.Abs(t[1].Font.SizeInPoints - size) > 0.1f) t[1].Font = UiFont.Create("Segoe MDL2 Assets", size);
                 var info = t[0].Controls[1];
                 int room = Math.Max(Font.Height * 10, width - t[1].PreferredSize.Width - t[1].Margin.Horizontal - t[2].PreferredSize.Width - t[0].Margin.Horizontal
                                                       - info.Width - info.Margin.Horizontal);

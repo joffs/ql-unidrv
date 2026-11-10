@@ -81,7 +81,11 @@ namespace QlLabels.Tests
                 new KeyValuePair<string, Func<Form>>("about", () => (Form)Activator.CreateInstance(typeof(AboutForm), All, null,
                     new object[] { "QL Label Formats" }, null)),
                 new KeyValuePair<string, Func<Form>>("editor", () => new EditorForm(null, "QL-800 Capture", null)),   // QL Label Maker (Label Maker's case)
+                new KeyValuePair<string, Func<Form>>("printdata", PrintData),   // QL Label Maker's Print with data, with 20 rows
             };
+            // QL_DPI_ONLY=printdata,editor: only these windows
+            string only = Environment.GetEnvironmentVariable("QL_DPI_ONLY");
+            if (!string.IsNullOrEmpty(only)) windows = windows.Where(w => only.Split(',').Contains(w.Key)).ToList();
             int failures = 0;
             foreach (var w in windows)
             {
@@ -94,6 +98,27 @@ namespace QlLabels.Tests
             }
             Console.WriteLine(failures == 0 ? "DONE" : "DONE " + failures + " failed");
             return failures == 0 ? 0 : 1;
+        }
+
+        // QL Label Maker's "Print with data" dialog: a 62 mm label with two data fields and a CSV of 20 rows (previews).
+        static Form PrintData()
+        {
+            var doc = new LabelDoc { FormName = "62mm", PaperId = 259 };
+            doc.Objects.Add(new TextObject { X = 4, Y = 3, W = 50, H = 8, Text = "{Artikel}", Size = 14, Kind = TextKind.Line });
+            doc.Objects.Add(new TextObject { X = 4, Y = 13, W = 50, H = 6, Text = "Nr. {Nummer}", Size = 10, Kind = TextKind.Line });
+            foreach (TextObject t in doc.Objects) EditorRender.FitText(t);
+            string error;
+            var layout = LabelJob.LayoutFor(doc, "QL-800 Capture", out error);
+            if (layout == null) throw new InvalidOperationException(error);
+            var csv = new StringBuilder("Artikel;Nummer\r\n");
+            for (int i = 1; i <= 20; i++) csv.Append("Schraube M" + (3 + i % 5) + " × " + (10 + i) + ";V-" + i.ToString("000") + "\r\n");
+            string path = Path.Combine(outDir, "printdata.csv");
+            File.WriteAllText(path, csv.ToString(), new UTF8Encoding(true));
+            return new PrintDataDialog(new PrintDataDialog.Options
+            {
+                Job = new LabelJob(doc, layout), TemplateName = "Regal.qllabel", LabelText = "62mm", PrinterText = "QL-800 Capture",
+                DocumentName = "dpi_move", CsvPath = path,
+            });
         }
 
         // "close": QL Label Formats opened and closed the normal way (WM_CLOSE, nothing changed by the test): closed within

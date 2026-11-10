@@ -57,6 +57,8 @@ namespace QlLabels
         DisabledLine,
         ErrorText,      // text in the error colour
         WarningText,    // text in the warning colour
+        ErrorBack,      // a pale error face: a field that stops printing (Print with data)
+        ErrorLine,
         InfoBack,       // tip bar, dimension tag
         InfoText,
         NoteBack,       // QL Label Maker's "outside the label" bar
@@ -88,7 +90,7 @@ namespace QlLabels
             { Role.Primary, Rgb(0x0E7C84) }, { Role.PrimaryHot, Rgb(0x0A636A) }, { Role.PrimaryPressed, Rgb(0x08474E) }, { Role.PrimaryLine, Rgb(0x0E6F78) },
             { Role.OnPrimary, Rgb(0xFFFFFF) }, { Role.ButtonFace, Rgb(0xFFFFFF) }, { Role.ButtonLine, Rgb(0xB8C4C4) },
             { Role.DisabledFace, Rgb(0xF0F0F0) }, { Role.DisabledLine, Rgb(0xA0A0A0) },
-            { Role.ErrorText, Rgb(0xD13438) }, { Role.WarningText, Rgb(0x9D5D00) },
+            { Role.ErrorText, Rgb(0xD13438) }, { Role.WarningText, Rgb(0x9D5D00) }, { Role.ErrorBack, Rgb(0xFDE7E8) }, { Role.ErrorLine, Rgb(0xEDA6A8) },
             { Role.InfoBack, Rgb(0xFFFFE1) }, { Role.InfoText, Rgb(0x000000) },
             { Role.NoteBack, Rgb(0xFFF4E0) }, { Role.NoteLine, Rgb(0xF0C880) }, { Role.NoteText, Rgb(0x000000) },
             { Role.Caption, Rgb(0xE6F1F0) }, { Role.CaptionText, Rgb(0x1E2B2F) },
@@ -106,7 +108,7 @@ namespace QlLabels
             { Role.Primary, Rgb(0x0E7C84) }, { Role.PrimaryHot, Rgb(0x11909A) }, { Role.PrimaryPressed, Rgb(0x0A636A) }, { Role.PrimaryLine, Rgb(0x1A9097) },
             { Role.OnPrimary, Rgb(0xFFFFFF) }, { Role.ButtonFace, Rgb(0x2A3031) }, { Role.ButtonLine, Rgb(0x4A5556) },
             { Role.DisabledFace, Rgb(0x2A3031) }, { Role.DisabledLine, Rgb(0x4A5556) },
-            { Role.ErrorText, Rgb(0xFF7B7D) }, { Role.WarningText, Rgb(0xFFB900) },
+            { Role.ErrorText, Rgb(0xFF7B7D) }, { Role.WarningText, Rgb(0xFFB900) }, { Role.ErrorBack, Rgb(0x3A1C1D) }, { Role.ErrorLine, Rgb(0x7A3A3C) },
             { Role.InfoBack, Rgb(0x3A3520) }, { Role.InfoText, Rgb(0xF0E6C0) },
             { Role.NoteBack, Rgb(0x3A2E14) }, { Role.NoteLine, Rgb(0x7A5A1E) }, { Role.NoteText, Rgb(0xF0DDB0) },
             { Role.Caption, Rgb(0x172A2C) }, { Role.CaptionText, Rgb(0xE6ECEC) },
@@ -120,9 +122,9 @@ namespace QlLabels
         {
             switch (role)
             {
-                case Role.Window: case Role.Surface: case Role.ButtonFace: case Role.DisabledFace: case Role.Liner: return SystemColors.Control;
+                case Role.Window: case Role.Surface: case Role.ButtonFace: case Role.DisabledFace: case Role.Liner: case Role.ErrorBack: return SystemColors.Control;
                 case Role.Content: return SystemColors.Window;
-                case Role.Text: case Role.Heading: case Role.ErrorText: case Role.WarningText: case Role.CaptionText: return SystemColors.ControlText;
+                case Role.Text: case Role.Heading: case Role.ErrorText: case Role.WarningText: case Role.CaptionText: case Role.ErrorLine: return SystemColors.ControlText;
                 case Role.Dim: return SystemColors.GrayText;
                 case Role.Hover: case Role.Selection: case Role.Primary: case Role.PrimaryHot: case Role.PrimaryPressed: return SystemColors.Highlight;
                 case Role.OnPrimary: return SystemColors.HighlightText;

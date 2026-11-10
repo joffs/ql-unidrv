@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace QlLabels.Tests
 {
-    static class EditorTest
+    static partial class EditorTest
     {
         static int failures;
 
@@ -53,8 +53,112 @@ namespace QlLabels.Tests
             Gs1Ui();
             LineAngleLength();
             TextRuns();
+            CaretMapTest();
+            RunFormatsTest();
+            EditingTest();
+            SpacesTest();
+            RecentTest();
+            OddNumbersTest();
+            SingleInstanceTest();
             Console.WriteLine(failures == 0 ? "editor_test: all OK" : "editor_test: " + failures + " failure(s)");
             return failures == 0 ? 0 : 1;
+        }
+
+        // A hand-edited label with "NaN" or "Infinity" as text for a number (review 0.22): the defaults, never NaN (it got
+        // past every clamp: letter spacing, size and line height NaN), and the label draws.
+        static void OddNumbersTest()
+        {
+            string json = "{\"format\":\"QL label\",\"version\":2,\"objects\":[{\"type\":\"text\",\"x\":2,\"y\":2,\"text\":\"ab\"," +
+                          "\"size\":\"NaN\",\"spacing\":\"NaN\",\"lineHeight\":\"-Infinity\",\"runs\":[{\"t\":\"a\",\"spacing\":\"Infinity\"},{\"t\":\"b\",\"size\":\"NaN\"}]}]}";
+            TextObject t = null;
+            try { t = (TextObject)LabelDoc.FromJson(json).Objects[0]; } catch (Exception ex) { Check(false, "odd numbers: opened (" + ex.Message + ")"); return; }
+            Check(!double.IsNaN(t.Size) && t.Size >= 2 && t.Size <= 400, "odd numbers: size " + t.Size);
+            Check(t.Spacing == 0 && t.LineHeight == 1, "odd numbers: letter spacing " + t.Spacing + ", line height " + t.LineHeight);
+            Check(t.Runs != null && t.Runs.All(r => r.Spacing == null && r.Size == null), "odd numbers: run values left to the text");
+            var doc = new LabelDoc();
+            doc.Objects.Add(t);
+            try { using (var bmp = EditorRender.Render(doc, LabelLayout.Estimate(Continuous62(50), false, false))) Check(bmp != null, "odd numbers: drawn"); }
+            catch (Exception ex) { Check(false, "odd numbers: drawn (" + ex.Message + ")"); }
+        }
+
+        // One window per program (SingleInstance.cs, review 0.22): a second start counts as handed over only when the
+        // running one answered; one that closes the pipe without an answer (its window just closed, or it refused the
+        // arguments) is not, so the second start tries again and opens a window of its own. After Release (the window
+        // closed) nobody takes anything.
+        static void SingleInstanceTest()
+        {
+            string pipe = "QLUnidrv.UnitTest." + Guid.NewGuid().ToString("N");
+            Func<bool, int> serve = answer =>
+            {
+                var server = new System.IO.Pipes.NamedPipeServerStream(pipe, System.IO.Pipes.PipeDirection.InOut, 1);
+                var t = new Thread(() =>
+                {
+                    try
+                    {
+                        server.WaitForConnection();
+                        var r = new System.IO.BinaryReader(server, System.Text.Encoding.UTF8);
+                        int n = r.ReadInt32();
+                        for (int i = 0; i < n; i++) r.ReadString();
+                        if (answer) { server.WriteByte(1); server.Flush(); server.WaitForPipeDrain(); }
+                    }
+                    catch (Exception) { }
+                    finally { server.Dispose(); }
+                }) { IsBackground = true };
+                t.Start();
+                int result = SingleInstance.Send(pipe, new[] { "x.qllabel" }, 5000);
+                t.Join(5000);
+                return result;
+            };
+            Check(serve(true) == 1, "single instance: an answer is a hand-over");
+            Check(serve(false) == 0, "single instance: closed without an answer is no hand-over");
+
+            string old = SingleInstance.Suffix;
+            SingleInstance.Suffix = ".UnitTest" + Guid.NewGuid().ToString("N");
+            try
+            {
+                string app = "Test", name = SingleInstance.PipeName(app);
+                Check(!SingleInstance.HandOff(app, new string[0]), "single instance: the first start is the running one");
+                Check(SingleInstance.Send(name, new[] { "a" }, 5000) == 1, "single instance: the running one takes a second start");
+                SingleInstance.Release();
+                Check(SingleInstance.Send(name, new[] { "a" }, 500) == 0, "single instance: after its window closed nobody takes it");
+                Check(!SingleInstance.HandOff(app, new string[0]), "single instance: the next start is the running one again");
+                Check(SingleInstance.Send(name, new[] { "a" }, 5000) == 1, "single instance: and takes a later start");
+                SingleInstance.Release();
+            }
+            finally { SingleInstance.Suffix = old; }
+        }
+
+        // File > Recent labels (RecentLabels.cs): the newest first, once each whatever the case, at most 15, a damaged
+        // registry value cleaned; stored in HKCU, here under a key of its own (removed afterwards).
+        static void RecentTest()
+        {
+            var list = new List<string>();
+            for (int i = 1; i <= 17; i++) list = RecentLabels.With(list, @"C:\Etiketten\L" + i + ".qllabel");
+            Check(list.Count == 15 && list[0] == @"C:\Etiketten\L17.qllabel" && list[14] == @"C:\Etiketten\L3.qllabel", "recent: newest first, at most 15");
+            list = RecentLabels.With(list, @"c:\etiketten\l5.QLLABEL");
+            Check(list.Count == 15 && list[0] == @"c:\etiketten\l5.QLLABEL" && list.Count(x => RecentLabels.Same(x, @"C:\Etiketten\L5.qllabel")) == 1, "recent: an entry again moves to the top, once");
+            Check(RecentLabels.Clean(new[] { "a", "", "A", " ", "b" }).SequenceEqual(new[] { "a", "b" }), "recent: empty and repeated entries dropped");
+            Check(RecentLabels.OnNetwork(@"\\server\share\x.qllabel") && !RecentLabels.OnNetwork(@"C:\x.qllabel"), "recent: a UNC path is on the network, C: isn't");
+
+            string key = RecentLabels.Key;
+            RecentLabels.Key = Lang.SettingsKey + @"\UnitTest-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                Check(RecentLabels.Load().Count == 0, "recent: nothing stored: empty");
+                RecentLabels.Add(@"C:\Etiketten\Regal 3.qllabel");
+                RecentLabels.Add(@"D:\Alt\Regal 3.qllabel");
+                var back = RecentLabels.Load();
+                Check(back.Count == 2 && back[0] == @"D:\Alt\Regal 3.qllabel" && back[1] == @"C:\Etiketten\Regal 3.qllabel", "recent: stored and read back, two of the same name");
+                RecentLabels.Remove(@"c:\etiketten\regal 3.qllabel");
+                Check(RecentLabels.Load().SequenceEqual(new[] { @"D:\Alt\Regal 3.qllabel" }), "recent: one removed");
+                RecentLabels.Clear();
+                Check(RecentLabels.Load().Count == 0, "recent: cleared");
+            }
+            finally
+            {
+                try { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(RecentLabels.Key, false); } catch (Exception) { }
+                RecentLabels.Key = key;
+            }
         }
 
         // An SVG picture: cleaned (no DTD, scripts or outside references), kept in the file, drawn as a vector at the size
@@ -120,6 +224,21 @@ namespace QlLabels.Tests
             Check(EditorForm.RestartArguments(null, "QL 800", "62 mm") == "--printer \"QL 800\" --format \"62 mm\"", "restart: a new label: printer and format");
             Check(EditorForm.RestartArguments(null, "QL 800", null) == "--printer \"QL 800\"", "restart: an own length: the printer only");
             Check(EditorForm.RestartArguments(null, null, null) == "", "restart: no printer");
+
+            // tabs: every file with its own printer (a restart in another language, a second start with several files)
+            var pairs = new[] { new KeyValuePair<string, string>(@"C:\a b\x.qllabel", "QL 800"), new KeyValuePair<string, string>(@"C:\y.qllabel", null),
+                                new KeyValuePair<string, string>(@"C:\z.qllabel", "QL-570") };
+            string several = EditorProgram.FileArguments(pairs);
+            Check(several == "--printer \"QL 800\" \"C:\\a b\\x.qllabel\" \"C:\\y.qllabel\" --printer \"QL-570\" \"C:\\z.qllabel\"", "restart: each file after its printer: " + several);
+            var parsed = EditorProgram.FilePrinters(new[] { "--printer", "QL 800", @"C:\a b\x.qllabel", @"C:\y.qllabel", "--printer", "QL-570", @"C:\z.qllabel", "--lang", "de" }, 0);
+            Check(parsed.Count == 3 && parsed[0].Value == "QL 800" && parsed[1].Value == null && parsed[2].Value == "QL-570" && parsed[2].Key == @"C:\z.qllabel",
+                  "FilePrinters: each file with the printer before it");
+            var old = EditorProgram.FilePrinters(new[] { "x.qllabel", "--printer", "QL 800", "--format", "62 mm" }, 0);
+            Check(old.Count == 1 && old[0].Key == "x.qllabel" && old[0].Value == "QL 800", "FilePrinters: \"file --printer name\" as before tabs");
+            Check(EditorProgram.FilePrinters(new[] { "--printer", "QL 800", "--format", "62 mm" }, 0).Count == 0, "FilePrinters: no file");
+            var running = EditorProgram.ForRunning(new[] { "a.qllabel", "b.qllabel", "--printer", "QL 800" });
+            Check(running.Length == 6 && running[0] == "--printer" && running[2] == System.IO.Path.GetFullPath("a.qllabel") && running[5] == System.IO.Path.GetFullPath("b.qllabel"),
+                  "second start with two files: both handed over, full paths, each with the printer: " + string.Join(" | ", running));
 
             // F1: the page of the selected kind of object, else the contents
             Func<LabelObject[], string> f1 = sel => EditorForm.HelpPage(sel);

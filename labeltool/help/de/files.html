@@ -34,14 +34,17 @@
           <span class="path">Datei &gt; Speichern unter...</span> legt eine Kopie unter neuem Namen an.</p>
         <p>In der Datei stehen das Etikettenformat (Name, Papier und Länge), die Richtung und alle Objekte. Bilder werden
           eingebettet; die Bilddatei wird danach nicht mehr gebraucht. Drucker und Auflösung gehören nicht zur Datei.</p>
-        <p>Ungespeicherte Änderungen zeigt ein Sternchen im Fenstertitel, zum Beispiel <span class="ui">Regal 3 *</span>.
-          Vor <span class="ui">Neu</span>, <span class="ui">Öffnen</span> und beim Schließen fragt der QL Label Maker:
-          <span class="ui">Änderungen an diesem Etikett speichern?</span></p>
+        <p>Ungespeicherte Änderungen zeigt ein Sternchen im Tab und im Fenstertitel, zum Beispiel
+          <span class="ui">Regal 3 *</span>. <span class="path">Datei &gt; Etikett schließen</span>, das ✕ am Tab oder die
+          mittlere Maustaste schließen das Etikett und fragen vorher: <span class="ui">Änderungen an „Regal 3“ speichern?</span>
+          Beim Schließen des Fensters (<span class="path">Datei &gt; Beenden</span>) fragt der QL Label Maker einmal für alle
+          ungespeicherten Etiketten, mit einer Liste zum Ankreuzen.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
         <div><span><kbd>Strg</kbd> + <kbd>S</kbd></span><span>speichern</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>S</kbd></span><span>speichern unter</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>W</kbd></span><span>Etikett schließen</span></div>
       </aside>
     </li>
 
@@ -49,13 +52,25 @@
       <div class="step">
         <h2 id="opening-and-starting-anew">Öffnen und neu anfangen</h2>
         <p><span class="path">Datei &gt; Öffnen...</span> oder ein Doppelklick auf die Datei im Explorer.
-          <span class="path">Datei &gt; Neu</span> beginnt ein leeres Etikett auf dem gewählten Etikettenformat.
+          <span class="path">Datei &gt; Neu</span> oder das <span class="ui">+</span> am Ende der Tabs beginnt ein leeres
+          Etikett („Unbenannt 1“) auf dem Drucker und Etikettenformat des aktiven Tabs.
           Starten mit einer Datei, einem Drucker oder einem Format: <a href="appendix.html">Kommandozeile</a>.</p>
+        <p>Jedes Etikett hat einen eigenen Tab über dem Etikett, mit eigenem Drucker, Format, Zoom und Rückgängig.
+          <kbd>Strg</kbd> + <kbd>Tab</kbd> wechselt zum nächsten. QL Label Maker hat nur ein Fenster: Eine Etikettendatei,
+          die Sie öffnen, während das Programm schon läuft, kommt dort in einen neuen Tab. Ist sie schon offen, wird ihr
+          Tab aktiv und blinkt kurz.</p>
+        <p><span class="path">Datei &gt; Zuletzt geöffnet</span> zeigt die letzten 15 Etiketten, das neueste oben,
+          mit dem Ordner daneben; die Ziffern 1 bis 9 öffnen sie direkt. Ein Etikett kommt beim Öffnen und beim Speichern
+          in die Liste. Das ✕ am Eintrag oder <kbd>Entf</kbd> nimmt es aus der Liste, <span class="ui">Liste leeren...</span>
+          leert sie; die Dateien selbst bleiben. Eine fehlende Datei steht grau mit „nicht gefunden“ da. Einen
+          Netzwerkordner prüft das Programm erst beim Klick; ist er nicht erreichbar, können Sie es noch einmal
+          versuchen.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
         <div><span><kbd>Strg</kbd> + <kbd>O</kbd></span><span>öffnen</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>N</kbd></span><span>neu</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Tab</kbd></span><span>nächster Tab</span></div>
       </aside>
     </li>
 
@@ -67,7 +82,8 @@
           anbietet. Es wird auf … angezeigt.</span> Gespeichert wird es dann weiter für das ursprüngliche Format.</p>
         <p>Ein Etikett mit eigener Länge öffnet auf demselben Band, wenn der Drucker es hat.</p>
         <p>Dateien aus einer neueren Version des QL Label Maker öffnen ebenfalls. Objekte, die diese Version noch nicht
-          kennt, werden weggelassen, und eine Meldung sagt, wie viele.</p>
+          kennt, werden nicht angezeigt, und eine Meldung sagt, wie viele; beim Speichern bleiben sie in der Datei.
+          Manches kann vereinfacht aussehen, auch darauf weist eine Meldung hin.</p>
       </div>
     </li>
   </ul>
@@ -81,7 +97,7 @@
     </div>
   </aside>
 
-  <nav class="pager" aria-label="Seiten"><a href="printing.html">← Drucken</a><a href="limits.html">Weiter: Was (noch) nicht funktioniert →</a></nav>
+  <nav class="pager" aria-label="Seiten"><a href="print-data.html">← Mit Daten drucken</a><a href="limits.html">Weiter: Was (noch) nicht funktioniert →</a></nav>
 </div></section>
 </main>
 

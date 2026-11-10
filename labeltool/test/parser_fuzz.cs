@@ -1,6 +1,7 @@
 // Fuzz test for the parsers that read data from other programs (clipboard, drag and drop, files): EmfPicture
 // (Check, What, SizeMm, Render), EmfText (Read, Objects, Repair), RtfRuns (Read, Object, PlainText), SvgPicture (Clean,
-// Size, Missing, Render), EditorClipboard (Read, Dib). Inputs: the synthetic fixtures of clipboard_test/editor_test
+// Size, Missing, Render), EditorClipboard (Read, Dib), and label files (LabelDoc.FromJson, then saved, copied, drawn and
+// checked; values in the JSON changed, 3 s per file). Inputs: the synthetic fixtures of clipboard_test/editor_test
 // (EMFs drawn with GDI, Word-like RTF, SVG with CSS and text, DIBs), mutated with a fixed seed: bits flipped, numbers
 // at record and header offsets overwritten (0, -1, int.MaxValue, NaN, ...), cut off, RTF/SVG tokens inserted; plus a
 // few hand-made worst cases (deep nesting, long text). Passes when no call throws anything but InvalidDataException
@@ -53,16 +54,19 @@ namespace QlLabels.Tests
             var rtfs = RtfFixtures();
             var svgs = SvgFixtures();
             var dibs = DibFixtures();
-            Console.WriteLine("parser_fuzz: seed " + seed + ", " + count + " inputs per kind, fixtures " + emfs.Count + " EMF, " + rtfs.Count + " RTF, " + svgs.Count + " SVG, " + dibs.Count + " DIB");
+            var labels = LabelFixtures();
+            Console.WriteLine("parser_fuzz: seed " + seed + ", " + count + " inputs per kind, fixtures " + emfs.Count + " EMF, " + rtfs.Count + " RTF, " + svgs.Count + " SVG, "
+                              + dibs.Count + " DIB, " + labels.Count + " labels");
 
             // warm-up, not timed: the first calls load fonts, GDI+ and Direct2D and compile the code (two seconds)
             warming = true;
-            Emf(emfs[0], null, "warm-up"); Rtf(rtfs[0], null, "warm-up"); Svg(svgs[2], null, "warm-up"); Dib(dibs[0], null, "warm-up");
+            Emf(emfs[0], null, "warm-up"); Rtf(rtfs[0], null, "warm-up"); Svg(svgs[2], null, "warm-up"); Dib(dibs[0], null, "warm-up"); Label(labels[0], null, "warm-up");
             warming = false;
             // the fixtures themselves must be fine
             foreach (var e in emfs) Emf(e, dump, "fixture");
             foreach (var r in rtfs) Rtf(r, dump, "fixture");
             foreach (var s in svgs) Svg(s, dump, "fixture");
+            foreach (var l in labels) Label(l, dump, "fixture");
             // worst cases made by hand (not in the quick run: some take a second by design)
             if (!quick)
             {
@@ -72,6 +76,8 @@ namespace QlLabels.Tests
                 foreach (var s in HardSvg()) Svg(s, dump, "hand-svg#" + h++);
                 h = 0;
                 foreach (var e in HardEmf(emfs[0])) Emf(e, dump, "hand-emf#" + h++);
+                h = 0;
+                foreach (var l in HardLabels(labels[0])) Label(l, dump, "hand-label#" + h++);
             }
 
             for (int i = 0; i < count; i++)
@@ -81,6 +87,7 @@ namespace QlLabels.Tests
                 Svg(Encoding.UTF8.GetBytes(MutateText(rnd, Encoding.UTF8.GetString(svgs[rnd.Next(svgs.Count)]), SvgTokens)), dump, "svg#" + i);
                 if (i % 4 == 0) Svg(MutateBytes(rnd, svgs[rnd.Next(svgs.Count)]), dump, "svgbytes#" + i);
                 Dib(MutateDib(rnd, dibs[rnd.Next(dibs.Count)]), dump, "dib#" + i);
+                Label(MutateLabel(rnd, labels[rnd.Next(labels.Count)]), dump, "label#" + i);
             }
             Console.WriteLine("parser_fuzz: " + calls + " calls, slowest " + slowestMs + " ms (" + slowest + "); ms per entry point: "
                               + string.Join(", ", totals.OrderByDescending(t => t.Value).Select(t => t.Key + " " + t.Value)));
@@ -133,6 +140,31 @@ namespace QlLabels.Tests
             Call("EditorClipboard.Dib", name, b, dump, "dib", () => { using (EditorClipboard.Dib(b)) { } });
         }
 
+        // A label file (.qllabel) as QL Label Maker and QlLabelPrint open it (security review 2026-11-09, L5): reading it
+        // may fail only with InvalidDataException ("damaged"), and a file that opens must save, copy, draw and check
+        // without an exception.
+        static readonly LabelLayout labelLayout = LabelLayout.Estimate(new LabelChoice { Name = "Fuzz 62", Media = MediaTable.ById(259), LengthMm = 70, FeedMm = 3, IsFormat = true }, false, false);
+
+        static void Label(string s, string dump, string name)
+        {
+            var bytes = Encoding.UTF8.GetBytes(s);
+            Call("LabelDoc.FromJson+Render", name, bytes, dump, "qllabel", () =>
+            {
+                var d = LabelDoc.FromJson(s);
+                LabelDoc.FromJson(d.ToJson());
+                d.Clone();
+                var now = new DateTime(2026, 11, 9, 23, 0, 0);
+                using (EditorRender.Render(d, labelLayout, now)) { }
+                foreach (var o in d.Objects)
+                {
+                    var b = o as BarcodeObject;
+                    if (b != null) EditorRender.Problem(b, labelLayout, now);
+                    var t = o as TextObject;
+                    if (t != null) EditorRender.Overflows(t);
+                }
+            }, 3000);   // opening a file happens once (a paste or a key press has 1 s): 2,000 objects take about 1.3 s
+        }
+
         // The worker thread the calls run on (a new one after a hang; the hanging one is left behind).
         sealed class Worker
         {
@@ -162,13 +194,13 @@ namespace QlLabels.Tests
         }
         static Worker worker = new Worker();
 
-        // One call on the worker thread: InvalidDataException is fine, anything else and more than 1 s are findings.
-        static void Call(string what, string name, byte[] input, string dump, string ext, Action a)
+        // One call on the worker thread: InvalidDataException is fine, anything else and more than 1 s (limit) are findings.
+        static void Call(string what, string name, byte[] input, string dump, string ext, Action a, int limit = LimitMs)
         {
             calls++;
             var sw = Stopwatch.StartNew();
             worker.Start(a);
-            bool done = worker.Wait(LimitMs);
+            bool done = worker.Wait(limit);
             if (!done) done = worker.Wait(10000);   // a hang still ends (or is left behind) after 11 s
             long ms = sw.ElapsedMilliseconds;
             Exception error = done ? worker.Error : null;
@@ -177,7 +209,7 @@ namespace QlLabels.Tests
             long sum; totals.TryGetValue(what, out sum); totals[what] = sum + ms;
             if (ms > slowestMs) { slowestMs = ms; slowest = what + " " + name + " (" + input.Length + " bytes)"; }
             string finding = null;
-            if (ms > LimitMs) finding = what + ": " + (done ? "took " + ms + " ms" : "HANG (> 11 s)");
+            if (ms > limit) finding = what + ": " + (done ? "took " + ms + " ms" : "HANG (> 11 s)");
             else if (error != null) finding = what + ": " + error.GetType().Name + " " + Where(error);
             if (finding == null) return;
             findings++;
@@ -506,6 +538,143 @@ namespace QlLabels.Tests
                 PutInt(b, 52, BitConverter.ToInt32(b, 52) + 5000);
                 yield return b;
             }
+        }
+
+        // ---------- label files ----------
+
+        static Dictionary<string, object> D(params object[] kv)
+        {
+            var d = new Dictionary<string, object>();
+            for (int i = 0; i + 1 < kv.Length; i += 2) d[(string)kv[i]] = kv[i + 1];
+            return d;
+        }
+
+        // One label with every kind of object and most keys, plus the help's sample labels when the folder is there.
+        static List<string> LabelFixtures()
+        {
+            string png;
+            using (var bmp = new Bitmap(4, 4))
+            using (var ms = new MemoryStream())
+            {
+                bmp.SetPixel(1, 1, Color.Black); bmp.SetPixel(2, 2, Color.Gray);
+                bmp.Save(ms, ImageFormat.Png); png = Convert.ToBase64String(ms.ToArray());
+            }
+            var objects = new object[]
+            {
+                D("type", "text", "x", 2, "y", 2, "w", 40, "h", 10, "rot", 0, "text", "Hallo {date} Welt", "font", "Arial", "size", 12, "bold", false,
+                  "italic", false, "underline", false, "align", "left", "kind", "frame", "lineHeight", 1, "spacing", 0,
+                  "runs", new object[] { D("t", "Hallo ", "font", "Arial", "size", 12), D("t", "{date} Welt", "bold", true, "underline", true) }),
+                D("type", "text", "x", 2, "y", 14, "w", 30, "h", 8, "rot", 90, "tilt", 15, "text", "Grafik", "font", "Segoe UI", "size", 20, "align", "center",
+                  "kind", "line", "invert", true),
+                D("type", "line", "x", 1, "y", 30, "w", 50, "h", 0, "thickness", 0.5, "rising", false),
+                D("type", "box", "x", 1, "y", 32, "w", 20, "h", 10, "thickness", 0.3, "filled", false, "ellipse", false, "radius", 2),
+                D("type", "shape", "x", 25, "y", 32, "w", 10, "h", 10, "thickness", 0.3, "filled", true, "shape", "star", "points", 5, "inner", 0.5),
+                D("type", "shape", "x", 40, "y", 32, "w", 10, "h", 10, "shape", "polygon", "corners", 6),
+                D("type", "barcode", "x", 2, "y", 44, "w", 40, "h", 10, "symbology", "code128", "data", "ABC-{gs}123", "showText", true, "level", "M"),
+                D("type", "barcode", "x", 45, "y", 44, "w", 12, "h", 12, "symbology", "qr", "data", "", "qrType", "wifi",
+                  "qrFields", D("ssid", "Netz", "password", "geheim"), "level", "Q", "invert", true),
+                D("type", "barcode", "x", 2, "y", 58, "w", 30, "h", 10, "symbology", "ean13", "data", "400638133393", "showText", true),
+                D("type", "image", "x", 35, "y", 58, "w", 10, "h", 10, "png", png, "mode", "threshold", "threshold", 128, "invert", false),
+                D("type", "image", "x", 48, "y", 58, "w", 10, "h", 5, "png", png, "mode", "dither",
+                  "svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 10\"><rect x=\"1\" y=\"1\" width=\"18\" height=\"8\"/></svg>"),
+                D("type", "future", "x", 1, "y", 1, "w", 1, "h", 1)
+            };
+            var doc = D("format", "QL label", "version", 2, "label", D("form", "", "paperId", 259, "length01", 700, "view", "along", "length", "own"), "objects", objects);
+            var list = new List<string> { Json.Serialize(doc) };
+            for (var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory); dir != null; dir = dir.Parent)
+            {
+                string help = Path.Combine(dir.FullName, @"labeltool\help\img\shots\labels");
+                if (!Directory.Exists(help)) continue;
+                list.AddRange(Directory.GetFiles(help, "*.qllabel", SearchOption.AllDirectories).OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
+                break;
+            }
+            return list;
+        }
+
+        static readonly System.Web.Script.Serialization.JavaScriptSerializer Json = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+
+        static readonly string[] LabelKeys =
+        {
+            "type", "x", "y", "w", "h", "rot", "tilt", "text", "font", "size", "bold", "italic", "underline", "align", "kind", "lineHeight", "spacing",
+            "invert", "runs", "t", "thickness", "rising", "filled", "ellipse", "radius", "shape", "corners", "points", "inner", "symbology", "data",
+            "showText", "level", "qrType", "qrFields", "png", "svg", "emf", "mode", "threshold", "form", "paperId", "length01", "view", "length", "version"
+        };
+
+        static object LabelValue(Random r)
+        {
+            switch (r.Next(24))
+            {
+                case 0: return 0;
+                case 1: return -1;
+                case 2: return 1e9;
+                case 3: return -1e9;
+                case 4: return 1e308;
+                case 5: return int.MaxValue;
+                case 6: return int.MinValue;
+                case 7: return 0.0001;
+                case 8: return "";
+                case 9: return "x";
+                case 10: return new string('W', 1 + r.Next(20000));
+                case 11: return true;
+                case 12: return null;
+                case 13: return new object[0];
+                case 14: return D();
+                case 15: return new object[] { D("t", "a"), D("t", null), 5, D("t", "b", "size", -3) };
+                case 16: return "{date}{time}{gs}{x00}{{";
+                case 17: return "AAAA";   // base64 of three zero bytes: not a picture
+                case 18: return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1e9\" height=\"1e9\"><text>A</text></svg>";
+                case 19: return new[] { "text", "line", "box", "shape", "image", "barcode" }[r.Next(6)];
+                case 20: return new[] { "code128", "ean13", "qr", "gs1-128", "gs1_128", "?" }[r.Next(6)];
+                case 21: return new[] { "triangle", "polygon", "star", "?" }[r.Next(4)];
+                case 22: return string.Concat(Enumerable.Repeat("́😀‏", 1 + r.Next(500)));
+                default: return r.NextDouble() * 400 - 200;
+            }
+        }
+
+        // Mostly values changed inside the JSON (keys of every kind set on any object), sometimes the text itself.
+        static string MutateLabel(Random r, string src)
+        {
+            if (r.Next(5) == 0) return MutateText(r, src, LabelTokens);
+            var d = Json.DeserializeObject(src) as Dictionary<string, object>;
+            if (d == null) return src;
+            var objects = (d.ContainsKey("objects") ? d["objects"] as object[] : null) ?? new object[0];
+            int steps = 1 + r.Next(5);
+            for (int s = 0; s < steps; s++)
+            {
+                Dictionary<string, object> target;
+                int pick = r.Next(objects.Length + 2);
+                if (pick < objects.Length) target = objects[pick] as Dictionary<string, object>;
+                else if (pick == objects.Length) target = d.ContainsKey("label") ? d["label"] as Dictionary<string, object> : null;
+                else target = d;
+                if (target == null) continue;
+                var runs = target.ContainsKey("runs") ? target["runs"] as object[] : null;
+                if (runs != null && runs.Length > 0 && r.Next(3) == 0) target = runs[r.Next(runs.Length)] as Dictionary<string, object> ?? target;
+                string key = LabelKeys[r.Next(LabelKeys.Length)];
+                if (r.Next(8) == 0) target.Remove(key); else target[key] = LabelValue(r);
+            }
+            if (r.Next(6) == 0 && objects.Length > 0)   // many copies of one object
+                d["objects"] = Enumerable.Repeat(objects[r.Next(objects.Length)], 1 + r.Next(300)).ToArray();
+            return Json.Serialize(d);
+        }
+
+        static readonly string[] LabelTokens =
+        {
+            "{", "}", "[", "]", ",", ":", "\"", "null", "true", "1e400", "-0", "NaN", "\\u0000", "\\ud800", "\"type\":\"text\",", "\"objects\":[",
+            "{\"type\":\"image\",\"png\":\"!!\"},", "[[[[[[[[[[[[[[[[[[[[", "]]]]]]]]]]]]]]]]]]]]"
+        };
+
+        static IEnumerable<string> HardLabels(string sample)
+        {
+            yield return "{\"format\":\"QL label\",\"objects\":" + new string('[', 5000) + new string(']', 5000) + "}";   // deep arrays
+            var many = Json.DeserializeObject(sample) as Dictionary<string, object>;
+            var objects = (object[])many["objects"];
+            many["objects"] = Enumerable.Range(0, 2000).Select(i => objects[i % objects.Length]).ToArray();   // 2,000 objects
+            yield return Json.Serialize(many);
+            var text = D("type", "text", "x", 0, "y", 0, "w", 60, "h", 60, "kind", "frame", "text", new string('W', 100000), "size", 8);
+            yield return Json.Serialize(D("format", "QL label", "objects", new object[] { text }));   // 100,000 characters in one frame
+            var runs = Enumerable.Range(0, 20000).Select(i => (object)D("t", "a", "bold", i % 2 == 0)).ToArray();
+            var runText = D("type", "text", "x", 0, "y", 0, "w", 60, "h", 60, "kind", "frame", "text", new string('a', 20000), "runs", runs);
+            yield return Json.Serialize(D("format", "QL label", "objects", new object[] { runText }));   // 20,000 runs
         }
 
         static List<byte[]> DibFixtures()

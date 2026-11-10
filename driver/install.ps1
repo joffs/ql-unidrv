@@ -140,6 +140,7 @@ function Get-ErrorCode([string]$message) {
         "as administrator" { return "not-admin" }
         "QL Label (Formats|Maker)\b.* is open" { return "label-tool-open" }   # "QL Label Formats or QL Label Maker is open"
         "Another setup is running" { return "busy" }
+        "QlLabelPrint\.exe is still printing" { return "printing" }
         "^pnputil failed.*0x800B0109" { return "enforcement-on" }
         "^pnputil failed" { return "pnputil" }
         "has no driver for this PC" { return "no-package" }
@@ -281,7 +282,8 @@ try {
     # Three programs: the label tool, the label editor and the printer status (window, monitor, service).
     $editorApp = Join-Path $appDir "QlLabelMaker.exe"
     $statusApp = Join-Path $appDir "QlPrinterStatus.exe"
-    $appNames = @("QlLabelFormats.exe", "QlLabelMaker.exe", "QlPrinterStatus.exe")
+    # QlLabelPrint.exe: "Print from data" on the command line (console, no window, no Start menu entry).
+    $appNames = @("QlLabelFormats.exe", "QlLabelMaker.exe", "QlPrinterStatus.exe", "QlLabelPrint.exe")
     # Icons as files (csc embeds one icon per exe): the base mark for Installed apps, the .qllabel file icon.
     # Without them the exes' icons are used.
     $appIcons = @("qlunidrv.ico", "qllabel.ico")
@@ -354,6 +356,10 @@ try {
     # The printer status program (window, monitor): nothing to save there
     function Test-StatusProcess($p) { $p.Name -eq "QlPrinterStatus.exe" }
     function Assert-LabelToolClosed {
+        # A print from data (QlLabelPrint.exe, run by a script) ends by itself within seconds: wait for it (60 s)
+        $deadline = (Get-Date).AddSeconds(60)
+        while (($printing = @(Get-LabelTools | Where-Object { $_.Name -eq "QlLabelPrint.exe" })) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+        if ($printing) { throw "QlLabelPrint.exe is still printing (pid $(($printing.ProcessId) -join ', ')): wait until it has finished, then run this again." }
         $open = @(Get-LabelTools | Where-Object { -not (Test-StatusProcess $_) })
         if ($open) { throw "QL Label Formats or QL Label Maker is open (pid $(($open.ProcessId) -join ', ')): save your changes, close it, then run this again." }
     }

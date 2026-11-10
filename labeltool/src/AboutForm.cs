@@ -77,7 +77,7 @@ namespace QlLabels
         {
             Text = Lang.T("About QL Unidrv");
             HelpPages.F1(this);   // the owner program's page (the tray's window has none)
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -102,8 +102,8 @@ namespace QlLabels
                 int u = Font.Height;  // the present font: after a move to a screen with other scaling the window's em changed
                 float mark = u * 4.5f, x = u * 1.5f, y = (top.Height - mark) / 2f;
                 Brand.DrawMark(g, x, y, mark);
-                using (var bold = new Font("Segoe UI", Font.SizeInPoints * 2.6f, FontStyle.Bold, GraphicsUnit.Point))
-                using (var semi = new Font("Segoe UI Semibold", Font.SizeInPoints * 2.6f, FontStyle.Regular, GraphicsUnit.Point))
+                using (var bold = UiFont.Create("Segoe UI", Font.SizeInPoints * 2.6f, FontStyle.Bold, GraphicsUnit.Point))
+                using (var semi = UiFont.Create("Segoe UI Semibold", Font.SizeInPoints * 2.6f, FontStyle.Regular, GraphicsUnit.Point))
                 {
                     var flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
                     int tx = (int)(x + mark + u), ty = (int)(y + mark / 2f - bold.Height * 0.62f);

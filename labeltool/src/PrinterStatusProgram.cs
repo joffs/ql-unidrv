@@ -32,6 +32,7 @@ namespace QlLabels
                 return 0;
             }
             if (mode == "--online") return Program.Command(args);
+            UiFont.UseForWindows();   // window fonts without GDI+'s table of every installed font (seconds after a restart)
             Lang.WindowApp();   // the window and the monitor: the user's language
             if (mode == "--monitor") TrayMonitor.Run();
             else RunWindow();

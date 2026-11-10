@@ -234,7 +234,8 @@ Every install or update writes `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\U
 version, publisher, project link) and copies `install.ps1` and `setup.ps1` to `C:\Program Files\QLUnidrv\setup`
 (administrators write, users read), so uninstall and the setup window work without the zip; the entry shows the
 programs' size and version (`DisplayVersion`, e.g. 0.18.1), and the value `DriverVersion` holds the driver's (0.18). The Start menu gets *QL Label Formats*, *QL Label Maker* (the label editor) and *QL Printer Status*; each exe is named like its entry (`QlLabelFormats.exe`,
-`QlLabelMaker.exe`, `QlPrinterStatus.exe`). The uninstall removes the entry, the folder and these Start menu entries, and also: for every signed-in user the printer
+`QlLabelMaker.exe`, `QlPrinterStatus.exe`); `QlLabelPrint.exe` (printing from the command line,
+[print-command-line.md](print-command-line.md)) has no Start menu entry. The uninstall removes the entry, the folder and these Start menu entries, and also: for every signed-in user the printer
 monitor's autostart, the programs' settings (`HKCU\Software\QLUnidrv`), "Open with" entries and the removed printers'
 per-user settings; shortcuts users made to the programs (desktops, taskbar pins; only those that start one of them); the ports it made for shared and network printers (when no other printer uses them); the status service's event
 log source; the copies of this PC's signing root among the user's intermediate certificates. The logs in `%TEMP%`

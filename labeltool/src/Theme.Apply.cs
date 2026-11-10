@@ -222,6 +222,8 @@ namespace QlLabels
                 var updown = c as UpDownBase;
                 if (updown != null && Dark) { UpDownFrame.Hook(updown); SpinButtons.Hook(updown); }
                 if (updown != null) updown.Invalidate(true);   // with its buttons, after a live switch
+                var combo = c as ComboBox;
+                if (combo != null && Dark && combo.DropDownStyle == ComboBoxStyle.DropDown) ComboEdit.Hook(combo);
                 var list = c as ListView;
                 if (list != null)
                 {
@@ -309,6 +311,46 @@ namespace QlLabels
             }
         }
 
+        // A combo box one can type in (DropDown): while it is off, its text field asks for its colours with
+        // WM_CTLCOLORSTATIC, which WinForms leaves to Windows (a light grey box in dark). Here it gets Content with Dim
+        // text, as a number box that is off. Once per handle; in light it lets everything through.
+        sealed class ComboEdit : NativeWindow
+        {
+            readonly ComboBox box;
+            ComboEdit(ComboBox box) { this.box = box; AssignHandle(box.Handle); box.HandleDestroyed += delegate { ReleaseHandle(); }; }
+
+            static readonly ConditionalWeakTable<ComboBox, ComboEdit> hooks = new ConditionalWeakTable<ComboBox, ComboEdit>();
+            static IntPtr brush;
+            static int brushColor = -1;
+
+            public static void Hook(ComboBox box)
+            {
+                ComboEdit h;
+                if (hooks.TryGetValue(box, out h)) { if (h.Handle == box.Handle) { box.Invalidate(true); return; } hooks.Remove(box); }
+                hooks.Add(box, new ComboEdit(box));
+                box.Invalidate(true);
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                if (m.Msg == 0x0138 /* WM_CTLCOLORSTATIC */ && Dark && !box.Enabled)
+                {
+                    int back = ColorRef(Of(Role.Content));
+                    if (brush == IntPtr.Zero || brushColor != back)
+                    {
+                        if (brush != IntPtr.Zero) DeleteObject(brush);
+                        brush = CreateSolidBrush(back);
+                        brushColor = back;
+                    }
+                    SetTextColor(m.WParam, ColorRef(Of(Role.Dim)));
+                    SetBkColor(m.WParam, back);
+                    m.Result = brush;
+                    return;
+                }
+                base.WndProc(ref m);
+            }
+        }
+
         // A number box's up/down buttons draw themselves light whatever the window theme: in dark they are painted over
         // after each paint, both halves in ButtonFace (Hover under the mouse, Selection while pressed, DisabledFace when
         // off), a Border line, and filled arrows in whole pixels (Text, Dim when off). Once per handle; in light it lets
@@ -365,6 +407,9 @@ namespace QlLabels
         }
 
         [DllImport("gdi32.dll")] static extern int SetTextColor(IntPtr hdc, int color);
+        [DllImport("gdi32.dll")] static extern int SetBkColor(IntPtr hdc, int color);
+        [DllImport("gdi32.dll")] static extern IntPtr CreateSolidBrush(int color);
+        [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr obj);
         [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)] static extern int SetWindowTheme(IntPtr hwnd, string app, string idList);
         [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
         [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);

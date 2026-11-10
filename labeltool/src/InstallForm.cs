@@ -135,7 +135,7 @@ namespace QlLabels
             Text = Lang.T("QL printer driver setup");
             Theme.Use(this);
             HelpPages.F1(this, HelpPages.Install);
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             Theme.TintCaption(this);
@@ -340,7 +340,7 @@ namespace QlLabels
 
         static Label Grey(string text, int indent)
         {
-            return Theme.Fore(new Label { Text = text, AutoSize = true, MaximumSize = new Size(SystemFonts.MessageBoxFont.Height * 30, 0),
+            return Theme.Fore(new Label { Text = text, AutoSize = true, MaximumSize = new Size(UiFont.MessageBox.Height * 30, 0),
                                           Margin = new Padding(indent, 0, 0, 4) }, Role.Dim);
         }
 
@@ -375,7 +375,7 @@ namespace QlLabels
                 Lang.T("Key 7 wasn't pressed"), Lang.T("The setup did not finish"), Lang.T("Can't start the setup here"),
                 Lang.T("Uninstall the QL printer driver"), Lang.T("The QL printer driver is removed"), Lang.T("The uninstall did not finish"),
             };
-            using (var font = new Font("Segoe UI Semibold", headline.Font.SizeInPoints * 1.6f, FontStyle.Regular, GraphicsUnit.Point))
+            using (var font = UiFont.Create("Segoe UI Semibold", headline.Font.SizeInPoints * 1.6f, FontStyle.Regular, GraphicsUnit.Point))
             {
                 int text = titles.Max(t => TextRenderer.MeasureText(t, font, Size.Empty, TextFormatFlags.NoPrefix).Width);
                 int e = headline.Font.Height;  // the band's present scaling (the window may have been rescaled)
@@ -1226,6 +1226,7 @@ namespace QlLabels
             {
                 case "label-tool-open": return Lang.T("QL Label Formats or QL Label Maker was open. Close it, then click Try again.");
                 case "busy": return Lang.T("Another setup is running on this PC. Wait until it has finished, then click Try again.");
+                case "printing": return Lang.T("Labels are still being printed from the command line (QlLabelPrint). Wait until they are done, then click Try again.");
                 case "enforcement-on": return Lang.T("Refused: Windows was started without key 7. Try again leads through the restart.");
                 case "pnputil": return Lang.T("Windows refused the driver package. Try again; if it fails again, click Show details and send them to the project (see README).");
                 case "port": return Lang.T("Windows didn't let the setup add a printer port. Try again; if it still doesn't work, click Show details and send them to the project (see README).");
@@ -1264,7 +1265,7 @@ namespace QlLabels
             {
                 Theme.Use(d);
                 var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill,
-                                        Font = new Font(FontFamily.GenericMonospace, Font.Size * 0.9f), Text = (failureDetails ?? "").Replace("\r\n", "\n").Replace("\n", "\r\n") };
+                                        Font = UiFont.Monospace(Font.Size * 0.9f), Text = (failureDetails ?? "").Replace("\r\n", "\n").Replace("\n", "\r\n") };
                 var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(em / 2) };
                 var closeButton = new Button { Text = Lang.T("Close"), AutoSize = true, DialogResult = DialogResult.Cancel };
                 var copy = new Button { Text = Lang.T("Copy details"), AutoSize = true };

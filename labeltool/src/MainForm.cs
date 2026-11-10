@@ -28,7 +28,7 @@ namespace QlLabels
         List<LabelFormat> saved = new List<LabelFormat>();
         bool dirty, busy, loading;
 
-        readonly ListView list = new ListView();
+        readonly ListView list = new UiFont.NativeHeaderListView();   // no GDI+ font table for its header (UiFont.cs)
         readonly TextBox nameBox = new TextBox();
         readonly ComboBox mediaBox = new ComboBox();
         readonly NumericUpDown lengthBox = new NumericUpDown();
@@ -74,7 +74,7 @@ namespace QlLabels
             Theme.Use(this);
             Theme.Changed += ThemeChanged;
             FormClosed += delegate { Theme.Changed -= ThemeChanged; };
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;  // scales nothing here (no AutoScaleDimensions): sizes go through S()
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             // The font already follows the display scaling; the window's own sizes are 100 % pixels scaled the same way.
@@ -363,6 +363,7 @@ namespace QlLabels
             {
                 if (fillingPrinters || printerBox.SelectedItem == null) return;
                 testPrinter = printerBox.SelectedItem.ToString();
+                QlPrinters.Remember(testPrinter);   // the next start shows it (also QL Label Maker)
                 UpdatePrinterStatus();
             };
             tools.Items.Add(printerBox);
@@ -489,6 +490,7 @@ namespace QlLabels
             }
             catch (Exception ex) { Failed(Lang.T("The language couldn't be changed."), ex); return; }
             if (!restart) return;
+            SingleInstance.Release();   // the new start is the window from now on
             try { Process.Start(Application.ExecutablePath, testPrinter != null ? "--printer \"" + testPrinter + "\"" : ""); }
             catch (Exception ex) { Failed(Lang.T("QL Label Formats couldn't start again in the new language."), ex); return; }
             Close();

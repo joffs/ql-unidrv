@@ -123,7 +123,9 @@ namespace QlLabels
             if (d.TryGetValue("qrFields", out fields) && fields is Dictionary<string, object>)
                 foreach (var kv in (Dictionary<string, object>)fields)
                     if (kv.Value is string) QrFields[kv.Key] = (string)kv.Value; else if (kv.Value is bool) QrFields[kv.Key] = (bool)kv.Value ? "true" : "false";
-            // Data as saved: the code prints the same even if a newer editor built it differently.
+            // Data as saved: the code prints the same even if a newer editor built it differently. A typed QR code saved
+            // without its data (a file written by hand or by a script): built from its fields.
+            if (TypedQr && Data.Length == 0) Data = QrContent.Build(QrType, QrFields);
         }
     }
 
@@ -601,22 +603,30 @@ namespace QlLabels
 
         void AddBarcode()
         {
-            var at = FreeSpot();
-            Add(new BarcodeObject { X = at.X, Y = at.Y, W = 32, H = 12 });   // with its quiet zone about 40 mm
+            Add(NewBarcode(FreeSpot()));
             FocusField(dataBox);
+        }
+
+        static BarcodeObject NewBarcode(PointF at)
+        {
+            return new BarcodeObject { X = at.X, Y = at.Y, W = 32, H = 12 };   // with its quiet zone about 40 mm
         }
 
         // A QR code starts as a web address (the panel's "Contains" offers the other kinds).
         void AddQrCode()
         {
-            var at = FreeSpot();
+            Add(NewQrCode(FreeSpot()));
+            FocusField((TextBox)qrEditors["url"]);
+        }
+
+        BarcodeObject NewQrCode(PointF at)
+        {
             // the code itself; its quiet zone (4 modules on each side) comes around it
             double side = layout != null ? Math.Max(8, Math.Min(16, (Math.Min(layout.Printable.Width, layout.Printable.Height) - 2) * 0.75)) : 16;
             var q = new BarcodeObject { X = at.X, Y = at.Y, W = side, H = side, Kind = Symbology.Qr };
             q.SetQrType(QrType.Url);
             q.SetQrField("url", "example.org");
-            Add(q);
-            FocusField((TextBox)qrEditors["url"]);
+            return q;
         }
 
         // Code 128 <-> GS1-128 <-> EAN-13: an EAN-13 needs digits and a GS1-128 elements, so a content that doesn't fit

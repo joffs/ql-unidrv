@@ -76,7 +76,7 @@ static class HelpShots
         Step(dir + "\\invert\\Regal 3.qllabel", target, size, () =>
         {
             Shot("invert-none");
-            Select(o => Text(o) == "Regal 3"); Shot("invert-text");
+            Select(o => Text(o) == "Regal 3"); NoFontHighlight(); Shot("invert-text");
             Select(o => Text(o) != null && Text(o).StartsWith("Schrauben")); Shot("invert-frame");
             Select(o => Kind(o) == "Qr"); Shot("invert-qr");
             Select(o => Kind(o) == "Code128"); Shot("invert-code128");
@@ -145,10 +145,48 @@ static class HelpShots
         });
         Step(dir + "\\runs\\Regal 3.qllabel", target, size, () =>
         {
-            // a paragraph text with words in their own format: the panel's text box shows them
-            Select(o => Text(o) != null && Text(o).StartsWith("Schrauben"));
-            NoFontHighlight();
-            Shot("runs");
+            // a paragraph text with words in their own format, edited on the label: the caret after "verzinkt"
+            var canvas = (Control)Field("canvas");
+            var runs = Objects().First(o => Text(o) != null && Text(o).StartsWith("Schrauben"));
+            Edit(runs, Text(runs).IndexOf("verzinkt") + "verzinkt".Length);
+            Shot("edit-canvas");
+            // a paragraph text whose second line doesn't fit: shown light grey below its box while editing
+            var over = Objects().First(o => Text(o) != null && Text(o).StartsWith("Trocken"));
+            Edit(over, Text(over).Length);
+            Shot("edit-overflow");
+            canvas.GetType().GetMethod("EndEdit", All).Invoke(canvas, null); Pump(400);
+        });
+        Step(dir + "\\printdata\\Regal 3.qllabel", target, size, () =>
+        {
+            // File > Print with data on a 20-row CSV without a "Lagerort" column: "Leave missing fields empty" on, one card
+            // selected. The dialog is modal: a timer takes the shot inside its loop, then cancels it.
+            System.Windows.Forms.Form shown = null;
+            var timer = new System.Windows.Forms.Timer { Interval = 50 };
+            timer.Tick += delegate
+            {
+                var d = Field("printDataDialog") as System.Windows.Forms.Form;
+                if (d == null || !d.Visible) return;
+                timer.Stop();
+                shown = d;
+                try
+                {
+                    d.Size = d.MinimumSize;   // not the size this PC remembers
+                    Pump(800);
+                    ((CheckBox)d.GetType().GetField("missingEmpty", All).GetValue(d)).Checked = true;
+                    Pump(300);
+                    var grid = d.GetType().GetField("grid", All).GetValue(d);
+                    grid.GetType().GetMethod("ClickCard", All).Invoke(grid, new object[] { 3, Keys.None });
+                    Pump(2500);   // the previews are drawn in the background
+                    ShotOf(d, "print-data");
+                }
+                catch (Exception e) { Console.WriteLine("FAILED: " + e); }
+                d.DialogResult = DialogResult.Cancel;
+            };
+            timer.Start();
+            form.GetType().GetMethod("PrintWithData", All).Invoke(form, new object[] { dir + "\\printdata\\teile.csv" });
+            timer.Dispose();
+            if (shown == null) Console.WriteLine("FAILED: the Print with data dialog didn't open");
+            Pump(300);
         });
         Step(dir + "\\errors\\Regal 3.qllabel", target, size, () =>
         {
@@ -293,10 +331,34 @@ static class HelpShots
     static string Text(object o) { return o.GetType().Name == "TextObject" ? Member(o, "Text") as string : null; }
     static string Kind(object o) { return o.GetType().Name == "BarcodeObject" ? Convert.ToString(Member(o, "Kind")) : null; }
 
-    static void Select(Func<object, bool> which)
+    static List<object> Objects()
     {
         var doc = Field("doc");
-        var objs = ((IEnumerable)doc.GetType().GetField("Objects", All).GetValue(doc) ?? (IEnumerable)doc.GetType().GetProperty("Objects", All).GetValue(doc, null)).Cast<object>().ToList();
+        var f = doc.GetType().GetField("Objects", All);
+        return ((IEnumerable)(f != null ? f.GetValue(doc) : doc.GetType().GetProperty("Objects", All).GetValue(doc, null))).Cast<object>().ToList();
+    }
+
+    // Edits the text on the label with the caret at index caret, the caret shown (not blinking) and the canvas focused.
+    static void Edit(object text, int caret)
+    {
+        var canvas = (Control)Field("canvas");
+        canvas.GetType().GetMethod("BeginEdit", All).Invoke(canvas, new object[] { text, null, false });
+        Pump(300);
+        var editing = canvas.GetType().GetField("editing", All).GetValue(canvas);
+        editing.GetType().GetMethod("SetCaret", All).Invoke(editing, new object[] { caret, false });
+        form.GetType().GetMethod("EditCaretMoved", All).Invoke(form, null);   // the panel shows the format at the caret
+        form.ActiveControl = canvas;
+        ((System.Windows.Forms.Timer)canvas.GetType().GetField("blink", All).GetValue(canvas)).Enabled = false;
+        canvas.GetType().GetField("caretOn", All).SetValue(canvas, true);
+        canvas.Invalidate();
+        NoFontHighlight();
+        form.ActiveControl = canvas;
+        Pump(600);
+    }
+
+    static void Select(Func<object, bool> which)
+    {
+        var objs = Objects();
         var pick = objs.Where(which).ToList();
         var canvas = Field("canvas");
         var lt = asm.GetType("QlLabels.LabelObject");

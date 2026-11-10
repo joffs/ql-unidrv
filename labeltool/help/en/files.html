@@ -35,14 +35,16 @@
         <p>The file holds the label format (name, paper and length), the direction and all objects. Pictures are
           embedded; the picture file isn't needed afterwards. The printer and the resolution are not part of the
           file.</p>
-        <p>An asterisk in the window title shows unsaved changes, for example <span class="ui">Regal 3 *</span>. Before
-          <span class="ui">New</span>, <span class="ui">Open</span> and when closing, QL Label Maker asks:
-          <span class="ui">Save the changes to this label?</span></p>
+        <p>An asterisk in the tab and the window title shows unsaved changes, for example <span class="ui">Regal 3 *</span>.
+          <span class="path">File &gt; Close label</span>, the tab's ✕ or the middle mouse button close the label and ask
+          first: <span class="ui">Save the changes to “Regal 3”?</span> Closing the window (<span class="path">File &gt;
+          Exit</span>) asks once for all unsaved labels, with a list to tick.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
         <div><span><kbd>Ctrl</kbd> + <kbd>S</kbd></span><span>save</span></div>
         <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></span><span>save as</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>W</kbd></span><span>close label</span></div>
       </aside>
     </li>
 
@@ -50,13 +52,24 @@
       <div class="step">
         <h2 id="opening-and-starting-anew">Opening and starting anew</h2>
         <p><span class="path">File &gt; Open...</span> or double-click the file in Explorer.
-          <span class="path">File &gt; New</span> starts an empty label on the chosen label format. Starting with a
-          file, a printer or a format: <a href="appendix.html">command line</a>.</p>
+          <span class="path">File &gt; New</span> or the <span class="ui">+</span> at the end of the tabs starts an empty
+          label ("Untitled 1") on the active tab's printer and label format. Starting with a file, a printer or a
+          format: <a href="appendix.html">command line</a>.</p>
+        <p>Each label has its own tab above the label, with its own printer, format, zoom and undo.
+          <kbd>Ctrl</kbd> + <kbd>Tab</kbd> goes to the next one. QL Label Maker has one window: a label file you open
+          while it is running opens there in a new tab. If it is already open, its tab comes forward and blinks
+          briefly.</p>
+        <p><span class="path">File &gt; Recent labels</span> shows the last 15 labels, the newest at the top, with
+          their folder beside them; the digits 1 to 9 open them directly. A label joins the list when you open or save
+          it. The ✕ on an entry or <kbd>Del</kbd> takes it off the list, <span class="ui">Clear list...</span> empties
+          it; the files themselves stay. A missing file shows grey with "not found". A network folder is checked only
+          when you click; if it can't be reached, you can try again.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
         <div><span><kbd>Ctrl</kbd> + <kbd>O</kbd></span><span>open</span></div>
         <div><span><kbd>Ctrl</kbd> + <kbd>N</kbd></span><span>new</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Tab</kbd></span><span>next tab</span></div>
       </aside>
     </li>
 
@@ -67,8 +80,9 @@
           length and says so when it opens: <span class="ui">The label was made for '…', which … doesn't offer. It is
           shown on ….</span> It is still saved for the original format.</p>
         <p>A label with a length of its own opens on the same tape if the printer has it.</p>
-        <p>Files from a newer version of QL Label Maker open too. Objects this version doesn't know yet are left out,
-          and a message says how many.</p>
+        <p>Files from a newer version of QL Label Maker open too. Objects this version doesn't know yet aren't shown,
+          and a message says how many; they stay in the file when you save. Some parts may look simplified; a message
+          says so too.</p>
       </div>
     </li>
   </ul>
@@ -82,7 +96,7 @@
     </div>
   </aside>
 
-  <nav class="pager" aria-label="Pages"><a href="printing.html">← Printing</a><a href="limits.html">Next: What it can't do (yet) →</a></nav>
+  <nav class="pager" aria-label="Pages"><a href="print-data.html">← Print with data</a><a href="limits.html">Next: What it can't do (yet) →</a></nav>
 </div></section>
 </main>
 

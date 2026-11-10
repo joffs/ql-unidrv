@@ -136,7 +136,7 @@ namespace QlLabels
             // follows the window's font here when the scaling changes
             void TitleFont(Font font)
             {
-                title.Font = new Font("Segoe UI Semibold", font.SizeInPoints * 1.15f, FontStyle.Regular, GraphicsUnit.Point);
+                title.Font = UiFont.Create("Segoe UI Semibold", font.SizeInPoints * 1.15f, FontStyle.Regular, GraphicsUnit.Point);
             }
 
             protected override void OnFontChanged(EventArgs e)

@@ -48,7 +48,7 @@ namespace QlLabels
         {
             this.source = source;
             Text = "QL Printer Status";
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             FormBorderStyle = FormBorderStyle.FixedSingle;

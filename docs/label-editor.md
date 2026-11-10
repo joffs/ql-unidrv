@@ -11,6 +11,19 @@ screen exactly as they will print. The name is the same in German; the UI follow
 - or `QlLabelMaker.exe [file.qllabel] [--printer "name"] [--format "label format"]` (the editor's own program next to
   `QlLabelFormats.exe`; `QlLabelFormats.exe --editor ...` starts it too).
 
+**One window** (`SingleInstance.cs`, `EditorForm.SingleInstance.cs`): a second start while QL Label Maker is open (in
+this user session) hands its command line to the open window and ends; the window comes to the front (restored when
+minimised). A file opens there after the usual *Save the changes?* question (Cancel keeps the label; the same file
+already open: only to the front); `--printer`/`--format` without a file start a new label after the same question;
+without arguments only to the front. While a dialog of the window is open (Save as, Print with data, a question) or a
+print is being sent, the file waits until that is over. A local mutex `Local\QLUnidrv.LabelMaker.Instance` marks the
+open window, which listens on a named pipe of this session and user (only this user may connect; the second start
+checks that the listener is the same program in this session). An elevated window can't be reached from a normal start:
+then a second window opens, as before. The language switch lets go before it restarts. QL Label Formats works the same
+for a plain start and `--printer` (Printer setup's test print, *Save as label format*: the printer is chosen there and
+the new format added); `--apply`, `--sync`, `--plan`, `--remove-forms`, `--setup`, `--install` and Setup.exe never take
+part.
+
 It opens on the printer chosen in the label tool (else the first QL printer) and on that printer's default label
 format. On a USB printer, a new empty label switches to a format that fits the loaded roll.
 
@@ -18,11 +31,55 @@ format. On a USB printer, a new empty label switches to a format that fits the l
 
 The window has a tool palette on the left (*Text, Linie, Rahmen, Bild, Barcode*), one row with the printer, the
 label, the copies and **Print** (*Drucken*), the **Arrange toolbar** above the canvas and the settings panel, the canvas,
-and a settings panel on the right. Nothing is hidden behind an overflow arrow, also at 150 % display scaling.
+and a settings panel on the right. Nothing is hidden behind an overflow arrow from 1024 px window width, also at 150 %
+display scaling (the window opens at 1100 px; narrowed towards its 780 px minimum, the toolbar's last fields go behind
+»).
+**Drawing objects** (since 0.23; `EditorForm.Draw.cs`, `EditorCanvas.Draw.cs`):
+a click on a tool in the palette switches it on (`SelectTool`, event `ToolChanged`; one tool per window, a tab switch
+keeps it); the cursor is a crosshair and a drag on the label, or the grey area around it, draws the object with a live
+outline (a shape tool shows the shape itself: triangle, ellipse, polygon, star; the line a thin line): a line from A
+to Z, a shape, paragraph text or a code in the dragged area (a QR code square inside it), artistic text with the dragged
+height as its line (font size; under 6 pt the default size). A drawn text (artistic or paragraph, by click or drag)
+starts empty with the blinking caret, no placeholder (CorelDRAW); left empty (Esc, a click beside it, the arrow,
+another tool, a tab switch; also typed and deleted again) it goes again, without an undo step; typed in, Esc or the
+arrow ends the editing and leaves it selected. Insert (Ctrl+T, Ctrl+Shift+T, Enter on a tool) keeps the placeholder
+text, selected, as before. Choosing the arrow or another tool always ends a text's editing. A wheel zoom or scroll
+during a drag keeps its start on the label. A plain click (within the system's drag size) places the default size at
+the click point. Shift while dragging: a line horizontal, vertical or at 45°, a shape square, round or regular
+(equilateral triangle, regular polygon or star); pressing or releasing Shift during the drag switches at once, also
+without a mouse move (the outline and the status bar follow; the canvas reads the keyboard's Shift state itself, on
+every mouse move and with a short timer during the drag). Tip: in a Parallels VM on a Mac a Shift pressed during
+a drag doesn't reach Windows until another key comes; tap Ctrl once while holding Shift. A triangle, a polygon with
+an odd number of corners or a star with an odd number of points dragged upwards from its start point is drawn
+upside down (turned 180°; every shape is symmetric left to right, so a drag to the left changes nothing), as in
+PowerPoint; the outline shows it. The drawn corners and line ends snap to the label's edges, centre lines and printable area
+edges as moving does (same tolerance, the dotted guides show; with Shift only along the constrained direction, so a
+line stays level and a shape regular); Alt held is free (read live like Shift). The right mouse button during a drag
+cancels it like Esc (no object, no context menu, the tool stays on). The tool stays on for the next object; the picture tool asks for the
+file first and goes back to the arrow after one picture. With a text tool, a click on a text edits it; other tools draw
+over objects. Each drawn object is one undo step. Esc: a drag in progress ends without an object, then a text edit
+ends, then the arrow is back. Enter on a tool button, the *Insert* menu and the keys (Ctrl+T, Ctrl+L, ...) still insert
+at a free place and leave the active tool as it is.
 The toolbar (always visible) holds, from left to right: duplicate, delete; turn 90° left / right; align left, centre,
-right, top, middle, bottom; distribute horizontally / vertically; bring to front, forward, backward, to back. Each
-button's tooltip gives its name, its key and, for aligning, what it aligns with (*an der Auswahl* / *am druckbaren
-Bereich*); a button that can't do anything for the selection is greyed.
+right, top, middle, bottom; distribute horizontally / vertically; bring to front, forward, backward, to back; then the
+**text group** (`EditorForm.TextBar.cs`): **B I U** (German *F K U*) and **Invert**; align text left, centre, right,
+**justify** (*Blocksatz*); **line spacing** (an icon and a box: 1.0 / 1.15 / 1.5 / 2.0 or a value of one's own, 0.5 to
+3) and **letter spacing** (an icon and a number with arrows, pt). Each button's tooltip gives its name, its key and,
+for aligning, what it aligns with (*an der Auswahl* / *am druckbaren Bereich*); a button that can't do anything for
+the selection is greyed, nothing is hidden or moves. The text group is greyed without a single selected text; for
+artistic text the alignment and the line spacing are greyed (*nur bei Mengentext*). It stays usable while a text is
+edited (the object commands are greyed then). B, I, U, Invert and the letter spacing act on the selected characters
+while editing (nothing selected: on what is typed next), else on the whole text; a format that differs inside is
+**hatched** (tooltip *teilweise* / *partly*): the first click sets it for all, the next removes it everywhere, as in
+Word; a letter spacing that differs leaves the field blank. Alignment and line spacing always apply to the whole text.
+Inverted characters (a run's `"invert": true`) get a black band behind them, the height of their line (Word's
+shading); the whole text inverted is the object's `"invert"`: an artistic text in a black box 1 mm beyond the frame, a
+paragraph text in bands behind its lines (from 0.3 mm before the first to 0.3 mm after the last character; the bands of
+two lines meet halfway between them, at any line spacing; an empty line and the rest of the frame stay white). A run's
+`"spacing"` (pt) is its letter spacing; RTF copies and pastes them as `\expnd`/`\expndtw` and black `\chcbpat` /
+`\highlight` with white `\cf` (a dark highlight or shading pastes as inverted).
+Keys: while editing Ctrl+B/I/U and Ctrl+L/E/R/J (alignment; for artistic text they do nothing); with the text only
+selected Ctrl+Shift+F (bold: Ctrl+B adds a rectangle then), Ctrl+I, Ctrl+U and Ctrl+J. The whole bar needs about 870 px (100 %).
 
 - **Printer** and **Label** (*Drucker*, *Etikett*, top row): the label is one of your label formats (listed first) or one of Brother's
   papers that the printer's model offers.
@@ -64,10 +121,23 @@ Bereich*); a button that can't do anything for the selection is greyed.
 
 ## Objects
 
+**Text is edited on the label** (since 0.22; `EditorCanvas.Editing.cs`, `EditorForm.TextEdit.cs`, `TextEditing`): a
+double-click into a text starts editing with the caret there; F2, Enter, the panel's
+**Edit text (F2)** (*Text bearbeiten (F2)*) or typing a character on the selected text start it with the caret at the
+end; a new text from the palette is only selected (it can be moved first); typing on it, or a field inserted before any
+editing, replaces its placeholder "Text". While editing: a thin solid frame without
+handles, the status bar says "Editing text – Esc or a click beside it ends.", fields show as codes in grey chips, the
+object commands are greyed and Edit > Cut/Copy/Paste/Select all/Undo act on the characters (one undo step per editing
+session afterwards). Esc, a click beside the text or another tool ends it; a text left empty is removed. Enter: a new
+paragraph in paragraph text, the end of editing in artistic text; Tab and PgUp/PgDn do nothing. A paragraph text's
+cut-off lines show light grey below its box while editing (**View > Show overflow while editing**, *Überlauf beim
+Bearbeiten zeigen*, on by default, per user); off, the text scrolls inside the box to the caret's line. The panel has
+no text box: one hint line (*Doppelklicken Sie den Text auf dem Etikett, um ihn zu bearbeiten.*) and the button.
+
 | Insert (menu / palette) | Settings (right panel) |
 |---|---|
-| **Artistic text** (Ctrl+T, *Grafiktext*) | one line (**Kind** *Grafiktext*): the box always fits the text; drag any handle to make the text larger or smaller (in proportion, the opposite side stays), or type the size in points. Font, bold / italic / underline, **letter spacing** in points (*Zeichenabstand*, −5 to +20). **Invert** (*Invertieren*): white on a black box 1 mm larger than the text's box; the box covers what lies below and turns with the text, the selection is drawn light on it. Enter does nothing, pasted line breaks become spaces |
-| **Paragraph text** (Ctrl+Shift+T, *Mengentext*) | text over several lines in a box you set with the handles: it wraps at the box's edge at its font size, a word longer than a line breaks at characters. Line alignment, **line spacing** (*Zeilenabstand*, 0.5 to 3 × the font's), letter spacing, **Invert** as for artistic text. A text that doesn't fit is cut off at the box; on screen the box gets a red edge and the panel says so in red. **Kind** switches between the two: paragraph text becomes one line (line breaks become spaces), artistic text becomes paragraph text in a box around its text. **Words in their own format** (*Wörter mit eigenem Format*, frame only): select words in the **Text** box, then **B / I / U** above it (*F / K / U*; Ctrl+B/I/U, also Ctrl+Shift+F/K/U), **Font** or **Size** apply to them; with nothing selected B/I/U apply to what is typed next, and with the box not active the rows apply to the whole text; mixed values show blank or ■. A paste is the text only, in the format at the cursor. Switching such a paragraph text to artistic text asks first and keeps the first word's format. In the file: `"runs"` on the text object, each run with only what differs (`{"t":"M4","bold":true}`); `"text"` stays the whole text, so older versions show it in one format |
+| **Artistic text** (Ctrl+T, *Grafiktext*) | one line (**Kind** *Grafiktext*): the box always fits the text; drag any handle to make the text larger or smaller (in proportion, the opposite side stays), or type the size in points. Font and size in the panel; bold / italic / underline, **Invert** and **letter spacing** in points (*Zeichenabstand*, −5 to +20) in the toolbar's text group, for the whole text or the selected characters. **Invert** (*Invertieren*) on the whole text: white on a black box 1 mm larger than the text's box; the box covers what lies below and turns with the text, the selection is drawn light on it. On selected characters: white on a black band as high as their line. Enter does nothing, pasted line breaks become spaces |
+| **Paragraph text** (Ctrl+Shift+T, *Mengentext*) | text over several lines in a box you set with the handles: it wraps at the box's edge at its font size, a word longer than a line breaks at characters. Line alignment left, centre, right or **justify** (*Blocksatz*: the spaces of a wrapped line widen so that it reaches both edges of the box; the last line of a paragraph, and a line of one word, stay left, as in Word; drawn, edited and printed alike, `EditorRender.Gap`), **line spacing** (*Zeilenabstand*, 0.5 to 3 × the font's), letter spacing, **Invert** as for artistic text (but the whole text inverted gets a black band behind each line, no box over the frame): all in the toolbar's text group. In the file `"align": "justify"`; RTF `\qj` pastes as justify. A text that doesn't fit is cut off at the box; on screen the box gets a red edge and the panel says so in red. **Kind** switches between the two: paragraph text becomes one line (line breaks become spaces), artistic text becomes paragraph text in a box around its text. **Words in their own format** (*Wörter mit eigenem Format*, artistic and paragraph text): select words while editing on the label, then Ctrl+B/I/U (also Ctrl+Shift+F/K/U) or the toolbar's **B / I / U**, the panel's **Font** or **Size** apply to them; with nothing selected they apply to what is typed next, and when the text isn't being edited they apply to the whole text; mixed values show blank (font, size) or hatched (B, I, U). A paste from Word or WordPad (RTF) keeps its formats, plain text takes the format at the cursor; in artistic text line breaks become spaces. **Kind** keeps the words' formats both ways (line breaks become spaces); the handles of an artistic text scale every word's size in proportion. In the file: `"runs"` on the text object, each run with only what differs (`{"t":"M4","bold":true}`); `"text"` stays the whole text, so older versions show it in one format |
 | **Line** (Ctrl+L) | line width, **angle** (*Winkel*, 0–180°, 0° level) and **length** (*Länge*); typed values keep the left end (a vertical line: the lower end); drag an end to move it (Shift: horizontal or vertical) |
 | **Box** (Ctrl+B) | line width, filled, ellipse |
 | **Picture** (Ctrl+I) | **Dither** for photos and shades, or **Threshold** (slider) for logos and drawings; **Invert**; *Replace...*, *Original proportions*, *Fit to label* (as large as the printable area, in proportion, centred; also in the object menu, for several selected pictures together; `EditorForm.Fit.cs`). Transparent parts print white. Files: PNG, JPG, BMP, GIF, TIFF, WebP, HEIC/HEIF, a PDF's first page, **SVG**: kept as a vector (`SvgPicture.cs`, Windows' own Direct2D SVG renderer, no DLL) and drawn at the printer's dots for the picture's size, so it stays sharp at any size; the stored 2000-px PNG is only the editor's draft. The file is cleaned on insert and on open (no DTD, scripts, event attributes or references to other files or the web; only `#id` and embedded `data:image/` pictures). CSS in `<style>` (Illustrator and others keep their colours there) becomes the elements' attributes on insert and on open (selectors: element, `.class`, `#id`, combinations such as `path.cls-1`, and lists of those; CSS's order, `style="..."` wins); other selectors and `@media` stay unapplied. Text becomes paths of the installed fonts on insert and on open, as a drawing program's "object to path" does (`SvgPicture.TextToPaths`: x/y, font-family with fallbacks, size, weight, style, text-anchor, letter-spacing; a missing font is replaced by a substitute, and the panel says "This picture prints with a substitute font.", its (i) naming the font); text along a path, vertical text and per-letter positions stay text. Direct2D doesn't draw such text, filters or masks; while such an SVG is selected the panel says so in one plain line ("Parts of this picture can't be printed – tip: insert it as a PNG."), its (i) names what is missing in plain words and how to print it all (`SvgPicture.Missing`) |
@@ -134,8 +204,8 @@ EMF and the bitmaps, because Word offers its text as an EMF too (dropped files s
 (`RtfRuns.cs`, no RichTextBox): font table (names, `\fcharset`/`\cpg` code pages), `\f`, `\fs` (half points), `\b`,
 `\i`, `\ul` and its kinds (`\ulc` is a colour), `\plain`, `\v` (hidden, left out), `\par`/`\line` ("\n"), `\tab`,
 `\cell`/`\row`, `\ql`/`\qc`/`\qr` (used when every paragraph has the same, else left), `\'hh`, `\uN` with `\uc`.
-One text object: `SetRuns` makes the most frequent format the object's own; a text frame for several lines or several
-formats, else a single-line text. Colours, spacing and lists are dropped; a missing font gets Segoe UI and the status
+One text object: `SetRuns` makes the most frequent format the object's own; a text frame for several lines, else a
+single-line text (other formats are its runs in both). Colours, spacing and lists are dropped; a missing font gets Segoe UI and the status
 bar names it. Line breaks in pasted runs are "\n" (EMF text too), as the text box writes them. HTML, URLs, PDF, OLE and program-native formats are never
 used; all formats are read as bytes through COM (never WinForms' GetData, which would deserialize .NET objects). An EMF
 picture stays a vector like SVG (file key `emf`, base64; `EmfPicture.Check` on paste and on open: header, record sizes,
@@ -156,8 +226,8 @@ transforms, SaveDC/RestoreDC, ExtCreateFontIndirectW + SelectObject, SetTextAlig
 the width. The font size is lfHeight through the transforms to mm, then points (a positive lfHeight is a cell height:
 scaled by the font's em/cell ratio). Runs on one baseline next to each other make a line (a space where the gap is a
 word's); lines a line pitch apart with a common left edge, centre or right edge make a paragraph, which becomes one
-text frame with that alignment (one line in one format: a single-line text); other fonts, sizes or styles inside become
-its runs (`TextObject.SetRuns`), and then it is a text frame even on one line (a single-line text has one format). Turned text (escapement or world transform) keeps its angle. A font that isn't installed is
+text frame with that alignment (one line: a single-line text); other fonts, sizes or styles inside become
+its runs (`TextObject.SetRuns`), in both kinds. Turned text (escapement or world transform) keeps its angle. A font that isn't installed is
 replaced by Segoe UI and the status bar names it. CorelDRAW sets a 0.01 mm page, then resets it to 1:1 before its
 text but keeps the text's size and place in 0.01 mm, so Windows draws that text far outside the picture (a whole
 label pasted as a picture lost all its text). A run outside the frame that the mapping from before the first SaveDC
@@ -187,6 +257,14 @@ a format or paper with the same paper and length, and says so. Files from a newe
 it doesn't know are left out (with a note), unknown settings are kept when saving. The file carries a format version
 (`"version": 1` = the format of 0.18, the base); a later version that changes the format raises it and converts older
 files on opening.
+
+**File > Recent labels** (*Zuletzt geöffnet*, `EditorForm.Recent.cs`, `RecentLabels.cs`): the last 15 labels opened
+or saved, the newest first, the digits 1-9 as access keys, the folder grey beside the name (labels of the same name
+differ there). The x on the marked entry (mouse) or Del removes one and the menu stays open; *Clear list...* asks
+first. A missing local file is grey with "not found" when the menu opens and a click asks whether to remove it; a
+network folder (UNC or mapped drive) is looked at only on a click, so the menu never waits for a server, and "folder
+not reachable" offers *Retry* and removes nothing by itself. Stored per user in `HKCU\Software\QLUnidrv\LabelMaker`
+(value `RecentLabels`), no file; uninstalling removes it with the other settings. No Windows jump list.
 
 ## Limits
 

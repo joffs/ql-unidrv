@@ -12,7 +12,7 @@
     LICENSE, THIRD-PARTY-NOTICES.txt - all a user sees at the top (users take the setup window)
     advanced\driver\   setup.ps1 (tools\release), install.ps1, bind-device.ps1, package.ps1, check-signing.ps1
     advanced\out\package\   the staged, unsigned package (package.ps1 -Stage)
-    advanced\out\tools\     QlLabelFormats.exe, QlLabelMaker.exe, QlPrinterStatus.exe (+ .config each), qlunidrv.ico,
+    advanced\out\tools\     QlLabelFormats.exe, QlLabelMaker.exe, QlPrinterStatus.exe, QlLabelPrint.exe (+ .config each), qlunidrv.ico,
                             qllabel.ico, built with QL_RELEASE=1 (Brother's factory list never embedded),
                             help\ (the help pages; Setup.exe opens them from here too)
     advanced\labels\default-labels.json, default-labels-en.json, default-labels-en-us.json (the seeds: German, UK, US)
@@ -72,7 +72,7 @@ try {
     if ($LASTEXITCODE) { throw "labeltool\build.cmd failed." }
 } finally { Remove-Item Env:QL_RELEASE, Env:QL_TOOLS_OUT -ErrorAction SilentlyContinue }
 # The programs are built from the same sources, so each one is checked.
-foreach ($name in "QlLabelFormats.exe", "QlLabelMaker.exe", "QlPrinterStatus.exe", "Setup.exe") {
+foreach ($name in "QlLabelFormats.exe", "QlLabelMaker.exe", "QlPrinterStatus.exe", "QlLabelPrint.exe", "Setup.exe") {
     $exe = [IO.File]::ReadAllBytes((Join-Path $tools $name))
     if ([Text.Encoding]::ASCII.GetString($exe).Contains("bsq80V.ORG")) { throw "$name contains Brother's factory list; not releasable." }
     $product = (Get-Item (Join-Path $tools $name)).VersionInfo.ProductVersion

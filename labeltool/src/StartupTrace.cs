@@ -36,6 +36,16 @@ namespace QlLabels
             lock (gate) lines.Add(ms.ToString("0").PadLeft(7) + " ms  " + (thread != 1 ? "[thread " + thread + "] " : "") + phase);
         }
 
+        // Traced only: the window font made here (UiFont: a private collection, milliseconds; with QL_UIFONT=off GDI+'s
+        // table of every installed font, seconds with many fonts after a restart), so the trace shows that time on its
+        // own instead of inside the window's constructor. Off it does nothing.
+        public static void MarkFonts()
+        {
+            if (!On) return;
+            using (UiFont.MessageBox) { }
+            Mark("fonts: window font");
+        }
+
         // Writes the list once the first window has shown and the message loop is idle (call from Shown).
         public static void WhenIdle()
         {

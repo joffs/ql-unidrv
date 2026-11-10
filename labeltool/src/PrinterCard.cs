@@ -380,7 +380,7 @@ namespace QlLabels
                     using (var white = new SolidBrush(Theme.Fixed.StateSymbol)) g.FillEllipse(white, cx - w * 0.6f, dotY, w * 1.2f, w * 1.2f);
                     return;
                 }
-                using (var f = new Font("Segoe UI", badge.Height * 0.36f, FontStyle.Bold, GraphicsUnit.Pixel))
+                using (var f = UiFont.Create("Segoe UI", badge.Height * 0.36f, FontStyle.Bold, GraphicsUnit.Pixel))
                 {
                     var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                     using (var white = new SolidBrush(Theme.Fixed.StateSymbol)) g.DrawString(glyph, f, white, r, sf);

@@ -149,7 +149,8 @@ namespace QlLabels
         {
             object v;
             if (!d.TryGetValue(key, out v) || v == null) return fallback;
-            try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); }
+            // a text such as "NaN" or "Infinity" (a hand-edited file) is no number either: NaN would get past every clamp
+            try { double x = Convert.ToDouble(v, CultureInfo.InvariantCulture); return double.IsNaN(x) || double.IsInfinity(x) ? fallback : x; }
             catch (Exception) { return fallback; }
         }
         internal static string Str(Dictionary<string, object> d, string key, string fallback)
@@ -253,7 +254,13 @@ namespace QlLabels
 
         public static LabelDoc FromJson(string json)
         {
-            var d = new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(json) as Dictionary<string, object>;
+            // The JSON reader's own errors (ArgumentException, InvalidOperationException, FormatException for a bad \u
+            // escape: parser_fuzz) mean a damaged file, as a file that isn't a label (QlLabelPrint, the editor's Open).
+            Dictionary<string, object> d;
+            try { d = new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(json) as Dictionary<string, object>; }
+            catch (ArgumentException e) { throw new InvalidDataException(Lang.T("Not a QL label file."), e); }
+            catch (InvalidOperationException e) { throw new InvalidDataException(Lang.T("Not a QL label file."), e); }
+            catch (FormatException e) { throw new InvalidDataException(Lang.T("Not a QL label file."), e); }
             if (d == null || LabelObject.Str(d, "format", "") != "QL label") throw new InvalidDataException(Lang.T("Not a QL label file."));
             var doc = new LabelDoc();
             doc.extra = new Dictionary<string, object>(d);
@@ -327,5 +334,19 @@ namespace QlLabels
         }
 
         public void Clear() { undo.Clear(); redo.Clear(); }
+
+        // The last step taken back without a redo (its change was undone by hand: a drawn text never typed in).
+        public void DropLast() { if (undo.Count > 0) undo.RemoveAt(undo.Count - 1); }
+
+        // The last step, as a mark for StepsAfter (null: none).
+        public object Top { get { return undo.Count > 0 ? undo[undo.Count - 1] : null; } }
+
+        // How many steps were taken after the marked one; -1: it is no longer there (undone, or dropped at Max).
+        public int StepsAfter(object mark)
+        {
+            for (int i = undo.Count - 1; i >= 0; i--)
+                if (ReferenceEquals(undo[i], mark)) return undo.Count - 1 - i;
+            return -1;
+        }
     }
 }

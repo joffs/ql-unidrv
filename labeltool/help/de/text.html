@@ -23,18 +23,46 @@
     <span class="eyebrow">Objekte</span>
     <h1>Grafiktext und Mengentext</h1>
     <p class="lead">Ein Text ist entweder ein Grafiktext (eine Zeile, der Rahmen folgt dem Text) oder ein Mengentext
-      (mehrere Zeilen, die in ihrem Rahmen umbrechen). Alles Weitere stellen Sie rechts bei den Einstellungen ein.</p>
+      (mehrere Zeilen, die in ihrem Rahmen umbrechen). Sie schreiben direkt auf dem Etikett und sehen dabei, was gedruckt
+      wird. Alles Weitere stellen Sie rechts bei den Einstellungen ein.</p>
   </header>
 
   <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="edit-on-the-label">Auf dem Etikett schreiben</h2>
+        <p>Doppelklicken Sie einen Text, um ihn zu bearbeiten: Die Schreibmarke steht an der Stelle des Doppelklicks.
+          Ist der Text ausgewählt, funktionieren auch <kbd>F2</kbd>, die Eingabetaste, <span class="ui">Text bearbeiten
+          (F2)</span> rechts oder einfach Lostippen; die Schreibmarke steht dann am Ende. Ein neuer Text ist zuerst nur
+          ausgewählt, so können Sie ihn an seinen Platz schieben; tippen Sie dann los, ersetzt das den Platzhalter „Text“.</p>
+        <figure class="frame" style="max-width:363px"><img src="../img/de/text-panel.png" width="343" height="225" alt="Einstellungen eines Grafiktexts: Hinweis „Doppelklicken Sie den Text auf dem Etikett, um ihn zu bearbeiten.“, Text bearbeiten (F2), Feld einfügen, Art, Schriftart, Größe"></figure>
+        <p>Beim Bearbeiten hat der Text einen dünnen Rahmen ohne Anfasser; verschieben und vergrößern können Sie ihn erst
+          danach. Die Statusleiste sagt „Text bearbeiten – Esc oder ein Klick daneben beendet.“ <kbd>Esc</kbd>, ein Klick
+          neben den Text oder ein anderes Werkzeug beendet das Bearbeiten, die Änderungen bleiben. Ein Text, der dabei
+          leer geworden ist, wird entfernt.</p>
+        <p>Felder wie <code>{date}</code> zeigen beim Bearbeiten ihren Code in einem hellgrauen Kasten, danach wieder ihren
+          Wert. <span class="path">Bearbeiten &gt; Rückgängig</span> nimmt beim Bearbeiten den letzten Schritt zurück
+          (ein Wort, ein Format, ein Einfügen), danach das ganze Bearbeiten auf einmal.</p>
+      </div>
+      <aside class="keys" aria-label="Tasten">
+        <span class="h">Tasten</span>
+        <div><span><kbd>F2</kbd> oder Eingabetaste</span><span>ausgewählten Text bearbeiten</span></div>
+        <div><span><kbd>Esc</kbd></span><span>Bearbeiten beenden</span></div>
+        <div><span>Pfeiltasten, <kbd>Pos1</kbd>, <kbd>Ende</kbd></span><span>Schreibmarke bewegen; mit <kbd>Strg</kbd> wortweise bzw. an Anfang oder Ende des Texts</span></div>
+        <div><span><kbd>Umschalt</kbd> + Pfeiltasten</span><span>markieren</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>A</kbd></span><span>den ganzen Text markieren</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>Rücktaste</kbd> / <kbd>Entf</kbd></span><span>Wort löschen</span></div>
+        <div><span>Doppel-/Dreifachklick</span><span>Wort / Absatz markieren</span></div>
+      </aside>
+    </li>
+
     <li>
       <div class="step">
         <h2 id="single-line">Grafiktext</h2>
         <p>Werkzeug <span class="ui">Grafiktext</span> oder <span class="path">Einfügen &gt; Grafiktext</span>. Der Rahmen passt sich
           immer dem Text an. Ziehen Sie an einem Anfasser, um den Text zu vergrößern oder zu verkleinern; die
           gegenüberliegende Seite bleibt dabei stehen. Oder tippen Sie die <span class="ui">Größe (pt)</span> ein.</p>
-        <p>Die Eingabetaste bewirkt hier nichts; eingefügte Zeilenumbrüche werden zu Leerzeichen.</p>
-        <figure class="frame" style="max-width:340px"><img src="../img/de/text-panel.png" width="230" height="173" alt="Einstellungen eines Grafiktexts: Text, Feld einfügen, Art Grafiktext, Schriftart, Größe, Fett, Kursiv, Unterstrichen"></figure>
+        <p>Die Eingabetaste beendet hier das Bearbeiten; eingefügte Zeilenumbrüche werden zu Leerzeichen.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
@@ -48,35 +76,52 @@
         <p>Werkzeug <span class="ui">Mengentext</span> oder <span class="path">Einfügen &gt; Mengentext</span>. Den Rahmen legen Sie mit den Anfassern fest; der Text bricht
           an seinem Rand in seiner Schriftgröße um. Ein Wort, das länger als eine Zeile ist, wird zwischen Buchstaben
           getrennt.</p>
-        <p>Dazu kommen die Ausrichtung der Zeilen (<span class="ui">Links</span>, <span class="ui">Zentriert</span>,
-          <span class="ui">Rechts</span>) und der <span class="ui">Zeilenabstand</span> (0,5- bis 3-fach).</p>
+        <p>Oben in der Symbolleiste richten Sie die Zeilen aus (<span class="ui">Linksbündig</span>,
+          <span class="ui">Zentriert</span>, <span class="ui">Rechtsbündig</span>, <span class="ui">Blocksatz</span>) und wählen
+          den <span class="ui">Zeilenabstand</span>: 1,0, 1,15, 1,5, 2,0 oder einen eigenen Wert von 0,5 bis 3. Im Blocksatz
+          reichen die umbrochenen Zeilen bis an beide Ränder des Rahmens; die letzte Zeile eines Absatzes bleibt
+          linksbündig, wie in Word.</p>
+        <p>Die Eingabetaste beginnt einen neuen Absatz.</p>
         <p>Passt der Text nicht in den Rahmen, wird er am Rahmen abgeschnitten. Der Rahmen bekommt dann auf dem
-          Bildschirm einen roten Rand, und rechts steht ein roter Hinweis.</p>
+          Bildschirm einen roten Rand, und rechts steht ein roter Hinweis. Beim Bearbeiten erscheinen die abgeschnittenen
+          Zeilen hellgrau unter dem Rahmen, damit Sie sehen, was Sie dort tippen; gedruckt werden sie nicht.</p>
+        <figure class="frame" style="max-width:450px"><img src="../img/de/text-overflow.png" width="430" height="100" alt="Ein Mengentext beim Bearbeiten mit rotem Rahmen; die Zeile, die nicht hineinpasst, steht hellgrau darunter"></figure>
+        <p>Mit <span class="path">Ansicht &gt; Überlauf beim Bearbeiten zeigen</span> schalten Sie das aus: Dann rollt
+          der Text im Rahmen zur Zeile der Schreibmarke.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
         <div><span><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>T</kbd></span><span>Mengentext einfügen</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>L</kbd> / <kbd>E</kbd> / <kbd>R</kbd> / <kbd>J</kbd></span><span>beim Bearbeiten: linksbündig, zentriert, rechtsbündig, Blocksatz</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>J</kbd></span><span>Blocksatz, auch wenn der Text nur markiert ist</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
         <h2 id="word-formats">Wörter mit eigenem Format</h2>
-        <p>In einem Mengentext können einzelne Wörter fett, kursiv, unterstrichen oder in einer anderen Schrift oder Größe
-          sein. Markieren Sie sie im Feld <span class="ui">Text</span> und klicken Sie darüber auf <span class="ui">F</span>,
-          <span class="ui">K</span> oder <span class="ui">U</span>, oder ändern Sie <span class="ui">Schriftart</span> und
-          <span class="ui">Größe (pt)</span>. Eine Zeile unter dem Feld sagt, wofür die Einstellungen gelten.</p>
-        <figure class="frame" style="max-width:348px"><img src="../img/de/text-runs-panel.png" width="328" height="320" alt="Einstellungen eines Mengentexts: über dem Textfeld F, K und U; im Feld M4 × 20 fett, verzinkt kursiv, Fach 12 unterstrichen"></figure>
-        <p>Ohne Markierung gelten <span class="ui">F</span>, <span class="ui">K</span> und <span class="ui">U</span> für das,
-          was Sie als Nächstes tippen. Ist das Textfeld nicht aktiv, gelten die Einstellungen für den ganzen Text. Wo sich
-          die markierten Wörter unterscheiden, bleibt die Einstellung leer oder zeigt ■.</p>
-        <p>Eingefügter Text bekommt das Format an der Schreibmarke. Ein Grafiktext hat ein Format für den ganzen Text: Wer
-          einen Mengentext mit Wortformaten dorthin umstellt, wird vorher gefragt; der Text behält das Format des ersten
-          Worts.</p>
+        <p>In Grafiktext und Mengentext können einzelne Wörter fett, kursiv, unterstrichen, weiß auf schwarz, gesperrt
+          oder in einer anderen Schrift oder Größe sein. Markieren Sie sie beim Bearbeiten auf dem Etikett und drücken Sie
+          <kbd>Strg</kbd> + <kbd>B</kbd>, <kbd>I</kbd> oder <kbd>U</kbd>, oder klicken Sie oben in der Symbolleiste auf
+          <span class="ui">F</span>, <span class="ui">K</span>, <span class="ui">U</span> oder
+          <span class="ui">Invertieren</span>, oder ändern Sie dort den <span class="ui">Zeichenabstand (pt)</span>.
+          <span class="ui">Schriftart</span> und <span class="ui">Größe (pt)</span> ändern Sie rechts; eine Zeile dort
+          sagt, wofür sie gelten.</p>
+        <figure class="frame" style="max-width:408px"><img src="../img/de/text-toolbar.png" width="388" height="28" alt="Die Textgruppe der Symbolleiste: F, K (gedrückt), U, Invertieren, Linksbündig (gedrückt), Zentriert, Rechtsbündig, Blocksatz, Zeilenabstand 1,0 und Zeichenabstand 0,0"></figure>
+        <figure class="frame" style="max-width:450px"><img src="../img/de/text-edit-canvas.png" width="430" height="160" alt="Ein Mengentext beim Bearbeiten: M4 × 20 fett, die Schreibmarke im Text"></figure>
+        <p>Ohne Markierung gelten die Formate für das, was Sie als Nächstes tippen. Wird der Text nicht bearbeitet,
+          gelten die Knöpfe und Einstellungen für den ganzen Text. Wo sich die markierten Wörter unterscheiden, bleiben
+          Schriftart, Größe und Zeichenabstand leer, und <span class="ui">F</span>, <span class="ui">K</span>,
+          <span class="ui">U</span> oder <span class="ui">Invertieren</span> sind schraffiert (teilweise). Ein Klick darauf formatiert die ganze Markierung, der nächste nimmt das Format
+          überall wieder weg.</p>
+        <p>Text aus Word oder WordPad behält beim Einfügen seine Formate; reiner Text bekommt das Format an der
+          Schreibmarke. Ein Grafiktext bleibt eine Zeile: Eingefügte Zeilenumbrüche werden zu Leerzeichen. Die Anfasser
+          eines Grafiktexts vergrößern oder verkleinern alle Wörter im gleichen Verhältnis. <span class="ui">Art</span>
+          behält die Formate der Wörter in beide Richtungen.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
         <span class="h">Tasten</span>
-        <div><span><kbd>Strg</kbd> + <kbd>B</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>F</kbd></span><span>fett</span></div>
+        <div><span><kbd>Strg</kbd> + <kbd>B</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>F</kbd></span><span>fett (ist der Text nur markiert: <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>F</kbd>, denn <kbd>Strg</kbd> + <kbd>B</kbd> fügt dann ein Rechteck ein)</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>I</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>K</kbd></span><span>kursiv</span></div>
         <div><span><kbd>Strg</kbd> + <kbd>U</kbd> oder <kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>U</kbd></span><span>unterstrichen</span></div>
       </aside>
@@ -94,18 +139,21 @@
     <li>
       <div class="step">
         <h2 id="font">Schrift</h2>
-        <p><span class="ui">Schriftart</span>, <span class="ui">Größe (pt)</span>, <span class="ui">Fett</span>,
-          <span class="ui">Kursiv</span>, <span class="ui">Unterstrichen</span> und <span class="ui">Zeichenabstand
-          (pt)</span> von −5 bis +20 gelten für beide Arten. <span class="ui">Invertieren</span> druckt den Text weiß auf
-          schwarz: <a href="invert.html">Weiß auf Schwarz</a>.</p>
+        <p><span class="ui">Schriftart</span> und <span class="ui">Größe (pt)</span> stehen rechts. Oben in der
+          Symbolleiste stehen <span class="ui">F</span>, <span class="ui">K</span>, <span class="ui">U</span>,
+          <span class="ui">Invertieren</span> und der <span class="ui">Zeichenabstand (pt)</span> von −5 bis +20; sie
+          gelten für beide Arten, beim Bearbeiten für die markierten Zeichen. <span class="ui">Invertieren</span> druckt den Text weiß auf schwarz:
+          <a href="invert.html">Weiß auf Schwarz</a>.</p>
+        <p>Ohne ausgewählten Text sind die Knöpfe grau. Beim Grafiktext sind Ausrichtung und Zeilenabstand grau, denn er
+          ist einzeilig. Fährt die Maus über einen Knopf, nennt er seine Taste.</p>
       </div>
     </li>
 
     <li>
       <div class="step">
         <h2 id="date-and-time">Datum und Uhrzeit</h2>
-        <p><span class="ui">Feld einfügen ▾</span> unter dem Text fügt ein Feld ein, das beim Anzeigen und Drucken
-          ausgefüllt wird:</p>
+        <p><span class="ui">Feld einfügen ▾</span> fügt an der Schreibmarke ein Feld ein (wird der Text nicht
+          bearbeitet, an seinem Ende), das beim Anzeigen und Drucken ausgefüllt wird:</p>
         <dl class="terms">
           <dt><code>{date}</code></dt><dd>das heutige Datum</dd>
           <dt><code>{date+30}</code></dt><dd>das Datum in 30 Tagen; <code>{date-1}</code> ist gestern</dd>

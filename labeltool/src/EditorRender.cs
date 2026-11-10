@@ -411,8 +411,9 @@ namespace QlLabels
                 if (text != null)
                 {
                     // inverted: a black box over whatever lies below, the text white in it
-                    if (text.Invert) g.FillRectangle(Brushes.Black, RectangleF.Inflate(box, InvertPad, InvertPad));
-                    DrawText(g, text, box, now, text.Invert ? Brushes.White : Brushes.Black);
+                    // (a paragraph text: bands behind its lines, DrawText)
+                    if (text.InvertBox) g.FillRectangle(Brushes.Black, RectangleF.Inflate(box, InvertPad, InvertPad));
+                    DrawText(g, text, box, now, text.InvertBox ? Brushes.White : Brushes.Black);
                 }
                 else if (line != null)
                 {

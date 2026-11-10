@@ -12,8 +12,7 @@ namespace QlLabels
 {
     static partial class Lang
     {
-        static readonly Dictionary<string, string> De = Merge(SharedTexts(), FormatsTexts(), SetupTexts(), EditorTexts());
-
+        static readonly Dictionary<string, string> De = Merge(SharedTexts(), FormatsTexts(), SetupTexts(), EditorTexts(), PrintDataTexts(), PrintCliTexts(), RecentTexts(), TabsTexts(), EditorTabsTexts(), DrawTexts());
         static Dictionary<string, string> Merge(params Dictionary<string, string>[] parts)
         {
             var all = new Dictionary<string, string>();

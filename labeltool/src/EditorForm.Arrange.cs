@@ -34,6 +34,7 @@ namespace QlLabels
                 button(Layer.ToFront, () => Order(Layer.ToFront)), button(Layer.Forward, () => Order(Layer.Forward)),
                 button(Layer.Backward, () => Order(Layer.Backward)), button(Layer.ToBack, () => Order(Layer.ToBack)),
             });
+            arrangeBar.Items.AddRange(BuildTextBar().ToArray());   // the text group (EditorForm.TextBar.cs)
             SizeArrangeBar();
             return arrangeBar;
         }
@@ -46,7 +47,7 @@ namespace QlLabels
             arrangeBar.Padding = new Padding(S(4), S(2), S(4), S(2));
             foreach (ToolStripItem item in arrangeBar.Items)
             {
-                if (item.Tag == null) continue;
+                if (!(item.Tag is ArrangeIcon) && !(item.Tag is Layer)) continue;   // the text group: SizeTextBar
                 var bmp = new Bitmap(n, n);
                 using (var g = Graphics.FromImage(bmp))
                 {
@@ -59,6 +60,7 @@ namespace QlLabels
                 if (old != null) old.Dispose();
                 item.Padding = new Padding(S(3));
             }
+            SizeTextBar(n);
             // the panel's rotate buttons: the same icons at the same size
             foreach (var t in turnButtons)
             {
@@ -114,6 +116,8 @@ namespace QlLabels
                 }
                 item.AccessibleName = item.ToolTipText;   // the buttons show only icons: screen readers read the tip
             }
+            LockObjectItems(arrangeBar.Items);   // greyed while a text is edited
+            UpdateTextBar();                     // ... but not the text group (EditorForm.TextBar.cs)
         }
 
         static void Aligner(ToolStripItem item, int n, string name, string with)
@@ -144,6 +148,7 @@ namespace QlLabels
             printerBox.SelectedIndexChanged += delegate
             {
                 if (loading || printerBox.SelectedItem == null) return;
+                QlPrinters.Remember(printerBox.SelectedItem.ToString());   // the next start shows it (also QL Label Formats)
                 ChangePrinter(printerBox.SelectedItem.ToString());
                 CheckRoll();
             };
@@ -164,10 +169,25 @@ namespace QlLabels
             printButton.Text = Lang.T("Print");
             printButton.Font = new Font(Font, FontStyle.Bold);
             printButton.Padding = new Padding(S(10), S(1), S(10), S(1));
-            printButton.Anchor = AnchorStyles.Left;
-            printButton.Margin = new Padding(S(8), 0, 0, 0);
+            printButton.Margin = Padding.Empty;
             Theme.Primary(printButton);
             printButton.Click += delegate { Print(); };
+            // A split button: Print as before, its ▾ part opens Print and Print with data... (the File menu's commands).
+            printMoreButton.Text = "▾";
+            printMoreButton.Font = printButton.Font;
+            printMoreButton.Padding = new Padding(S(3), S(1), S(3), S(1));
+            printMoreButton.Margin = Padding.Empty;
+            printMoreButton.Anchor = AnchorStyles.Top | AnchorStyles.Bottom;   // as high as Print
+            printMoreButton.AccessibleName = Lang.T("More ways to print");
+            tips.SetToolTip(printMoreButton, Lang.T("More ways to print"));
+            Theme.Primary(printMoreButton);
+            printMenu.Items.Add(new ToolStripMenuItem(Lang.T("&Print"), null, delegate { Print(); }) { ShortcutKeyDisplayString = KeyText(Keys.Control | Keys.P) });
+            printMenu.Items.Add(new ToolStripMenuItem(Lang.T("Print with &data..."), null, delegate { PrintWithData(); }) { ShortcutKeyDisplayString = KeyText(PrintWithDataKeys) });
+            printMoreButton.Click += delegate { printMenu.Show(printButton, 0, printButton.Height); };
+            var printPair = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = Padding.Empty,
+                                                  Margin = new Padding(S(8), 0, 0, 0), Anchor = AnchorStyles.Left };
+            printPair.Controls.Add(printButton);
+            printPair.Controls.Add(printMoreButton);
 
             printerCaption = caption(Lang.T("Printer:"));
             row.Controls.Add(printerCaption, 0, 0);
@@ -176,7 +196,7 @@ namespace QlLabels
             row.Controls.Add(labelBox, 3, 0);
             row.Controls.Add(caption(Lang.T("Copies:")), 5, 0);
             row.Controls.Add(copies, 6, 0);
-            row.Controls.Add(printButton, 7, 0);
+            row.Controls.Add(printPair, 7, 0);
             commandRow = row;
             return row;
         }
@@ -316,6 +336,8 @@ namespace QlLabels
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (TabKey(keyData)) return true;   // Ctrl+Tab, Ctrl+Shift+Tab: EditorForm.Tabs.cs
+            if (TextEditingKey(keyData)) return true;   // EditorForm.TextEdit.cs
             // Ctrl + the number pad's + and − zoom too.
             if (keyData == (Keys.Control | Keys.Add) || keyData == (Keys.Control | Keys.Subtract))
             {
@@ -362,7 +384,13 @@ namespace QlLabels
 
         void OnCanvasKey(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape) { canvas.Selected = null; e.Handled = true; return; }
+            if (e.KeyCode == Keys.Escape)
+            {
+                // a drag in progress first (text editing ended before: ProcessCmdKey), then back to the arrow
+                if (!canvas.CancelDraw()) { if (activeTool != null) SelectTool(null); else canvas.Selected = null; }
+                e.Handled = true;
+                return;
+            }
             if (canvas.Selection.Count == 0) return;
             if (e.KeyCode == Keys.Delete) { Delete(); e.Handled = true; return; }
             if (e.KeyCode == Keys.Apps || (e.KeyCode == Keys.F10 && e.Shift))

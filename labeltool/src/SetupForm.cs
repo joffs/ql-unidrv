@@ -75,7 +75,7 @@ namespace QlLabels
             Text = Lang.T("QL Printer Setup");
             Theme.Use(this);
             HelpPages.F1(this, HelpPages.Setup);
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -475,7 +475,7 @@ namespace QlLabels
             var rule = Theme.Back(new Panel { Height = 1, Width = width, Margin = new Padding(0, 0, 0, em / 2) }, Role.SurfaceLine);
             rules.Add(rule);
             section.Controls.Add(rule);
-            var heading = new Label { Text = text, AutoSize = true, Font = new Font(SystemFonts.MessageBoxFont, FontStyle.Bold), Margin = new Padding(0, 0, 0, em / 3) };
+            var heading = new Label { Text = text, AutoSize = true, Font = new Font(UiFont.MessageBox, FontStyle.Bold), Margin = new Padding(0, 0, 0, em / 3) };
             Theme.Fore(heading, Role.Heading);
             section.Controls.Add(heading);
             inner = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };

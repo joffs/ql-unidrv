@@ -30,10 +30,20 @@ namespace QlLabels
 {
     static class Program
     {
+        public const string AppId = "LabelFormats";   // SingleInstance: one window per user session
+
+        // The starts that are the QL Label Formats window (and so hand over to a running one): none, or --printer (Printer
+        // setup's test print, QL Label Maker). Never Setup.exe, --install, --setup or a command mode (--apply, --sync, ...).
+        internal static bool IsWindowStart(string[] args, bool setupExe)
+        {
+            return !setupExe && (args.Length == 0 || (args[0] == "--printer" && args.Length > 1));
+        }
+
         [STAThread]
         static int Main(string[] args)
         {
             StartupTrace.Mark("main");
+            UiFont.UseForWindows();   // window fonts without GDI+'s table of every installed font (seconds after a restart)
             // The release zip's Setup.exe is this exe: started without arguments it is the setup window.
             bool setupExe = string.Equals(Path.GetFileNameWithoutExtension(Application.ExecutablePath), "Setup", StringComparison.OrdinalIgnoreCase);
             if ((args.Length == 0 && setupExe) || (args.Length > 0 && args[0] == "--install"))
@@ -51,11 +61,15 @@ namespace QlLabels
                 InstallForm.Uninstall(args);
                 return 0;
             }
+            if (IsWindowStart(args, setupExe) && SingleInstance.HandOff(AppId, args)) return 0;   // a QL Label Formats window is open
             if (args.Length == 0)
             {
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+                StartupTrace.Mark("visual styles");
+                StartupTrace.MarkFonts();
                 var form = new MainForm();
+                SingleInstance.Serve(form, form.StartedAgain);
                 StartupTrace.Mark("window built");
                 Application.Run(form);
                 return 0;
@@ -71,6 +85,7 @@ namespace QlLabels
                 int paperId, length01;
                 if (args.Length > 4 && args[2] == "--new-format" && int.TryParse(args[3], out paperId) && int.TryParse(args[4], out length01))
                     main.Shown += delegate { main.NewFormat(paperId, length01 / 10.0); };
+                SingleInstance.Serve(main, main.StartedAgain);
                 Application.Run(main);
                 return 0;
             }

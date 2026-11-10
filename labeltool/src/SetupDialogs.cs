@@ -45,7 +45,7 @@ namespace QlLabels
             Text = title;
             Theme.Use(this);
             HelpPages.F1(this);   // its owner's page
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = false;
@@ -87,7 +87,7 @@ namespace QlLabels
             if (!string.IsNullOrEmpty(details))
             {
                 var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true, Visible = false,
-                                        Font = new Font(FontFamily.GenericMonospace, Font.Size * 0.9f), Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n"),
+                                        Font = UiFont.Monospace(Font.Size * 0.9f), Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n"),
                                         Size = new Size(wide, em * 10), Margin = new Padding(0, 0, 0, em / 2) };
                 var links = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
                 var show = Link(Lang.T("Show details"));
@@ -220,7 +220,7 @@ namespace QlLabels
                             break;
                         default:
                             string mark = kind == ResultKind.Question ? "?" : kind == ResultKind.Info ? "i" : "!";
-                            using (var font = new Font(FontFamily.GenericSansSerif, size * 0.42f, FontStyle.Bold, GraphicsUnit.Pixel))
+                            using (var font = UiFont.Create("Microsoft Sans Serif", size * 0.42f, FontStyle.Bold, GraphicsUnit.Pixel))
                             using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
                                 g.DrawString(mark, font, white, new RectangleF(0, 0, size, size), format);
                             break;
@@ -239,7 +239,7 @@ namespace QlLabels
             Text = title;
             Theme.Use(this);
             HelpPages.F1(this);
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             ControlBox = false;

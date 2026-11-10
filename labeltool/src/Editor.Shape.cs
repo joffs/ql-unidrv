@@ -80,6 +80,13 @@ namespace QlLabels
             }
         }
 
+        // Upside down it looks different (a half turn = a flip top to bottom; every shape here is symmetric left to right):
+        // a triangle, a polygon with an odd number of corners, a star with an odd number of points.
+        public bool UpsideDownDiffers
+        {
+            get { return Kind == ShapeKind.Triangle || Kind == ShapeKind.Polygon && Sides % 2 == 1 || Kind == ShapeKind.Star && Points % 2 == 1; }
+        }
+
         // Triangle, polygon, star: the corners on the unit circle, the first one at the top, clockwise.
         PointF[] UnitPoints()
         {
@@ -133,8 +140,9 @@ namespace QlLabels
                 g.DrawPolygon(pen, q);
         }
 
-        // The filled shape's outline in box (radius: the rectangle's round corners).
-        GraphicsPath Path(RectangleF box, float radius)
+        // The filled shape's outline in box (radius: the rectangle's round corners; also the drawing tool's outline,
+        // EditorCanvas.Draw.cs, in screen pixels).
+        internal GraphicsPath Path(RectangleF box, float radius)
         {
             var path = new GraphicsPath();
             if (Kind == ShapeKind.Ellipse) path.AddEllipse(box);
@@ -242,10 +250,14 @@ namespace QlLabels
 
         void AddShape(ShapeKind kind)
         {
-            var at = FreeSpot();
+            Add(NewShape(kind, FreeSpot()));
+        }
+
+        static ShapeObject NewShape(ShapeKind kind, PointF at)
+        {
             var o = new ShapeObject { Kind = kind, X = at.X, Y = at.Y, W = 15, H = 10 };
             if (!o.IsBox) { o.H = 12; o.W = Math.Round(12 * o.NaturalRatio, 2); }
-            Add(o);
+            return o;
         }
     }
 }

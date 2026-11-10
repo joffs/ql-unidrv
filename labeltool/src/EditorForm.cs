@@ -25,7 +25,7 @@ namespace QlLabels
         readonly Panel outsideBar = new Panel { Visible = false };
         string outsideText = "";
         LabelDoc doc = new LabelDoc();
-        readonly UndoStack undo = new UndoStack();
+        UndoStack undo = new UndoStack();   // the active tab's (EditorForm.Tabs.cs)
         string path;
         bool dirty, loading, printing;
         // The opened file's label format isn't on this printer (shown on another label): Save keeps the file's format
@@ -48,6 +48,9 @@ namespace QlLabels
         readonly NumericUpDown copies = new NumericUpDown { Minimum = 1, Maximum = 999, Value = 1, TextAlign = HorizontalAlignment.Right };
         // The window's main action, in the petrol accent (Theme.Primary).
         readonly System.Windows.Forms.Button printButton = new System.Windows.Forms.Button { AutoSize = true };
+        // Its small ▾ part (a split button): a menu with Print and Print with data... (EditorForm.Arrange BuildCommandRow).
+        readonly System.Windows.Forms.Button printMoreButton = new System.Windows.Forms.Button { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+        readonly ContextMenuStrip printMenu = new ContextMenuStrip();
         readonly ToolTip tips = new ToolTip();
         readonly ToolStripMenuItem undoItem = new ToolStripMenuItem(), redoItem = new ToolStripMenuItem();
         readonly ToolStripMenuItem highResItem = new ToolStripMenuItem(), rollItem = new ToolStripMenuItem();
@@ -78,15 +81,15 @@ namespace QlLabels
         readonly List<KeyValuePair<Control[], Func<LabelObject, bool>>> rows = new List<KeyValuePair<Control[], Func<LabelObject, bool>>>();
         readonly Label nothingSelected = Theme.Fore(new Label { AutoSize = true }, Role.Dim);
         readonly Label severalSelected = new Label { AutoSize = true };
-        NumericUpDown numX, numY, numW, numH, sizeNum, thickNum, lineHeightNum, spacingNum, lineAngleNum, lineLengthNum;
+        NumericUpDown numX, numY, numW, numH, sizeNum, thickNum, lineAngleNum, lineLengthNum;
         NumericUpDown angleNum;
         Button resetButton;
         readonly List<KeyValuePair<Button, ArrangeIcon>> turnButtons = new List<KeyValuePair<Button, ArrangeIcon>>();   // redrawn at each DPI
-        ComboBox rotBox, fontBox, alignBox, modeBox, kindBox, levelBox, textKindBox, qrTypeBox;
+        ComboBox rotBox, fontBox, modeBox, kindBox, levelBox, textKindBox, qrTypeBox;
         Label notationLabel;
         readonly Dictionary<string, Control> qrEditors = new Dictionary<string, Control>();   // a QR type's fields by key
         TextBox dataBox;   // textBox (RunsBox): Editor.Text.cs
-        CheckBox boldCheck, italicCheck, underlineCheck, filledCheck, invertCheck, textInvertCheck, qrInvertCheck, showTextCheck;
+        CheckBox filledCheck, invertCheck, qrInvertCheck, showTextCheck;
         Label problemLabel, quietLabel, svgLabel;
         FlowLayoutPanel quietRow;
         // Codes with something in their quiet zone and the topmost object there (EditorRender.QuietZoneIntruders).
@@ -101,7 +104,7 @@ namespace QlLabels
             Theme.Changed += ThemeChanged;
             FormClosed += delegate { Theme.Changed -= ThemeChanged; };
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
-            Font = SystemFonts.MessageBoxFont;
+            Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;  // scales nothing here (no AutoScaleDimensions): sizes go through S()
             StartPosition = FormStartPosition.CenterScreen;
             var area = Screen.FromPoint(Cursor.Position).WorkingArea;
@@ -124,13 +127,17 @@ namespace QlLabels
             var canvasArea = new Panel { Dock = DockStyle.Fill };
             canvasArea.Controls.Add(host);
             canvasArea.Controls.Add(outsideBar);
+            // The tabs right above the canvas (between the palette and the panel), always shown: EditorForm.Tabs.cs.
+            var tabbed = new Panel { Dock = DockStyle.Fill };
+            tabbed.Controls.Add(canvasArea);
+            tabbed.Controls.Add(strip);
             outsideBar.BringToFront();
             host.Resize += delegate { outsideBar.Width = host.ClientSize.Width; };   // not over the vertical scroll bar
             outsideBar.Paint += PaintOutsideBar;
             outsideBar.Resize += delegate { FitOutsideBar(); outsideBar.Invalidate(); };
             // Right of the palette: the Arrange toolbar over the canvas and the panel.
             var work = new Panel { Dock = DockStyle.Fill };
-            work.Controls.Add(canvasArea);
+            work.Controls.Add(tabbed);
             work.Controls.Add(side);
             work.Controls.Add(BuildFitBar());   // under the Arrange toolbar, over the canvas and the panel
             work.Controls.Add(BuildArrangeBar());
@@ -143,6 +150,7 @@ namespace QlLabels
             StartupTrace.Mark("EditorForm: toolbars, palette, menu, status bar");
 
             canvas.Doc = doc;
+            BuildTabs();
             canvas.SelectionChanged += delegate { lastEdited = null; FillProps(null); UpdateCommands(); };
             canvas.BeforeChange += delegate { PushUndo(null); dragBounds = canvas.Dragging ? SelectionBounds() : (RectangleF?)null; };
             canvas.Changed += delegate { Touched(); if (canvas.Dragging) FillPlace(); else FillProps(null); };
@@ -163,7 +171,17 @@ namespace QlLabels
             canvas.LengthDragged += mm => OwnLength(mm, false);
             canvas.QuietZoneOf = c => layout != null ? EditorRender.QuietZone(c, layout, DateTime.Now) : c.Box;
             canvas.QuietTip = Lang.T("Quiet zone: stays clear, doesn't print.");
-            canvas.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) ShowObjectMenu(e.Location); };
+            canvas.MouseUp += (s, e) =>
+            {
+                if (e.Button != MouseButtons.Right) return;
+                if (canvas.TakeRightCancel()) return;   // it cancelled a drawing drag (EditorCanvas.Draw.cs)
+                if (canvas.Editing != null) ShowTextMenu(e.Location); else ShowObjectMenu(e.Location);
+            };
+            WireTextEditing();   // EditorForm.TextEdit.cs
+            canvas.Drawn += OnDrawn;   // EditorForm.Draw.cs
+            canvas.DrawMoved += OnDrawMoved;
+            SetUpPan();   // the middle mouse button drags the view: EditorForm.Pan.cs
+            SetUpAltKey();   // Alt as the free-drag key opens no menu: EditorForm.AltKey.cs
             SetUpDrop();
             host.Resize += delegate { ApplyZoom(); };
             FormClosing += OnClosing;
@@ -175,11 +193,11 @@ namespace QlLabels
             StartupTrace.Mark("EditorForm: events");
             printers = QlPrinters.OurPrinters();
             StartupTrace.Mark("EditorForm: printers listed");
-            printer = printerName != null && printers.Contains(printerName) ? printerName : printers.FirstOrDefault();
+            printer = QlPrinters.Choose(printers, printerName);   // --printer, else the last one chosen, else the first
             FillPrinterBox();
             SetPrinter(printer, formName);
             StartupTrace.Mark("EditorForm: printer set (labels, page)");
-            if (file != null) Open(file);
+            if (file != null) OpenFile(file);
             FillProps(null);
             UpdateCommands();
             UpdateTitle();

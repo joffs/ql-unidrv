@@ -140,6 +140,7 @@ namespace QlLabels
 
         void SetDoc(LabelDoc d, IEnumerable<LabelObject> select)
         {
+            canvas.EndEdit();   // another label, undo, redo
             doc = d;
             canvas.Doc = d;
             HideFitBar();   // undo, redo, another label
@@ -151,6 +152,7 @@ namespace QlLabels
 
         void Undo(bool redo)
         {
+            if (canvas.Editing != null) { canvas.EditUndo(redo); UpdateCommands(); return; }   // the editing session's own steps
             if (redo ? !undo.CanRedo : !undo.CanUndo) return;
             var indexes = canvas.Selection.Select(o => doc.Objects.IndexOf(o)).ToList();
             var d = redo ? undo.Redo(doc) : undo.Undo(doc);
@@ -163,9 +165,10 @@ namespace QlLabels
 
         void UpdateCommands()
         {
-            undoItem.Enabled = undo.CanUndo;
-            redoItem.Enabled = undo.CanRedo;
-            printButton.Enabled = printer != null && !printing;
+            var editing = canvas.Editing;
+            undoItem.Enabled = editing != null ? editing.CanUndo : undo.CanUndo;
+            redoItem.Enabled = editing != null ? editing.CanRedo : undo.CanRedo;
+            printButton.Enabled = printMoreButton.Enabled = printer != null && !printing;
             // While a print is checked and sent, printer and label stay as they were checked.
             printerBox.Enabled = printers.Count > 0 && !printing;
             labelBox.Enabled = !printing;
@@ -175,8 +178,10 @@ namespace QlLabels
 
         void UpdateTitle()
         {
-            string name = path != null ? Path.GetFileNameWithoutExtension(path) : Lang.T("New label");
+            if (current != null) { current.Path = path; current.Dirty = dirty; }
+            string name = current != null ? TabName(current) : Lang.T("New label");
             Text = name + (dirty ? " *" : "") + " – " + AppTitle;
+            if (current != null) UpdateTabs();
         }
 
         // The texts are set when the window is built, so QL Label Maker starts again in the new language: with the label's
@@ -188,14 +193,21 @@ namespace QlLabels
             bool restart;
             try
             {
-                restart = await LanguageSwitch.Run(language, dirty, unsaved => AskLanguage(language, unsaved) == DialogResult.OK,
-                                                   () => Task.FromResult(Save(false)), setting => Lang.Setting = setting);
+                StoreTab();
+                restart = await LanguageSwitch.Run(language, tabs.Any(t => t.Dirty), unsaved => AskLanguage(language, unsaved) == DialogResult.OK,
+                                                   () => Task.FromResult(SaveAll()), setting => Lang.Setting = setting);
             }
             catch (Exception ex) { Failed(this, Lang.T("The language couldn't be switched."), ex); return; }
             if (!restart) return;
-            try { Process.Start(Application.ExecutablePath, RestartArguments(path, printer, label != null && !label.Custom ? label.Name : null)); }
+            SingleInstance.Release();   // the new start is the window from now on
+            // every tab with a file comes back (in their order); an empty label: its printer and label format
+            var saved = tabs.Where(t => t.Path != null).ToList();
+            string args = saved.Count > 0 ? EditorProgram.FileArguments(saved.Select(t => new KeyValuePair<string, string>(t.Path, t.Printer)))
+                                          : RestartArguments(null, printer, label != null && !label.Custom ? label.Name : null);
+            try { Process.Start(Application.ExecutablePath, args); }
             catch (Exception ex) { Failed(this, Lang.T("QL Label Maker couldn't start again in the new language."), ex); return; }
-            dirty = false;   // saved, or nothing changed
+            foreach (var t in tabs) t.Dirty = false;   // saved, or nothing changed
+            dirty = false;
             Close();
         }
 
@@ -214,34 +226,28 @@ namespace QlLabels
             return args;
         }
 
-        bool ConfirmDiscard()
+        // Before the restart in another language: every label with changes saved (an untitled one asks for its place).
+        bool SaveAll()
         {
-            if (!dirty) return true;
-            var answer = QlMessage.Show(this, Lang.T("Save the changes to this label?"), AppTitle, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-            if (answer == DialogResult.Cancel) return false;
-            return answer == DialogResult.No || Save(false);
-        }
-
-        void NewLabel()
-        {
-            if (printing || !ConfirmDiscard()) return;
-            path = null;
-            dirty = false;
-            keepFileFormat = false;
-            undo.Clear();
-            SetDoc(new LabelDoc { Across = label != null && LabelLayout.AcrossByDefault(label) }, null);
-            Relayout();
-            UpdateTitle();
+            StoreTab();
+            foreach (var t in tabs.Where(x => x.Dirty).ToList())
+            {
+                if (t != current) { StoreTab(); ShowTab(t); }
+                if (!Save(false)) return false;
+                StoreTab();
+            }
+            return true;
         }
 
         void OpenDialog()
         {
-            if (printing || !ConfirmDiscard()) return;
+            if (printing) return;
             using (var dlg = new OpenFileDialog { Filter = Lang.T("QL labels") + " (*.qllabel)|*.qllabel|" + Lang.T("All files") + " (*.*)|*.*" })
-                if (dlg.ShowDialog(this) == DialogResult.OK) Open(dlg.FileName);
+                if (dlg.ShowDialog(this) == DialogResult.OK) OpenFile(dlg.FileName);   // EditorForm.Tabs.cs: a tab of its own
         }
 
-        void Open(string file)
+        // The file read, or null after the message why not.
+        LabelDoc LoadLabel(string file)
         {
             LabelDoc d;
             try { d = LabelDoc.Load(file); }
@@ -251,14 +257,32 @@ namespace QlLabels
                 // missing file or one without access keeps Windows' message.
                 bool damaged = ex is InvalidDataException || ex is ArgumentException || ex is InvalidOperationException;
                 string what = Lang.F("Cannot open {0}.", Path.GetFileName(file));
-                if (damaged) QlMessage.Ask(this, AppTitle, what, Lang.T("The file is damaged or is not a QL label file.") + "\n\n" + file,
-                                           MessageBoxButtons.OK, MessageBoxIcon.Error);
-                else Failed(this, what, ex);
-                return;
+                // While the window is being made (a start or a restart with files): a missing file is a line in the
+                // status bar, anything else a message once the window shows.
+                if (!shownOnce && (ex is FileNotFoundException || ex is DirectoryNotFoundException))
+                {
+                    string line = Lang.F("“{0}” was not found.", Path.GetFileNameWithoutExtension(file));
+                    WhenShown(() => labelStatus.Text = line);
+                    return null;
+                }
+                WhenShown(() =>
+                {
+                    if (damaged) QlMessage.Ask(this, AppTitle, what, Lang.T("The file is damaged or is not a QL label file.") + "\n\n" + file,
+                                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    else Failed(this, what, ex);
+                });
+                return null;
             }
+            return d;
+        }
+
+        // A read file in the active tab.
+        void ShowLabel(string file, LabelDoc d)
+        {
             path = file;
             dirty = false;
             undo.Clear();
+            RecentLabels.Add(file);   // File > Recent labels
             var c = LabelChoice.Find(choices, d.FormName, d.PaperId, d.Length01);
             // A length of its own: on the same tape, if this printer has it.
             var tapeOf = d.LengthMode.Length > 0 ? MediaTable.ById(d.PaperId) : null;
@@ -278,11 +302,12 @@ namespace QlLabels
             string newer = d.Skipped > 0 ? Lang.F("{0} object(s) from a newer QL Label Maker can't be shown here. They stay in the file when you save.", d.Skipped)
                          : d.Newer ? Lang.T("This label was made with a newer QL Label Maker: some parts may be missing or shown simplified.") : null;
             if (newer != null) note = (note != null ? note + "\n\n" : "") + newer;
-            if (note != null) QlMessage.Show(this, note, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (note != null) WhenShown(() => QlMessage.Show(this, note, AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information));
         }
 
         bool Save(bool saveAs)
         {
+            canvas.EndEdit();   // as Esc: the session committed, an emptied text removed; the file has what is shown
             if (label != null && !keepFileFormat)
             {
                 doc.FormName = label.Custom ? "" : label.Name;   // an own length has no form
@@ -309,6 +334,7 @@ namespace QlLabels
             path = target;
             dirty = false;
             UpdateTitle();
+            RecentLabels.Add(target);   // File > Recent labels
             return true;
         }
 
@@ -316,7 +342,8 @@ namespace QlLabels
         {
             // While a print is checked and sent: the window closes by itself when it is sent or a question stops it.
             if (printing) { closeWhenPrinted = true; e.Cancel = true; return; }
-            if (!ConfirmDiscard()) e.Cancel = true;
+            canvas.EndEdit();   // as Esc first: an emptied text goes, the question about saving sees that
+            if (!ConfirmCloseAll()) e.Cancel = true;   // EditorForm.Tabs.cs: one question for all labels with changes
         }
 
         bool closeWhenPrinted;

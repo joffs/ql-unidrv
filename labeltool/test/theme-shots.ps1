@@ -12,6 +12,11 @@ $Out = [IO.Path]::GetFullPath($Out)
 $csc = "$env:WINDIR\Microsoft.NET\FrameworkArm64\v4.0.30319\csc.exe"
 if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" }
 $deskrun = "$PSScriptRoot\..\..\out\tools\uitest\deskrun.exe"
+if (-not (Test-Path $deskrun)) {
+    # a worktree under out\: the main checkout's
+    $main = (& git -C (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path rev-parse --path-format=absolute --git-common-dir) -replace '[\\/]\.git$', ''
+    $deskrun = Join-Path $main "out\tools\uitest\deskrun.exe"
+}
 if (-not (Test-Path $deskrun)) { throw "deskrun.exe missing: run tools\uitest\build.cmd first" }
 New-Item -ItemType Directory -Force $Out | Out-Null
 $exe = Join-Path $Out "themeshots.exe"

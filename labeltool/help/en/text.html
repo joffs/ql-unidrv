@@ -23,18 +23,45 @@
     <span class="eyebrow">Objects</span>
     <h1>Artistic and paragraph text</h1>
     <p class="lead">A text is either an artistic text (one line, the box follows the text) or a paragraph text (several
-      lines that wrap in their box). You set everything else in the settings on the right.</p>
+      lines that wrap in their box). You type directly on the label and see what will be printed. You set everything
+      else in the settings on the right.</p>
   </header>
 
   <ul class="blocks">
+    <li>
+      <div class="step">
+        <h2 id="edit-on-the-label">Type on the label</h2>
+        <p>Double-click a text to edit it: the cursor goes where you double-clicked. On a selected text,
+          <kbd>F2</kbd>, Enter, <span class="ui">Edit text (F2)</span> on the right, or just typing work too; the cursor
+          then goes to the end. A new text is only selected at first, so you can move it into place; typing on it then
+          replaces its placeholder "Text".</p>
+        <figure class="frame" style="max-width:363px"><img src="../img/en/text-panel.png" width="343" height="194" alt="Settings of an artistic text: the hint &quot;Double-click the text on the label to edit it.&quot;, Edit text (F2), Insert field, Kind, Font, Size"></figure>
+        <p>While you edit, the text has a thin frame without handles; you move or resize it afterwards. The status bar
+          says "Editing text – Esc or a click beside it ends." <kbd>Esc</kbd>, a click beside the text or another tool
+          ends editing, and your changes stay. A text that you left empty is removed.</p>
+        <p>Fields such as <code>{date}</code> show their code in a light grey box while you edit, their value again
+          afterwards. <span class="path">Edit &gt; Undo</span> takes back the last step while you edit (a word, a format,
+          a paste), and the whole edit at once afterwards.</p>
+      </div>
+      <aside class="keys" aria-label="Keys">
+        <span class="h">Keys</span>
+        <div><span><kbd>F2</kbd> or Enter</span><span>edit the selected text</span></div>
+        <div><span><kbd>Esc</kbd></span><span>stop editing</span></div>
+        <div><span>Arrow keys, <kbd>Home</kbd>, <kbd>End</kbd></span><span>move the cursor; with <kbd>Ctrl</kbd> by word or to the start or end of the text</span></div>
+        <div><span><kbd>Shift</kbd> + arrow keys</span><span>select</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>A</kbd></span><span>select the whole text</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>Backspace</kbd> / <kbd>Delete</kbd></span><span>delete a word</span></div>
+        <div><span>Double / triple click</span><span>select a word / paragraph</span></div>
+      </aside>
+    </li>
+
     <li>
       <div class="step">
         <h2 id="single-line">Artistic text</h2>
         <p>The <span class="ui">Artistic text</span> tool or <span class="path">Insert &gt; Artistic text</span>. The box always fits the
           text. Drag a handle to make the text larger or smaller; the opposite side stays where it is. Or type the
           <span class="ui">Size (pt)</span>.</p>
-        <p>Enter does nothing here; pasted line breaks become spaces.</p>
-        <figure class="frame" style="max-width:340px"><img src="../img/en/text-panel.png" width="230" height="173" alt="Settings of an artistic text: Text, Insert field, Kind Artistic text, Font, Size, Bold, Italic, Underline"></figure>
+        <p>Enter stops editing here; pasted line breaks become spaces.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
@@ -47,34 +74,49 @@
         <h2 id="text-frame">Paragraph text</h2>
         <p>The <span class="ui">Paragraph text</span> tool or <span class="path">Insert &gt; Paragraph text</span>. You set the box with the handles; the text wraps at its edge
           at its font size. A word longer than a line breaks between letters.</p>
-        <p>You also get the alignment of the lines (<span class="ui">Left</span>, <span class="ui">Centre</span>,
-          <span class="ui">Right</span>) and the <span class="ui">Line spacing</span> (0.5 to 3 times).</p>
+        <p>At the top, in the toolbar, you align the lines (<span class="ui">Align text left</span>,
+          <span class="ui">Centre text</span>, <span class="ui">Align text right</span>, <span class="ui">Justify</span>) and
+          choose the <span class="ui">Line spacing</span>: 1.0, 1.15, 1.5, 2.0 or your own value from 0.5 to 3. Justified,
+          the wrapped lines reach both edges of the box; the last line of a paragraph stays left, as in Word.</p>
+        <p>Enter starts a new paragraph.</p>
         <p>A text that doesn't fit the box is cut off at the box. On the screen the box then gets a red edge, and a red note
-          appears on the right.</p>
+          appears on the right. While you edit, the cut-off lines show light grey below the box, so you see what you type
+          there; they are never printed.</p>
+        <figure class="frame" style="max-width:450px"><img src="../img/en/text-overflow.png" width="430" height="100" alt="A paragraph text being edited with a red box; the line that doesn't fit shows light grey below it"></figure>
+        <p><span class="path">View &gt; Show overflow while editing</span> turns this off: the text then scrolls inside the
+          box to the cursor's line.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
         <div><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></span><span>add paragraph text</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>L</kbd> / <kbd>E</kbd> / <kbd>R</kbd> / <kbd>J</kbd></span><span>while editing: left, centre, right, justify</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>J</kbd></span><span>justify, also when the text is only selected</span></div>
       </aside>
     </li>
 
     <li>
       <div class="step">
         <h2 id="word-formats">Words in their own format</h2>
-        <p>In a paragraph text single words can be bold, italic, underlined, in another font or size. Select them in the
-          <span class="ui">Text</span> box and click <span class="ui">B</span>, <span class="ui">I</span> or
-          <span class="ui">U</span> above it, or change <span class="ui">Font</span> and <span class="ui">Size (pt)</span>.
-          A line below the box says what the settings apply to.</p>
-        <figure class="frame" style="max-width:348px"><img src="../img/en/text-runs-panel.png" width="328" height="295" alt="Settings of a paragraph text: B, I and U above the text box; in the box M4 × 20 bold, verzinkt italic, Fach 12 underlined"></figure>
-        <p>With nothing selected, <span class="ui">B</span>, <span class="ui">I</span> and <span class="ui">U</span> apply
-          to what you type next. When the text box isn't active, the settings apply to the whole text. Where the selected
-          words differ, the setting stays blank or shows ■.</p>
-        <p>Pasted text takes the format at the cursor. An artistic text has one format for the whole text: switching a
-          paragraph text with word formats to it asks first and keeps the first word's format.</p>
+        <p>In artistic and paragraph text single words can be bold, italic, underlined, white on black, spaced out or
+          in another font or size. Select them on the label while you edit and press <kbd>Ctrl</kbd> + <kbd>B</kbd>,
+          <kbd>I</kbd> or <kbd>U</kbd>, or click <span class="ui">B</span>, <span class="ui">I</span>,
+          <span class="ui">U</span> or <span class="ui">Invert</span> in the toolbar at the top, or change the
+          <span class="ui">Letter spacing (pt)</span> there. You change the <span class="ui">Font</span> and
+          <span class="ui">Size (pt)</span> on the right; a line there says what they apply to.</p>
+        <figure class="frame" style="max-width:409px"><img src="../img/en/text-toolbar.png" width="389" height="28" alt="The toolbar's text group: B, I (pressed), U, Invert, Align text left (pressed), Centre text, Align text right, Justify, line spacing 1.0 and letter spacing 0.0"></figure>
+        <figure class="frame" style="max-width:450px"><img src="../img/en/text-edit-canvas.png" width="430" height="160" alt="A paragraph text being edited: M4 × 20 bold, the cursor in the text"></figure>
+        <p>With nothing selected, the formats apply to what you type next. When the text isn't being edited, the settings
+          apply to the whole text, and so do the buttons. Where the selected words differ, font, size and letter spacing
+          stay blank, and <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span> or
+          <span class="ui">Invert</span> are hatched (partly). A click
+          formats the whole selection, the next one removes the format everywhere in it.</p>
+        <p>Text pasted from Word or WordPad keeps its formats; plain text takes the format at the cursor. An artistic text
+          stays one line: pasted line breaks become spaces. The handles of an artistic text make every word larger or
+          smaller in proportion. <span class="ui">Kind</span> keeps the words' formats both ways.</p>
       </div>
       <aside class="keys" aria-label="Keys">
         <span class="h">Keys</span>
-        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>bold</span></div>
+        <div><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>bold (with the text only selected: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>, as <kbd>Ctrl</kbd> + <kbd>B</kbd> then adds a rectangle)</span></div>
         <div><span><kbd>Ctrl</kbd> + <kbd>I</kbd></span><span>italic</span></div>
         <div><span><kbd>Ctrl</kbd> + <kbd>U</kbd></span><span>underline</span></div>
       </aside>
@@ -92,18 +134,21 @@
     <li>
       <div class="step">
         <h2 id="font">Font</h2>
-        <p><span class="ui">Font</span>, <span class="ui">Size (pt)</span>, <span class="ui">Bold</span>,
-          <span class="ui">Italic</span>, <span class="ui">Underline</span> and <span class="ui">Letter spacing (pt)</span>
-          from −5 to +20 work for both kinds. <span class="ui">Invert</span> prints the text white on black:
-          <a href="invert.html">White on black</a>.</p>
+        <p><span class="ui">Font</span> and <span class="ui">Size (pt)</span> are on the right. In the toolbar at the top
+          are <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span>, <span class="ui">Invert</span>
+          and the <span class="ui">Letter spacing (pt)</span> from −5 to +20; they work for both kinds, while you edit
+          on the selected characters.
+          <span class="ui">Invert</span> prints the text white on black: <a href="invert.html">White on black</a>.</p>
+        <p>Without a selected text the buttons are grey. For an artistic text the alignment and the line spacing are grey,
+          as it is one line. Point at a button to see its key.</p>
       </div>
     </li>
 
     <li>
       <div class="step">
         <h2 id="date-and-time">Date and time</h2>
-        <p><span class="ui">Insert field ▾</span> below the text adds a field that is filled in whenever the label is shown
-          or printed:</p>
+        <p><span class="ui">Insert field ▾</span> adds a field at the cursor (at the end when the text isn't being edited)
+          that is filled in whenever the label is shown or printed:</p>
         <dl class="terms">
           <dt><code>{date}</code></dt><dd>today's date</dd>
           <dt><code>{date+30}</code></dt><dd>the date in 30 days; <code>{date-1}</code> is yesterday</dd>
