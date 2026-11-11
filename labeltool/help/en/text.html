@@ -35,7 +35,7 @@
           <kbd>F2</kbd>, Enter, <span class="ui">Edit text (F2)</span> on the right, or just typing work too; the cursor
           then goes to the end. A new text is only selected at first, so you can move it into place; typing on it then
           replaces its placeholder "Text".</p>
-        <figure class="frame" style="max-width:363px"><img src="../img/en/text-panel.png" width="343" height="194" alt="Settings of an artistic text: the hint &quot;Double-click the text on the label to edit it.&quot;, Edit text (F2), Insert field, Kind, Font, Size"></figure>
+        <figure class="frame" style="max-width:363px"><img src="../img/en/text-panel.png" width="343" height="135" alt="Settings of an artistic text: the hint &quot;Double-click the text on the label to edit it.&quot;, Edit text (F2), Insert field, Kind"></figure>
         <p>While you edit, the text has a thin frame without handles; you move or resize it afterwards. The status bar
           says "Editing text – Esc or a click beside it ends." <kbd>Esc</kbd>, a click beside the text or another tool
           ends editing, and your changes stay. A text that you left empty is removed.</p>
@@ -60,7 +60,7 @@
         <h2 id="single-line">Artistic text</h2>
         <p>The <span class="ui">Artistic text</span> tool or <span class="path">Insert &gt; Artistic text</span>. The box always fits the
           text. Drag a handle to make the text larger or smaller; the opposite side stays where it is. Or type the
-          <span class="ui">Size (pt)</span>.</p>
+          font size in the toolbar at the top.</p>
         <p>Enter stops editing here; pasted line breaks become spaces.</p>
       </div>
       <aside class="keys" aria-label="Keys">
@@ -76,11 +76,17 @@
           at its font size. A word longer than a line breaks between letters.</p>
         <p>At the top, in the toolbar, you align the lines (<span class="ui">Align text left</span>,
           <span class="ui">Centre text</span>, <span class="ui">Align text right</span>, <span class="ui">Justify</span>) and
-          choose the <span class="ui">Line spacing</span>: 1.0, 1.15, 1.5, 2.0 or your own value from 0.5 to 3. Justified,
+          choose the <span class="ui">Line spacing</span> in % of the font's height: 100, 115, 150, 200 % or your own value from
+          10 to 500 %. Justified,
           the wrapped lines reach both edges of the box; the last line of a paragraph stays left, as in Word.</p>
         <p>Enter starts a new paragraph.</p>
+        <p>On the right, in the settings below the hint, <span class="ui">Vertical</span> places the text at the top, in the
+          middle or at the bottom of its box (three buttons; a text that doesn't fit stays at the top).
+          <span class="ui">Paragraph</span> <span class="ui">before</span> / <span class="ui">after</span> adds space
+          between paragraphs, in % of the font's height: never before the first or after the last paragraph; where both
+          meet they add up, as in Word.</p>
         <p>A text that doesn't fit the box is cut off at the box. On the screen the box then gets a red edge, and a red note
-          appears on the right. While you edit, the cut-off lines show light grey below the box, so you see what you type
+          appears at the end of the settings on the right. While you edit, the cut-off lines show light grey below the box, so you see what you type
           there; they are never printed.</p>
         <figure class="frame" style="max-width:450px"><img src="../img/en/text-overflow.png" width="430" height="100" alt="A paragraph text being edited with a red box; the line that doesn't fit shows light grey below it"></figure>
         <p><span class="path">View &gt; Show overflow while editing</span> turns this off: the text then scrolls inside the
@@ -100,14 +106,13 @@
         <p>In artistic and paragraph text single words can be bold, italic, underlined, white on black, spaced out or
           in another font or size. Select them on the label while you edit and press <kbd>Ctrl</kbd> + <kbd>B</kbd>,
           <kbd>I</kbd> or <kbd>U</kbd>, or click <span class="ui">B</span>, <span class="ui">I</span>,
-          <span class="ui">U</span> or <span class="ui">Invert</span> in the toolbar at the top, or change the
-          <span class="ui">Letter spacing (pt)</span> there. You change the <span class="ui">Font</span> and
-          <span class="ui">Size (pt)</span> on the right; a line there says what they apply to.</p>
-        <figure class="frame" style="max-width:409px"><img src="../img/en/text-toolbar.png" width="389" height="28" alt="The toolbar's text group: B, I (pressed), U, Invert, Align text left (pressed), Centre text, Align text right, Justify, line spacing 1.0 and letter spacing 0.0"></figure>
+          <span class="ui">U</span> or <span class="ui">Invert</span> in the toolbar at the top, or change the font, the
+          size or the letter spacing there. A line on the right says what they apply to.</p>
+        <figure class="frame" style="max-width:627px"><img src="../img/en/text-toolbar.png" width="607" height="28" alt="The toolbar's text group: font Segoe UI, size 12, B, I (pressed), U, Invert, Align text left (pressed), Centre text, Align text right, Justify, line spacing 100 % and letter spacing 100 %"></figure>
         <figure class="frame" style="max-width:450px"><img src="../img/en/text-edit-canvas.png" width="430" height="160" alt="A paragraph text being edited: M4 × 20 bold, the cursor in the text"></figure>
         <p>With nothing selected, the formats apply to what you type next. When the text isn't being edited, the settings
           apply to the whole text, and so do the buttons. Where the selected words differ, font, size and letter spacing
-          stay blank, and <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span> or
+          stay blank (Enter there applies the value to all), and <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span> or
           <span class="ui">Invert</span> are hatched (partly). A click
           formats the whole selection, the next one removes the format everywhere in it.</p>
         <p>Text pasted from Word or WordPad keeps its formats; plain text takes the format at the cursor. An artistic text
@@ -134,12 +139,14 @@
     <li>
       <div class="step">
         <h2 id="font">Font</h2>
-        <p><span class="ui">Font</span> and <span class="ui">Size (pt)</span> are on the right. In the toolbar at the top
-          are <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span>, <span class="ui">Invert</span>
-          and the <span class="ui">Letter spacing (pt)</span> from −5 to +20; they work for both kinds, while you edit
-          on the selected characters.
+        <p>In the toolbar at the top, first after <span class="ui">Duplicate</span> and <span class="ui">Delete</span>, are
+          the font, the font size in pt, <span class="ui">B</span>, <span class="ui">I</span>, <span class="ui">U</span>,
+          <span class="ui">Invert</span> and the letter spacing in % (100 % is normal, from 0 to 300 %); they work for both
+          kinds, while you edit on the selected characters. In the size and spacing fields the mouse wheel or the arrow keys
+          change the value by 1, with <kbd>Shift</kbd> by 10, with <kbd>Ctrl</kbd> by 0.1. In a narrow window the
+          buttons for arranging objects move behind <span class="ui">»</span> at the end of the toolbar.
           <span class="ui">Invert</span> prints the text white on black: <a href="invert.html">White on black</a>.</p>
-        <p>Without a selected text the buttons are grey. For an artistic text the alignment and the line spacing are grey,
+        <p>Without a selected text the fields and buttons are grey. For an artistic text the alignment and the line spacing are grey,
           as it is one line. Point at a button to see its key.</p>
       </div>
     </li>

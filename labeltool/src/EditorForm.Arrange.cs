@@ -15,7 +15,9 @@ namespace QlLabels
     {
         // ---------- the Arrange toolbar ----------
         // Always visible: the commands of the Arrange menu and the context menu for the selection. A button that can't
-        // do anything now is greyed (the row stays, so nothing jumps).
+        // do anything now is greyed (the row stays, so nothing jumps). In CorelDRAW's order: Duplicate and Delete, the
+        // text group (text first), then the object functions (rotate, align, distribute, order); what doesn't fit a
+        // narrow window goes into the toolbar's » menu.
         ToolStrip arrangeBar;
 
         ToolStrip BuildArrangeBar()
@@ -26,6 +28,10 @@ namespace QlLabels
             arrangeBar.Items.AddRange(new ToolStripItem[]
             {
                 button(ArrangeIcon.Duplicate, Duplicate), button(ArrangeIcon.Delete, Delete), new ToolStripSeparator(),
+            });
+            arrangeBar.Items.AddRange(BuildTextBar().ToArray());   // the text group (EditorForm.TextBar.cs)
+            arrangeBar.Items.AddRange(new ToolStripItem[]
+            {
                 button(ArrangeIcon.RotateLeft, RotateLeft), button(ArrangeIcon.ResetRotation, ResetRotation), button(ArrangeIcon.RotateRight, Rotate), new ToolStripSeparator(),
                 button(ArrangeIcon.AlignLeft, () => Align(0, -1)), button(ArrangeIcon.AlignCenter, () => Align(0, 0)), button(ArrangeIcon.AlignRight, () => Align(0, 1)),
                 button(ArrangeIcon.AlignTop, () => Align(1, -1)), button(ArrangeIcon.AlignMiddle, () => Align(1, 0)), button(ArrangeIcon.AlignBottom, () => Align(1, 1)),
@@ -34,7 +40,6 @@ namespace QlLabels
                 button(Layer.ToFront, () => Order(Layer.ToFront)), button(Layer.Forward, () => Order(Layer.Forward)),
                 button(Layer.Backward, () => Order(Layer.Backward)), button(Layer.ToBack, () => Order(Layer.ToBack)),
             });
-            arrangeBar.Items.AddRange(BuildTextBar().ToArray());   // the text group (EditorForm.TextBar.cs)
             SizeArrangeBar();
             return arrangeBar;
         }
@@ -331,7 +336,7 @@ namespace QlLabels
         // As the menu bar writes shortcuts (in Windows' language, like "Strg+D").
         static string KeyText(Keys keys)
         {
-            return System.ComponentModel.TypeDescriptor.GetConverter(typeof(Keys)).ConvertToString(keys);
+            return KeyNames.Text(keys);   // in the program's language, not Windows' (KeyNames.cs)
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

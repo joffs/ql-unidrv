@@ -20,7 +20,8 @@ QlLabelPrint --help
 | Option | Meaning |
 |---|---|
 | `--data <file>` | CSV (first row = column names, matched to the fields by name, upper/lower case ignored; `;` `,` or tab; UTF-8, UTF-16 or Windows-1252) or JSON (`.json`, or content starting with `{` or `[` unless the file is `.csv`: one object `{"Name":"Value"}` or a list of them; values text, number, `true`/`false` or `null`, no nested objects or lists; a name missing in an object is an empty cell). `-` reads stdin (JSON when it starts with `{` or `[`, else CSV). A column `labelname` names each label (see `--name`, the problems, QL Label Maker's preview) |
-| `--set Name=Value` | A value for every record (repeatable); without `--data` one label is printed |
+| (no `--data`) | The label's remembered data file (QL Label Maker's *Print with data* stores it in the `.qllabel`), looked for next to the label first, then at its full path; not there: code 3 with the path. Without one (or with `--set`): one label |
+| `--set Name=Value` | A value for every record (repeatable); without `--data` one label is printed, the remembered data file isn't used |
 | `--printer <name>` | The printer. Without it: Windows' default printer if it has the label's paper, else the only QL printer that has it, else the only one whose loaded roll fits |
 | `--copies N` | Copies of each label (1-999). A column `copies` in the data multiplies (0 = skip that row) |
 | `--rows 2-10` | Only these data rows (1 = the first row after the header; `5` or `5-` too) |

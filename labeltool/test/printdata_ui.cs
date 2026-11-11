@@ -365,6 +365,8 @@ namespace QlLabels.Tests
                 SaveShot(d, "nodata");
             });
 
+            LinkSteps(csv20);
+
             // many columns: one line of chips, the rest behind "+N more", all in its list
             var wide = new StringBuilder("Artikel;Nummer");
             for (int i = 1; i <= 24; i++) wide.Append(";Spalte" + i);
@@ -465,6 +467,175 @@ namespace QlLabels.Tests
         // Prints rows 1-3 through the dialog ("Leave missing fields empty" on) and keeps, in <dir>\print-<name>: the
         // capture file and expected-pN.pbm = the engine's page for each label as the printer gets it (EditorRender.
         // ForPrinter). printdata_prn_check.py compares them dot for dot (printdata-ui.ps1).
+        // The label's remembered data file (2026-11-11): chosen here it is remembered (the label changed, saved with the
+        // next Save), opened at once next time; missing: the tile and the card area say so, no message box; Retry; "Don't
+        // remember the file"; undo keeps it; --print-data opens the dialog with it.
+        static void LinkSteps(string csv)
+        {
+            string recentKey = RecentLabels.Key;
+            RecentLabels.Key = @"Software\QLUnidrv\Tests\PrintDataUiRecent";   // the user's recent labels stay
+            try
+            {
+                Func<LabelDoc> doc = () => (LabelDoc)Field(form, "doc");
+                Func<bool> dirty = () => (bool)Field(form, "dirty");
+                typeof(EditorForm).GetField("dirty", All).SetValue(form, false);
+                WithDialog(null, d =>
+                {
+                    Call(d, "UseFile", csv);
+                    Pump(200);
+                    var dt = Tile(d, "data");
+                    var change = (Button)Field(d, "chooseButton");
+                    Check(doc().PrintData != null && doc().PrintData.SameFile(csv) && !doc().PrintData.Saved && dirty(),
+                          "a file chosen: remembered in the label, the label changed (not saved)");
+                    Check(dt.Main == "teile.csv" && dt.Caption == Lang.T("Data · \U0001F517 when saved") && change.Text == Lang.T("Change") + " \u25BE",
+                          "the tile: " + dt.Caption + " | " + change.Text);
+                    SaveShot(d, "link-chosen");
+                });
+                // undo keeps the link (it isn't a drawing step)
+                AddText("x", 30, 3);
+                typeof(EditorForm).GetMethod("Undo", All, null, new[] { typeof(bool) }, null).Invoke(form, new object[] { false });
+                Pump(100);
+                Check(doc().PrintData != null && doc().PrintData.SameFile(csv), "undo keeps the remembered file");
+                // saved: the file has it, the tile says "remembered"
+                string label = Path.Combine(dir, "Regal.qllabel");
+                typeof(EditorForm).GetField("path", All).SetValue(form, label);
+                typeof(EditorForm).GetMethod("Save", All, null, new[] { typeof(bool) }, null).Invoke(form, new object[] { false });
+                Pump(100);
+                Check(File.ReadAllText(label).Contains("\"printData\":{\"file\":\"teile.csv\"") && doc().PrintData.Saved && !dirty(),
+                      "saved: printData with the relative path in the file");
+                WithDialog(null, d =>
+                {
+                    Wait(() => Field(d, "table") != null, 3000);
+                    var dt = Tile(d, "data");
+                    Check(Field(d, "table") != null && dt.Main == "teile.csv" && dt.Caption == Lang.T("Data · \U0001F517 remembered") && Grid(d).Shown.Count == 20,
+                          "opened again: the remembered file loaded at once (" + dt.Caption + ", " + Grid(d).Shown.Count + " labels)");
+                    SaveShot(d, "link-remembered");
+                });
+                // missing: no message box, the tile and the card area say so; Retry finds it again
+                string away = csv + ".away";
+                File.Move(csv, away);
+                WithDialog(null, d =>
+                {
+                    Wait(() => Field(d, "linkState") != null, 3000);
+                    var dt = Tile(d, "data");
+                    Check(dt.State == TileState.Warn && dt.Sub == "\u26A0 " + Lang.T("not found") && Field(d, "table") == null,
+                          "missing: the tile warns: " + dt.Sub);
+                    Check(Application.OpenForms.Cast<Form>().Count(f => f.Visible) == 2, "missing: no message box (" + Application.OpenForms.Count + " windows)");
+                    string empty = (string)Field(Grid(d), "emptyText");
+                    Check(empty != null && empty.Contains(csv), "missing: the card area names the path");
+                    Check(!PrintButton(d).Enabled, "missing: Print disabled");
+                    Call(d, "ShowChangeMenu");
+                    Pump(100);
+                    var menu = (ContextMenuStrip)Field(d, "changeMenu");
+                    var names = menu.Items.OfType<ToolStripMenuItem>().Select(i => i.Text).ToList();
+                    menu.Close();
+                    Check(names.SequenceEqual(new[] { Lang.T("Other file..."), Lang.T("Retry"), Lang.T("Don't remember the file") }), "Change ▾: " + string.Join(" / ", names));
+                    SaveShot(d, "link-missing");
+                    File.Move(away, csv);
+                    Call(d, "FindLinked");
+                    Wait(() => Field(d, "table") != null, 3000);
+                    Check(Field(d, "table") != null && Tile(d, "data").Sub.StartsWith("CSV"), "Retry: found and loaded: " + Tile(d, "data").Sub);
+                    // don't remember it: a saved label without other changes loses it at once (no asterisk), what is loaded stays
+                    string before = File.ReadAllText(label);
+                    Call(d, "Forget");
+                    Pump(100);
+                    string after = File.ReadAllText(label);
+                    Check(doc().PrintData == null && !dirty() && Field(d, "table") != null && ((Button)Field(d, "chooseButton")).Text == Lang.T("Change..."),
+                          "Don't remember the file: link gone at once, no asterisk, data stays");
+                    Check(!after.Contains("printData") && after == PrintDataLink.WithoutLink(before), "forgotten: only printData left the file");
+                });
+                if (File.Exists(away)) File.Move(away, csv);
+                Check(StatusText() == Lang.T("The data file is no longer remembered in the label."), "status bar: " + StatusText());
+                SilentSteps(label, csv);
+                // --print-data: the dialog with the remembered file (as from Explorer)
+                doc().PrintData = PrintDataLink.For(csv, label, true);
+                bool opened = false;
+                var timer = new System.Windows.Forms.Timer { Interval = 50 };
+                timer.Tick += delegate
+                {
+                    var d = Field(form, "printDataDialog") as PrintDataDialog;
+                    if (d == null || !d.Visible) return;
+                    timer.Stop();
+                    Wait(() => Field(d, "table") != null, 3000);
+                    opened = Field(d, "table") != null;
+                    d.DialogResult = DialogResult.Cancel;
+                };
+                timer.Start();
+                Call(form, "PrintDataSoon", label);
+                Wait(() => opened, 5000);
+                timer.Dispose();
+                Pump(200);
+                Check(opened, "--print-data: Print with data opens with the remembered file");
+                doc().PrintData = null;
+                typeof(EditorForm).GetField("path", All).SetValue(form, null);
+                typeof(EditorForm).GetField("dirty", All).SetValue(form, false);
+            }
+            finally
+            {
+                try { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(RecentLabels.Key, false); } catch (Exception) { }
+                RecentLabels.Key = recentKey;
+            }
+        }
+
+        static string StatusText() { return ((ToolStripItem)Field(form, "labelStatus")).Text; }
+
+        // Remembered without the asterisk (2026-11-11): a saved label without other changes gets only "printData" written,
+        // the rest of the file byte for byte; read-only or changed on disk since: the asterisk as before, nothing written.
+        static void SilentSteps(string label, string csv)
+        {
+            Func<LabelDoc> doc = () => (LabelDoc)Field(form, "doc");
+            Func<bool> dirty = () => (bool)Field(form, "dirty");
+            string before = File.ReadAllText(label);
+            WithDialog(null, d =>
+            {
+                Call(d, "UseFile", csv);
+                Pump(100);
+                Check(!dirty() && doc().PrintData != null && doc().PrintData.Saved && Tile(d, "data").Caption == Lang.T("Data · \U0001F517 remembered"),
+                      "chosen in a saved label: remembered at once, no asterisk: " + Tile(d, "data").Caption);
+            });
+            string after = File.ReadAllText(label);
+            Check(after == PrintDataLink.WithLink(before, PrintDataLink.For(csv, label), label) && PrintDataLink.WithoutLink(after) == before
+                  && after.Contains("\"printData\":{\"file\":\"teile.csv\""), "only printData added, the rest of the file unchanged");
+            Check(StatusText() == Lang.T("Data file remembered in the label."), "status bar: " + StatusText());
+
+            // read-only: the asterisk, the file untouched
+            byte[] bytes = File.ReadAllBytes(label);
+            File.SetAttributes(label, FileAttributes.ReadOnly);
+            try
+            {
+                WithDialog(null, d => { Call(d, "Forget"); Pump(100); });
+                Check(dirty() && doc().PrintData == null && File.ReadAllBytes(label).SequenceEqual(bytes) && !File.Exists(label + ".tmp"),
+                      "read-only: not written, the asterisk instead");
+                Check(StatusText() == Lang.T("The data file will no longer be remembered when you save the label."), "status bar: " + StatusText());
+            }
+            finally { File.SetAttributes(label, FileAttributes.Normal); }
+            typeof(EditorForm).GetField("dirty", All).SetValue(form, false);
+            doc().PrintData = PrintDataLink.For(csv, label, true);
+
+            // changed on disk since it was opened: not written over, the asterisk instead
+            string changed = after.Replace("\"view\":\"along\"", "\"view\":\"across\"");
+            Check(changed != after, "the test changes the file on disk");
+            File.WriteAllText(label, changed, new UTF8Encoding(false));
+            WithDialog(null, d => { Wait(() => Field(d, "table") != null, 3000); Call(d, "Forget"); Pump(100); });
+            Check(dirty() && File.ReadAllText(label) == changed, "changed on disk: not written over, the asterisk instead");
+            Check(StatusText() == Lang.T("The data file will no longer be remembered when you save the label."), "status bar: " + StatusText());
+            File.WriteAllText(label, after, new UTF8Encoding(false));
+            typeof(EditorForm).GetField("dirty", All).SetValue(form, false);
+
+            // other unsaved changes: the asterisk, the file untouched
+            doc().PrintData = PrintDataLink.For(csv, label, true);
+            typeof(EditorForm).GetField("dirty", All).SetValue(form, true);
+            WithDialog(null, d => { Wait(() => Field(d, "table") != null, 3000); Call(d, "Forget"); Pump(100); });
+            Check(File.ReadAllText(label) == after && doc().PrintData == null, "other unsaved changes: nothing written, saved with the next Save");
+            typeof(EditorForm).GetField("dirty", All).SetValue(form, false);
+        }
+
+        static void Wait(Func<bool> done, int ms)
+        {
+            var w = Stopwatch.StartNew();
+            while (!done() && w.ElapsedMilliseconds < ms) { Application.DoEvents(); Thread.Sleep(15); }
+        }
+
         static void PrintThrough(string name, string csv, int expectPages)
         {
             string folder = Path.Combine(dir, "print-" + name);
@@ -514,6 +685,11 @@ namespace QlLabels.Tests
             bool written = File.Exists(Capture) && new FileInfo(Capture).LastWriteTime.Ticks > before;
             Check(written, name + ": capture file written (" + (DateTime.Now - started).TotalSeconds.ToString("0") + " s)");
             if (written) File.Copy(Capture, Path.Combine(folder, "capture.prn"), true);
+            // the roll check 3 s after the print lays the label out again: the note stays
+            var since = Stopwatch.StartNew();
+            while (since.ElapsedMilliseconds < 3500) Pump(100);
+            status = ((ToolStripStatusLabel)Field(form, "labelStatus")).Text;
+            Check(status == Lang.F("{0} labels sent to {1}.", expectPages, "QL-800 Capture"), name + ": status bar after the roll check " + status);
         }
 
         static void WritePbm(string path, Bitmap bmp)

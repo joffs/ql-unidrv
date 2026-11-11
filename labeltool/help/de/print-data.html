@@ -87,6 +87,16 @@ Mutter M4;4712;Regal 3</pre>
         <figure class="frame" style="max-width:800px"><img src="../img/de/print-data-dialog.png" width="780" height="660" alt="Mit Daten drucken: oben drei Kacheln, Drucker Brother QL-800 (Unidrv), bereit, 62 mm Endlosband; Vorlage Regal 3.qllabel, 62 mm, 3 Felder; Daten teile.csv, CSV, 20 Zeilen, mit Ändern…; Felder: Lagerort bleibt leer, Artikel und Nummer gefunden, Preis nicht im Etikett; Fehlende Felder leer lassen eingeschaltet; die Vorschau der Etiketten, Etikett 4 ausgewählt; unten Exemplare je Etikett und Drucken (1 Etikett)"></figure>
         <p>Ein fehlendes Feld ohne Standardwert verhindert das Drucken: Ergänzen Sie die Spalte, oder schalten Sie
           <span class="ui">Fehlende Felder leer lassen</span> ein. Ein Standardwert gilt auch dann.</p>
+        <p>Das Etikett merkt sich die gewählte Datendatei: Ein gespeichertes Etikett behält sie sofort, die Kachel zeigt
+          <span class="ui">Daten · 🔗 gemerkt</span>. Hat das Etikett andere ungespeicherte Änderungen (oder wurde es nie
+          gespeichert), zeigt sie <span class="ui">Daten · 🔗 beim Speichern</span>, bis Sie das Etikett speichern. Beim nächsten
+          Mal lädt <span class="path">Mit Daten drucken…</span> sie sofort. Sie wird auch gefunden, wenn Sie Etikett und
+          Daten zusammen verschieben. Ist sie nicht da (verschoben, oder der Netzwerkordner ist offline), wird die Kachel
+          gelb und sagt es; wählen Sie sie unter <span class="ui">Ändern ▾</span> neu, oder <span class="ui">Noch
+          einmal</span>, wenn der Ordner wieder da ist. <span class="ui">Datei nicht mehr merken</span> nimmt sie aus dem
+          Etikett. Im Explorer öffnet Rechtsklick auf ein Etikett &gt; <span class="ui">Mit Daten drucken…</span>
+          (Windows 11: unter <span class="ui">Weitere Optionen anzeigen</span>) es direkt in diesem Fenster.</p>
+        <figure class="frame" style="max-width:770px"><img src="../img/de/print-data-remembered.png" width="750" height="60" alt="Die drei Kacheln eines Etiketts mit gemerkter Datendatei: Drucker, Vorlage Regal 3.qllabel und Daten · gemerkt mit teile.csv, CSV, 20 Zeilen und dem Knopf Ändern mit Pfeil"></figure>
       </div>
     </li>
 
@@ -131,7 +141,8 @@ Mutter M4;4712;Regal 3</pre>
         <h2 id="command-line">Ohne Fenster: QlLabelPrint.exe</h2>
         <p>Dasselbe funktioniert aus Skripten mit <code>QlLabelPrint.exe</code> in <code>C:\Program Files\QLUnidrv</code>.
           Es druckt eine <code>.qllabel</code>-Datei mit einer CSV- oder JSON-Datei und fragt nichts, sondern meldet
-          Probleme mit einem Rückgabewert. Mit <code>--name A1234</code> druckt es nur das Etikett mit
+          Probleme mit einem Rückgabewert. Ohne <code>--data</code> nimmt es die Datendatei, die sich das Etikett gemerkt
+          hat (siehe oben), zuerst neben dem Etikett. Mit <code>--name A1234</code> druckt es nur das Etikett mit
           diesem <code>labelname</code>. <code>QlLabelPrint.exe --help</code> zeigt alle Optionen.</p>
         <pre>"C:\Program Files\QLUnidrv\QlLabelPrint.exe" --print Regal.qllabel --data teile.csv --dry-run</pre>
       </div>

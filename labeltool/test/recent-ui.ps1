@@ -25,7 +25,7 @@ $exe = Join-Path $out "recent_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.RecentUi /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "$Src\*.cs" test\recent_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "/recurse:$Src\*.cs" test\recent_ui.cs
     if ($LASTEXITCODE) { throw "recent_ui build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

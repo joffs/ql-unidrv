@@ -249,6 +249,22 @@ namespace QlLabels.Tests
                   "still one window, one of the two files' tabs active, no new tab (" + path() + ", " + tabCount() + " tabs)");
             foreach (var t in (System.Collections.IList)tabsField.GetValue(form)) t.GetType().GetField("Dirty").SetValue(t, false);
 
+            // several labels selected in Explorer (one start each) while a dialog is open: every one opens once it closes
+            // (review 2026-11-11: only the last one did)
+            string d1 = NewLabel("Etikett D"), d2 = NewLabel("Etikett E"), d3 = NewLabel("Etikett F");
+            var busy = new Form { Text = "dialog", ShowInTaskbar = false, StartPosition = FormStartPosition.Manual, Location = new Point(60, 60), Size = new Size(200, 120) };
+            busy.Show(form);
+            EnableWindow(form.Handle, false);
+            Pump(300);
+            Check(Client("maker", null, d1) == 0 && Client("maker", null, d2) == 0 && Client("maker", null, d3) == 0, "three starts while a dialog is open: handed over");
+            Pump(800);
+            Check(tabCount() == 4, "the files wait while the dialog is open (" + tabCount() + " tabs)");
+            EnableWindow(form.Handle, true);
+            busy.Close();
+            Check(Until(() => tabCount() == 7, 5000) && path() == d3 && questions == 0,
+                  "the dialog closed: all three opened, the last one active (" + tabCount() + " tabs, " + path() + ")");
+            foreach (var t in (System.Collections.IList)tabsField.GetValue(form)) t.GetType().GetField("Dirty").SetValue(t, false);
+
             // the language switch: the window lets go, the next start runs on its own
             SingleInstance.Release();
             code = Client("maker", null);

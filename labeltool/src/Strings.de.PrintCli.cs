@@ -27,6 +27,8 @@ namespace QlLabels
                 { "The label file {0} is larger than {1} MB.", "Die Etikettendatei {0} ist größer als {1} MB." },
                 { "The label file {0} can't be read: {1}", "Die Etikettendatei {0} kann nicht gelesen werden: {1}" },
                 { "The data file {0} doesn't exist.", "Die Datendatei {0} gibt es nicht." },
+                { "The folder of the label's data file isn't reachable: {0}", "Der Ordner der Datendatei des Etiketts ist nicht erreichbar: {0}" },
+                { "The label's data file {0} doesn't exist (next to the label or at that place).", "Die Datendatei {0} des Etiketts gibt es nicht (weder neben dem Etikett noch an dieser Stelle)." },
                 { "The JSON data can't be read: {0}", "Die JSON-Daten können nicht gelesen werden: {0}" },
                 { "The JSON data must be an object or a list of objects.", "Die JSON-Daten müssen ein Objekt oder eine Liste von Objekten sein." },
                 { "not an object", "kein Objekt" },

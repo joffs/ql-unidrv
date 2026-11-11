@@ -79,10 +79,12 @@ namespace QlLabels
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             // The font already follows the display scaling; the window's own sizes are 100 % pixels scaled the same way.
             // 100 % pixels scaled to this display, never larger than its working area (150 % on a small screen).
-            var screen = Screen.FromPoint(Cursor.Position).WorkingArea;
+            // the screen it opens on (its saved place, else the mouse's): S() scales to that screen's DPI too
+            var screen = Screen.FromPoint(WindowBounds.StartPoint(WindowBounds.LabelFormats)).WorkingArea;
             ClientSize = new Size(Math.Min(S(1000), screen.Width * 9 / 10), Math.Min(S(620), screen.Height * 9 / 10));
             MinimumSize = new Size(Math.Min(S(760), screen.Width), Math.Min(S(480), screen.Height));  // the command row fits (German)
             StartPosition = FormStartPosition.CenterScreen;
+            WindowBounds.Use(this, WindowBounds.LabelFormats);   // the size and place it had when it was last closed
             KeyPreview = true;
 
             BuildTools();
@@ -170,7 +172,7 @@ namespace QlLabels
         // window opens on (WinForms scales the fonts to it when the window is created, the sizes set here it doesn't).
         int S(int pixels) { return IsHandleCreated ? LogicalToDeviceUnits(pixels) : (int)Math.Round(pixels * startDpi / 96.0); }
 
-        readonly int startDpi = Brand.ScreenDpi(Cursor.Position);
+        readonly int startDpi = Brand.ScreenDpi(WindowBounds.StartPoint(WindowBounds.LabelFormats));   // the screen it opens on
 
         // Created directly on a second screen with other scaling (ScaledForm, MatchScreenDpi): WinForms then scales as on a
         // move, keeping the window's size (the sizes set through S() are already the screen's; Rescale corrects the rest).
@@ -491,6 +493,7 @@ namespace QlLabels
             catch (Exception ex) { Failed(Lang.T("The language couldn't be changed."), ex); return; }
             if (!restart) return;
             SingleInstance.Release();   // the new start is the window from now on
+            WindowBounds.Save(this, WindowBounds.LabelFormats);   // the new start opens where this window is
             try { Process.Start(Application.ExecutablePath, testPrinter != null ? "--printer \"" + testPrinter + "\"" : ""); }
             catch (Exception ex) { Failed(Lang.T("QL Label Formats couldn't start again in the new language."), ex); return; }
             Close();

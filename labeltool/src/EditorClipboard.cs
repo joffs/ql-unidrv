@@ -30,6 +30,7 @@ namespace QlLabels
         public ClipKind Kind;
         public string ObjectsJson;     // Objects
         public byte[] Svg;             // Svg: cleaned (SvgPicture.Clean)
+        public byte[] SvgSource;       // Svg: as the source gave it (its text for Import/SvgText.cs)
         public byte[] Emf;             // Emf: checked (EmfPicture.Check)
         public EmfPicture.Content EmfKind;
         public Bitmap Picture;         // Picture: 32 bpp ARGB, the caller's to dispose
@@ -38,6 +39,8 @@ namespace QlLabels
         public string Text;            // Rtf: its plain text; Text
         public bool AlsoText;          // the source also offered plain text (not SVG source): "Paste as plain text" works
         public SizeF? SizeMm;          // Svg, Emf, Picture: the size it was copied at, mm (pasted 1:1); null: none known
+        public ImportSource Source = ImportSource.Unknown;   // the program it came from (Import/ImportSource.cs)
+        public byte[] Cmx;             // Emf from CorelDRAW: its CMX as well (its text: Import/Corel/Cmx.cs; outlines and small text of a picture: Import/Corel/CorelPicture.cs); null: none
     }
 
     // What a clipboard or a drop holds; tests give their own. Get: string, byte[], MemoryStream or string[] (files);
@@ -46,6 +49,12 @@ namespace QlLabels
     {
         bool Has(string format);
         object Get(string format);
+    }
+
+    // A source that knows the clipboard owner's process (a paste; not a drop).
+    interface IClipOwner
+    {
+        string Owner { get; }
     }
 
     static class EditorClipboard
@@ -61,6 +70,8 @@ namespace QlLabels
         public static ClipContent Read(IClipSource s)
         {
             var c = new ClipContent();
+            var owner = s as IClipOwner;
+            c.Source = ImportSource.Detect(s, owner != null ? owner.Owner : null);
             string plain = Text(s);
             bool plainIsSvg = plain != null && LooksLikeSvg(plain);
             c.AlsoText = plain != null && !plainIsSvg && plain.Trim().Length > 0;
@@ -72,13 +83,13 @@ namespace QlLabels
             {
                 var raw = Bytes(s, f);
                 var svg = VectorSvg(raw);
-                if (svg != null) { c.Kind = ClipKind.Svg; c.Svg = svg; c.SizeMm = SvgPicture.SizeMm(Trimmed(raw)); return c; }
+                if (svg != null) { c.Kind = ClipKind.Svg; c.Svg = svg; c.SvgSource = Trimmed(raw); c.SizeMm = SvgSizeMm(s, c); return c; }
             }
             if (plainIsSvg)
             {
                 var raw = Encoding.UTF8.GetBytes(plain);
                 var svg = VectorSvg(raw);
-                if (svg != null) { c.Kind = ClipKind.Svg; c.Svg = svg; c.SizeMm = SvgPicture.SizeMm(Trimmed(raw)); return c; }
+                if (svg != null) { c.Kind = ClipKind.Svg; c.Svg = svg; c.SvgSource = Trimmed(raw); c.SizeMm = SvgSizeMm(s, c); return c; }
             }
 
             // RTF that is only text before the pictures: Word offers its text as an EMF too (dropped files still win)
@@ -99,6 +110,7 @@ namespace QlLabels
                     if (facts.Kind != EmfPicture.Content.OneBitmap && facts.Kind != EmfPicture.Content.Empty)
                     {
                         c.Kind = ClipKind.Emf; c.Emf = emf; c.EmfKind = facts.Kind; c.SizeMm = EmfPicture.FrameSizeMm(emf);
+                        if (c.Source.IsCorelDraw) c.Cmx = Bytes(s, ImportSource.Cmx32Format);
                         return c;
                     }
                     if (facts.Kind == EmfPicture.Content.OneBitmap) shown = EmfPicture.FrameSizeMm(emf);
@@ -192,6 +204,14 @@ namespace QlLabels
         }
 
         // The data without the zeros some programs put at the end and the white space before it (copied source text).
+        // An SVG's size as copied: its width and height, or Affinity's true size from its PDF (its SVG counts px at the
+        // document's resolution: Import/Affinity/AffinityClip.cs).
+        static SizeF? SvgSizeMm(IClipSource s, ClipContent c)
+        {
+            var own = SvgPicture.SizeMm(c.SvgSource);
+            return c.Source.IsAffinity ? AffinityClip.SizeMm(own, Bytes(s, AffinityClip.PdfFormat)) : own;
+        }
+
         static byte[] Trimmed(byte[] source)
         {
             if (source == null) return null;
@@ -224,6 +244,7 @@ namespace QlLabels
         // counts as drawing.
         public static bool RasterOnly(byte[] svg)
         {
+            if (SvgPicture.TooDeep(svg)) return false;
             var doc = new XmlDocument { XmlResolver = null };
             try
             {
@@ -378,7 +399,7 @@ namespace QlLabels
         public static IClipSource FromClipboard()
         {
             ComTypes.IDataObject data;
-            return OleGetClipboard(out data) == 0 && data != null ? new ComSource(data) : null;
+            return OleGetClipboard(out data) == 0 && data != null ? new ComSource(data) { Owner = ImportSource.ClipboardOwner() } : null;
         }
 
         // A drop's data (the drop's own data only; a URL alone is never followed).
@@ -391,9 +412,10 @@ namespace QlLabels
         // Reads the formats as bytes through COM: WinForms' GetData would deserialize a .NET object that another program
         // put under a format's name, so it is never used for reading. Get: string for the text formats, string[] for
         // files, byte[] for the others (EmfFormat: the EMF's bytes).
-        sealed class ComSource : IClipSource
+        sealed class ComSource : IClipSource, IClipOwner
         {
             readonly ComTypes.IDataObject data;
+            public string Owner { get; set; }
             public ComSource(ComTypes.IDataObject data) { this.data = data; }
 
             static short Id(string format)

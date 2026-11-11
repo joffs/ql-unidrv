@@ -23,7 +23,7 @@ $exe = Join-Path $out "tabs_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.TabsUi /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "$Src\*.cs" test\tabs_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "/recurse:$Src\*.cs" test\tabs_ui.cs
     if ($LASTEXITCODE) { throw "tabs_ui build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

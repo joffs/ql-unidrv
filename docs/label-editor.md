@@ -9,15 +9,19 @@ screen exactly as they will print. The name is the same in German; the UI follow
 - in **QL Label Formats**: the button **Label Maker** (also in German; also menu *Tools*), or right-click a label
   format > **Design a label on this format...** (*Etikett mit diesem Format gestalten...*),
 - or `QlLabelMaker.exe [file.qllabel] [--printer "name"] [--format "label format"]` (the editor's own program next to
-  `QlLabelFormats.exe`; `QlLabelFormats.exe --editor ...` starts it too).
+  `QlLabelFormats.exe`; `QlLabelFormats.exe --editor ...` starts it too),
+- or right-click a `.qllabel` in Explorer > **Print with data...** (*Mit Daten drucken...*; Windows 11: under *Show more
+  options*): `QlLabelMaker.exe --print-data file.qllabel` opens the label (in the open window too) and then *Print with
+  data* with its remembered data file.
 
 **One window** (`SingleInstance.cs`, `EditorForm.SingleInstance.cs`): a second start while QL Label Maker is open (in
 this user session) hands its command line to the open window and ends; the window comes to the front (restored when
 minimised). A file opens there after the usual *Save the changes?* question (Cancel keeps the label; the same file
 already open: only to the front); `--printer`/`--format` without a file start a new label after the same question;
 without arguments only to the front. While a dialog of the window is open (Save as, Print with data, a question) or a
-print is being sent, the file waits until that is over. A local mutex `Local\QLUnidrv.LabelMaker.Instance` marks the
-open window, which listens on a named pipe of this session and user (only this user may connect; the second start
+print is being sent, the file waits until that is over (several at once, e.g. labels selected in Explorer: every one, in
+order; *Print with data...* from Explorer: that label's tab first, never on top of a question). A local mutex
+`Local\QLUnidrv.LabelMaker.Instance` marks the open window, which listens on a named pipe of this session and user (only this user may connect; the second start
 checks that the listener is the same program in this session). An elevated window can't be reached from a normal start:
 then a second window opens, as before. The language switch lets go before it restarts. QL Label Formats works the same
 for a plain start and `--printer` (Printer setup's test print, *Save as label format*: the printer is chosen there and
@@ -60,26 +64,33 @@ file first and goes back to the arrow after one picture. With a text tool, a cli
 over objects. Each drawn object is one undo step. Esc: a drag in progress ends without an object, then a text edit
 ends, then the arrow is back. Enter on a tool button, the *Insert* menu and the keys (Ctrl+T, Ctrl+L, ...) still insert
 at a free place and leave the active tool as it is.
-The toolbar (always visible) holds, from left to right: duplicate, delete; turn 90° left / right; align left, centre,
-right, top, middle, bottom; distribute horizontally / vertically; bring to front, forward, backward, to back; then the
-**text group** (`EditorForm.TextBar.cs`): **B I U** (German *F K U*) and **Invert**; align text left, centre, right,
-**justify** (*Blocksatz*); **line spacing** (an icon and a box: 1.0 / 1.15 / 1.5 / 2.0 or a value of one's own, 0.5 to
-3) and **letter spacing** (an icon and a number with arrows, pt). Each button's tooltip gives its name, its key and,
+The toolbar (always visible) holds, from left to right, in the order of CorelDRAW's property bar: duplicate, delete;
+the **text group** (`EditorForm.TextBar.cs`): **font** (a list of the installed fonts, typing completes a name, Enter
+applies it) and **size** (pt; a list of the usual sizes 6–72, any value from 2 to 400 can be typed; wheel or ↑↓: 1 pt,
+Shift 10 pt, Ctrl 0.1 pt); **B I U** (German *F K U*) and **Invert**; align text left, centre, right, **justify**
+(*Blocksatz*); **line spacing** (an icon and a box in % of the font's height: 100 / 115 / 150 / 200 % or a value of
+one's own, 10 to 500 %) and **letter spacing** (an icon and a number with arrows in %, 100 % = normal, 0 to 300 %; each
+% is 1 % of the font's space width, as in CorelDRAW); both: wheel or ↑↓ 1 %, Shift 10 %, Ctrl 0.1 %. Then the object
+functions: turn 90° left / right; align left, centre, right, top, middle, bottom; distribute horizontally / vertically;
+bring to front, forward, backward, to back. What doesn't fit a narrow window goes behind the toolbar's » (at the
+smallest window, 780 px, the text group stays whole; the bar's buttons and fields need about 1050 px at 100 %, so the
+window opens 1180 px wide, where the whole bar fits at 100 % and 125 %; a smaller screen gets its working area). Each button's tooltip gives its name, its key and,
 for aligning, what it aligns with (*an der Auswahl* / *am druckbaren Bereich*); a button that can't do anything for
 the selection is greyed, nothing is hidden or moves. The text group is greyed without a single selected text; for
 artistic text the alignment and the line spacing are greyed (*nur bei Mengentext*). It stays usable while a text is
 edited (the object commands are greyed then). B, I, U, Invert and the letter spacing act on the selected characters
 while editing (nothing selected: on what is typed next), else on the whole text; a format that differs inside is
 **hatched** (tooltip *teilweise* / *partly*): the first click sets it for all, the next removes it everywhere, as in
-Word; a letter spacing that differs leaves the field blank. Alignment and line spacing always apply to the whole text.
+Word; a font, size or letter spacing that differs leaves the field blank (Enter on the blank field applies the value
+to all). Alignment and line spacing always apply to the whole text.
 Inverted characters (a run's `"invert": true`) get a black band behind them, the height of their line (Word's
 shading); the whole text inverted is the object's `"invert"`: an artistic text in a black box 1 mm beyond the frame, a
 paragraph text in bands behind its lines (from 0.3 mm before the first to 0.3 mm after the last character; the bands of
 two lines meet halfway between them, at any line spacing; an empty line and the rest of the frame stay white). A run's
-`"spacing"` (pt) is its letter spacing; RTF copies and pastes them as `\expnd`/`\expndtw` and black `\chcbpat` /
+`"letterSpacing"` (%) is its letter spacing; RTF copies and pastes them as `\expnd`/`\expndtw` and black `\chcbpat` /
 `\highlight` with white `\cf` (a dark highlight or shading pastes as inverted).
 Keys: while editing Ctrl+B/I/U and Ctrl+L/E/R/J (alignment; for artistic text they do nothing); with the text only
-selected Ctrl+Shift+F (bold: Ctrl+B adds a rectangle then), Ctrl+I, Ctrl+U and Ctrl+J. The whole bar needs about 870 px (100 %).
+selected Ctrl+Shift+F (bold: Ctrl+B adds a rectangle then), Ctrl+I, Ctrl+U and Ctrl+J.
 
 - **Printer** and **Label** (*Drucker*, *Etikett*, top row): the label is one of your label formats (listed first) or one of Brother's
   papers that the printer's model offers.
@@ -136,8 +147,8 @@ no text box: one hint line (*Doppelklicken Sie den Text auf dem Etikett, um ihn 
 
 | Insert (menu / palette) | Settings (right panel) |
 |---|---|
-| **Artistic text** (Ctrl+T, *Grafiktext*) | one line (**Kind** *Grafiktext*): the box always fits the text; drag any handle to make the text larger or smaller (in proportion, the opposite side stays), or type the size in points. Font and size in the panel; bold / italic / underline, **Invert** and **letter spacing** in points (*Zeichenabstand*, −5 to +20) in the toolbar's text group, for the whole text or the selected characters. **Invert** (*Invertieren*) on the whole text: white on a black box 1 mm larger than the text's box; the box covers what lies below and turns with the text, the selection is drawn light on it. On selected characters: white on a black band as high as their line. Enter does nothing, pasted line breaks become spaces |
-| **Paragraph text** (Ctrl+Shift+T, *Mengentext*) | text over several lines in a box you set with the handles: it wraps at the box's edge at its font size, a word longer than a line breaks at characters. Line alignment left, centre, right or **justify** (*Blocksatz*: the spaces of a wrapped line widen so that it reaches both edges of the box; the last line of a paragraph, and a line of one word, stay left, as in Word; drawn, edited and printed alike, `EditorRender.Gap`), **line spacing** (*Zeilenabstand*, 0.5 to 3 × the font's), letter spacing, **Invert** as for artistic text (but the whole text inverted gets a black band behind each line, no box over the frame): all in the toolbar's text group. In the file `"align": "justify"`; RTF `\qj` pastes as justify. A text that doesn't fit is cut off at the box; on screen the box gets a red edge and the panel says so in red. **Kind** switches between the two: paragraph text becomes one line (line breaks become spaces), artistic text becomes paragraph text in a box around its text. **Words in their own format** (*Wörter mit eigenem Format*, artistic and paragraph text): select words while editing on the label, then Ctrl+B/I/U (also Ctrl+Shift+F/K/U) or the toolbar's **B / I / U**, the panel's **Font** or **Size** apply to them; with nothing selected they apply to what is typed next, and when the text isn't being edited they apply to the whole text; mixed values show blank (font, size) or hatched (B, I, U). A paste from Word or WordPad (RTF) keeps its formats, plain text takes the format at the cursor; in artistic text line breaks become spaces. **Kind** keeps the words' formats both ways (line breaks become spaces); the handles of an artistic text scale every word's size in proportion. In the file: `"runs"` on the text object, each run with only what differs (`{"t":"M4","bold":true}`); `"text"` stays the whole text, so older versions show it in one format |
+| **Artistic text** (Ctrl+T, *Grafiktext*) | one line (**Kind** *Grafiktext*): the box always fits the text; drag any handle to make the text larger or smaller (in proportion, the opposite side stays), or type the size in points. Font, size (pt), bold / italic / underline, **Invert** and **letter spacing** in % (*Zeichenabstand*, 0 to 300 %; 100 % normal, each % more adds 1 % of a space's width after every letter, i.e. 100 % + CorelDRAW's character spacing) in the toolbar's text group, for the whole text or the selected characters. Both spacing fields and the font size step with the mouse wheel and the arrow keys: 1 (% or pt), with Shift 10, with Ctrl 0.1 (CorelDRAW's nudge steps). A value typed + Enter applies to the whole text when it isn't being edited, also when the field was blank (mixed). Files before 0.24 stored the line spacing as a factor of GDI+'s line spacing and the letter spacing in points (`lineHeight`, `spacing`); they are converted with the text's font when read and saved as `lineSpacing` / `letterSpacing` in % (a letter spacing beyond 0–300 % is limited). **Invert** (*Invertieren*) on the whole text: white on a black box 1 mm larger than the text's box; the box covers what lies below and turns with the text, the selection is drawn light on it. On selected characters: white on a black band as high as their line. Enter does nothing, pasted line breaks become spaces |
+| **Paragraph text** (Ctrl+Shift+T, *Mengentext*) | text over several lines in a box you set with the handles: it wraps at the box's edge at its font size, a word longer than a line breaks at characters. Line alignment left, centre, right or **justify** (*Blocksatz*: the spaces of a wrapped line widen so that it reaches both edges of the box; the last line of a paragraph, and a line of one word, stay left, as in Word; drawn, edited and printed alike, `EditorRender.Gap`), **line spacing** (*Zeilenabstand*, 10 to 500 % of the font's height = ascent + descent, as CorelDRAW measures it; presets 100/115/150/200 %; a number below 10 is read as a factor, 1.5 = 150 %), letter spacing, **Invert** as for artistic text (but the whole text inverted gets a black band behind each line, no box over the frame): all in the toolbar's text group. In the file `"align": "justify"`; RTF `\qj` pastes as justify. **Frame options** in the panel, below the hint (as in CorelDRAW's Text docker; the toolbar has no room): **Vertical** (*Vertikal*; three buttons, tooltip *Vertikale Ausrichtung: Oben / Mitte / Unten*): the text sits at the top, in the middle or at the bottom of its box; a text that doesn't fit stays at the top (cut off at the bottom). **Paragraph before / after** (*Absatz vor / nach*, 0 to 500 % of the font's height, the line spacing's measure; wheel or ↑↓ 1 %, Shift 10 %, Ctrl 0.1 %): space between paragraphs only, none before the first or after the last; the space after a paragraph (its last line's font height) and before the next (its first line's) add up, as in Word. Both apply to the whole text, each click or value one undo step; artistic text doesn't show them. In the file `"verticalAlign": "middle"` / `"bottom"`, `"spaceBefore"`, `"spaceAfter"` (%), written only when set (files without them: top, no space). RTF doesn't carry them (`\sb`/`\sa` are neither copied nor read: Word's Normal style has 8 pt after each paragraph, every Word paste would change). A text that doesn't fit is cut off at the box; on screen the box gets a red edge and the panel says so in red, but only when a glyph is really cut off (the empty room below the letters, such as the font's line gap or the descent under capitals, may be cut without the mark; a last line of only spaces doesn't count). **Kind** switches between the two: paragraph text becomes one line (line breaks become spaces), artistic text becomes paragraph text in a box around its text. **Words in their own format** (*Wörter mit eigenem Format*, artistic and paragraph text): select words while editing on the label, then Ctrl+B/I/U (also Ctrl+Shift+F/K/U) or the toolbar's **B / I / U**, the panel's **Font** or **Size** apply to them; with nothing selected they apply to what is typed next, and when the text isn't being edited they apply to the whole text; mixed values show blank (font, size) or hatched (B, I, U). A paste from Word or WordPad (RTF) keeps its formats, plain text takes the format at the cursor; in artistic text line breaks become spaces. **Kind** keeps the words' formats both ways (line breaks become spaces); the handles of an artistic text scale every word's size in proportion. In the file: `"runs"` on the text object, each run with only what differs (`{"t":"M4","bold":true}`); `"text"` stays the whole text, so older versions show it in one format |
 | **Line** (Ctrl+L) | line width, **angle** (*Winkel*, 0–180°, 0° level) and **length** (*Länge*); typed values keep the left end (a vertical line: the lower end); drag an end to move it (Shift: horizontal or vertical) |
 | **Box** (Ctrl+B) | line width, filled, ellipse |
 | **Picture** (Ctrl+I) | **Dither** for photos and shades, or **Threshold** (slider) for logos and drawings; **Invert**; *Replace...*, *Original proportions*, *Fit to label* (as large as the printable area, in proportion, centred; also in the object menu, for several selected pictures together; `EditorForm.Fit.cs`). Transparent parts print white. Files: PNG, JPG, BMP, GIF, TIFF, WebP, HEIC/HEIF, a PDF's first page, **SVG**: kept as a vector (`SvgPicture.cs`, Windows' own Direct2D SVG renderer, no DLL) and drawn at the printer's dots for the picture's size, so it stays sharp at any size; the stored 2000-px PNG is only the editor's draft. The file is cleaned on insert and on open (no DTD, scripts, event attributes or references to other files or the web; only `#id` and embedded `data:image/` pictures). CSS in `<style>` (Illustrator and others keep their colours there) becomes the elements' attributes on insert and on open (selectors: element, `.class`, `#id`, combinations such as `path.cls-1`, and lists of those; CSS's order, `style="..."` wins); other selectors and `@media` stay unapplied. Text becomes paths of the installed fonts on insert and on open, as a drawing program's "object to path" does (`SvgPicture.TextToPaths`: x/y, font-family with fallbacks, size, weight, style, text-anchor, letter-spacing; a missing font is replaced by a substitute, and the panel says "This picture prints with a substitute font.", its (i) naming the font); text along a path, vertical text and per-letter positions stay text. Direct2D doesn't draw such text, filters or masks; while such an SVG is selected the panel says so in one plain line ("Parts of this picture can't be printed – tip: insert it as a PNG."), its (i) names what is missing in plain words and how to print it all (`SvgPicture.Missing`) |
@@ -220,12 +231,13 @@ showed it at), else at its resolution (PNG `pHYs`, DIB `biXPelsPerMeter`, a file
 96 dpi without one or with an unlikely one under 10 or over 10000), a dropped PDF page at its page size. Placement:
 the middle of the label (a paste), the drop or right-click point, kept on the label along each side it fits. Only
 an EMF with an empty frame falls back to Insert > Picture's size (80 % of the printable area), which stays as it is.
-**Text from EMF** (`EmfText.cs`): an EMF that holds only text (CorelDRAW keeps text as ExtTextOutW records with their
+**Text from EMF** (`Import/EmfText.cs`): an EMF that holds only text (CorelDRAW keeps text as ExtTextOutW records with their
 font) pastes as editable text, read without playing the EMF: map mode, window/viewport extents and origins, world
 transforms, SaveDC/RestoreDC, ExtCreateFontIndirectW + SelectObject, SetTextAlign, ExtTextOutW/A with the dx array for
 the width. The font size is lfHeight through the transforms to mm, then points (a positive lfHeight is a cell height:
-scaled by the font's em/cell ratio). Runs on one baseline next to each other make a line (a space where the gap is a
-word's); lines a line pitch apart with a common left edge, centre or right edge make a paragraph, which becomes one
+scaled by the font's em/cell ratio), to 0.01 pt. Runs on one baseline next to each other, taken in their order along it
+(CorelDRAW may write a line's right part first), make a line (a space where the gap is a word's); lines a line pitch
+apart with a common left edge, centre or right edge (whichever they share best) make a paragraph, which becomes one
 text frame with that alignment (one line: a single-line text); other fonts, sizes or styles inside become
 its runs (`TextObject.SetRuns`), in both kinds. Turned text (escapement or world transform) keeps its angle. A font that isn't installed is
 replaced by Segoe UI and the status bar names it. CorelDRAW sets a 0.01 mm page, then resets it to 1:1 before its
@@ -233,6 +245,44 @@ text but keeps the text's size and place in 0.01 mm, so Windows draws that text 
 label pasted as a picture lost all its text). A run outside the frame that the mapping from before the first SaveDC
 puts inside is read with that mapping, and `EmfText.Repair` (called by `ImageObject.FromEmf`, so for pastes, drops
 and .emf files) writes that mapping around each such text record and the old one back after it.
+**Where a paste comes from** (`Import/ImportSource.cs`): the clipboard owner's process (`CorelDRW`), CorelDRAW's own
+formats ("Corel 32-bit/64-bit Presentation Exchange Data") or the Object Descriptor's type name ("CorelDRAW 2024
+Graphic"; the source file's path it also holds is never read). Quirks of one program are handled for that program
+only (`Import/Corel/`): CorelDRAW gives the last character of each text record an advance of 1 unit, so its measured
+advance is used instead (else a line's runs look a word apart: "LED MIX S ET", and its width for the alignment is short).
+**CorelDRAW's CMX** (`Import/Corel/Cmx.cs`, `Import/TextImport.cs`): a text-only EMF from CorelDRAW also brings its
+"Corel 32-bit Presentation Exchange Data" (RIFF "CMX1"). From it come the real text with its paragraph marks (the EMF
+has only the laid-out lines), paragraph text in a frame vs artistic text (one line of artistic text becomes a single-line
+text), per paragraph the exact font size (the EMF's goes through a rounded mapping, up to 2 % off; a run within 3 % of
+it takes it), the alignment (left, centre, right, justified), the character spacing (Label Maker's letter spacing =
+100 + CorelDRAW's %) and the line spacing (the same measure as the text bar's: CorelDRAW's 100 % pitch for Arial is
+ascent + descent; without CMX it comes from the EMF's line pitch). A frame keeps its width (the text wraps in it as in
+CorelDRAW; a word wider than the frame widens it) and, when its text is top aligned, its height. A CMX text is used only
+when its characters (without spaces) are exactly those of one EMF text object or of several next to each other; the
+bold/italic/font of each run, the places and turned text still come from the EMF, and anything that doesn't match stays as
+the EMF has it. CorelDRAW names a styled face in its own language ("Arial Fett", "Arial Kursiv"): a face that isn't
+installed is tried without its style words. Unknown records and tags are skipped; a damaged CMX means the EMF alone. Not
+taken over: word spacing (Label Maker has none). A frame's vertical alignment (top, centre, bottom) comes over with the
+frame's height; the space between paragraphs comes as *space before* (CorelDRAW takes the larger of the space after one
+paragraph and before the next, 100 % meaning none; from the first paragraph, as Label Maker has one value per text;
+paragraph text only: artistic text keeps such values but CorelDRAW lays its lines out by the line spacing alone). Not
+read: envelope, path text, tabs, columns. Underlined text:
+CorelDRAW draws the underline as a thin filled bar under each line; a bar just under a text's baseline (within 0.4 em,
+at most 0.2 em thick) that runs along that text makes it underlined and is left out of the picture, so a text-only copy
+with underlines pastes as text (`TextImport.Underlines`); a line drawn under a text that doesn't follow it stays a line. White text (Label Maker's
+texts are black): a CMX text all in white comes inverted (white on black; it sits on something dark), white characters
+inside a dark text are left out (they don't show on white; a centred line then centres without them). The samples are
+made by `tools/corel-samples.ps1` (CorelDRAW over COM, one setting per sample).
+**A whole label from CorelDRAW** (text and shapes, lines, logos in one copy; `Import/EmfLayers.cs`,
+`TextImport.FromLabel`): the texts come as text objects as above, the rest as pictures, in CorelDRAW's z-order. Each text
+record and each run of drawing between two texts is drawn alone, small (4 px/mm), and the painted pixels show what lies
+on what: drawing that comes after a text and covers it goes into a picture above that text, all other drawing into one
+picture below the texts. Each picture is the EMF with the texts and the other pictures' records blanked, its frame cut
+to its own drawing, so it lies at its place and a picture above a text covers only that place (clicks reach the text
+beside it). Not split (one picture, as before): a copy from another program, one with no drawing or no text, more than
+300 parts, more than 3 s, or an EMF that can't be drawn. Known difference: a frame with paragraphs of different sizes may
+place its later lines up to about 1 mm off CorelDRAW's (Label Maker's line pitch for mixed sizes differs from CorelDRAW's;
+also for a text-only paste).
 **Objects beyond the label** (after *Turn view* or a narrower or shorter label format): the canvas grows so that every
 object stays visible; the parts outside the label are shown grey and hatched with a dashed edge (they don't print) and
 can still be clicked and dragged back (by the object's box). A strip above the canvas says how many objects have printed
@@ -248,6 +298,28 @@ reicht in den schraffierten Rand*); it goes away when none does. Both lines go b
 the loaded roll, as the label tool's test print does: a printer error, a roll that doesn't fit the label (the
 printer would stop with a red LED), or *Use Printer Offline* is shown first. A label format that Windows doesn't
 know yet (not saved with *Save & apply*) can't be printed: the status bar then says "approximate".
+
+**Print with data** (File menu, Ctrl+Shift+P, the Print button's ▾; help page *Print with data*) **remembers its data
+file in the label** (`PrintDataLink.cs`, 2026-11-11): choosing a file there stores it in the open label. A saved label
+without other changes gets it in its file at once, silently: only the `printData` key is written (the rest of the file
+byte for byte as on disk, atomic like Save), no asterisk, no undo step; the status bar says *Data file remembered in the
+label.* (*Datendatei im Etikett gemerkt.*; forgetting: *The data file is no longer remembered in the label.* /
+*Datendatei nicht mehr im Etikett gemerkt.*). Otherwise (other unsaved changes, never saved, the file read-only, offline
+or changed on disk since it was opened or saved) the label counts as changed (asterisk, saved with the next Save) and the
+status bar says *The data file will be remembered when you save the label.* (*Datendatei wird beim Speichern im Etikett
+gemerkt.*; forgetting: *...will no longer be remembered...* / *...nicht mehr im Etikett gemerkt.*); no message box. The
+data tile's caption says *Data · 🔗 remembered* (in the file) or *Data · 🔗 when saved*. Next time *Print with data* loads it at once (looked
+for off the window's thread: an offline share doesn't freeze it). In the file: `"printData": {"file": "Daten\\teile.csv",
+"absolute": "X:\\Lager\\Daten\\teile.csv"}`, `file` relative to the label's folder when it is on the same drive or share
+(Save as elsewhere computes it again), `absolute` always; looked for relative first (label and data moved together:
+found, no asterisk, the next Save writes the new place), then at the full path. Not there: the tile turns amber with
+*⚠ not found* or *⚠ folder offline* (the drive or share is gone), the card area names the path; no message box, the rest
+stays usable. **Change ▾** (with a remembered file; the arrow or Alt+Down opens the menu, the rest of the button chooses
+a file): *Other file...*, *Retry* (when it wasn't found), *Don't remember the file* (the link goes, written as above). Each tab has its own; Undo keeps it (it isn't a drawing step). CSV and JSON alike. The copies per label are
+not remembered. `QlLabelPrint.exe` uses the remembered file without `--data`/`--set` ([print-command-line.md](print-command-line.md)).
+The Explorer entry is written by `install.ps1` (`QLUnidrv.Label\shell\printdata`, the text in the installed Windows
+language, German or English, with QL Label Maker's icon; *open* stays the double-click) and removed with the file type on
+uninstall.
 
 ## Files
 
@@ -265,6 +337,15 @@ first. A missing local file is grey with "not found" when the menu opens and a c
 network folder (UNC or mapped drive) is looked at only on a click, so the menu never waits for a server, and "folder
 not reachable" offers *Retry* and removes nothing by itself. Stored per user in `HKCU\Software\QLUnidrv\LabelMaker`
 (value `RecentLabels`), no file; uninstalling removes it with the other settings. No Windows jump list.
+
+**Window size and place** (`WindowBounds.cs`, also QL Label Formats' window): when the window closes (and before a
+restart in another language) its normal bounds and whether it was maximized are stored per user in
+`HKCU\Software\QLUnidrv` (values `LabelMakerWindow`, `LabelFormatsWindow`: `left,top,width,height,maximized`, the place
+in screen pixels, the size in 96-dpi units so it follows a scaling change). The next start opens there, also with a file
+from Explorer; a forwarded second start keeps the open window as it is. A saved place that isn't mostly on a screen's
+working area now (screen unplugged, another desk) is not used: the window opens as on the first start (default size,
+centred where the mouse is). Never larger than the working area; minimized is never restored (opens normal). The test
+exes built from the same sources don't read or write the values (`window-bounds-ui.ps1` uses a key of its own).
 
 ## Limits
 

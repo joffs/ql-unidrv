@@ -17,7 +17,7 @@ Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:exe /platform:anycpu /warnaserror+ /codepage:65001 "/out:$exe" /main:QlLabels.Tests.EditorSpike `
         /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll `
-        src\*.cs test\editor_spike.cs
+        /recurse:src\*.cs test\editor_spike.cs
     if ($LASTEXITCODE) { throw "build failed" }
 } finally { Pop-Location }
 

@@ -158,6 +158,7 @@ namespace QlLabels
             var d = redo ? undo.Redo(doc) : undo.Undo(doc);
             lastEdited = null;
             bool turned = d.Across != doc.Across;
+            d.PrintData = doc.PrintData;   // the data file isn't a drawing step: undo keeps it
             SetDoc(d, indexes.Where(i => i >= 0 && i < d.Objects.Count).Select(i => d.Objects[i]).ToList());
             if (turned) Relayout();
             if (!dirty) { dirty = true; UpdateTitle(); }
@@ -200,6 +201,7 @@ namespace QlLabels
             catch (Exception ex) { Failed(this, Lang.T("The language couldn't be switched."), ex); return; }
             if (!restart) return;
             SingleInstance.Release();   // the new start is the window from now on
+            WindowBounds.Save(this, WindowBounds.LabelMaker);   // the new start opens where this window is
             // every tab with a file comes back (in their order); an empty label: its printer and label format
             var saved = tabs.Where(t => t.Path != null).ToList();
             string args = saved.Count > 0 ? EditorProgram.FileArguments(saved.Select(t => new KeyValuePair<string, string>(t.Path, t.Printer)))
@@ -332,6 +334,7 @@ namespace QlLabels
                 return false;
             }
             path = target;
+            if (doc.PrintData != null) doc.PrintData = doc.PrintData.SavedAt(target);   // as written (its relative path for this folder)
             dirty = false;
             UpdateTitle();
             RecentLabels.Add(target);   // File > Recent labels

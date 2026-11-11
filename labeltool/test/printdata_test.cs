@@ -135,10 +135,10 @@ namespace QlLabels.Tests
                   "problem text with and without labelname");
 
             // JSON data files (PrintDataFile.cs): the same table as CSV
-            var j = DataFile.Read(Encoding.UTF8.GetBytes("[{\"Artikel\":\"Schraube\",\"copies\":2,\"labelname\":\"A1\"},{\"Artikel\":\"Mutter\",\"EAN\":4006381333931,\"ok\":true,\"x\":null},{}]"), "liste.json");
+            var j = DataFile.Read(Encoding.UTF8.GetBytes("[{\"Artikel\":\"Schraube\",\"copies\":2,\"labelname\":\"A1\"},{\"Artikel\":\"Mutter\",\"EAN\":2000000000008,\"ok\":true,\"x\":null},{}]"), "liste.json");
             var jr = DataRecord.FromTable(j);
             Check(j.Columns.SequenceEqual(new[] { "Artikel", "copies", "labelname", "EAN", "ok", "x" }) && jr.Count == 3 && jr[0].Copies == 2 && jr[0].Title == "A1" &&
-                  jr[1].Value("EAN") == "4006381333931" && jr[1].Value("ok") == "true" && jr[1].Value("x") == "" && jr[1].Name == "" && jr[2].Value("Artikel") == "",
+                  jr[1].Value("EAN") == "2000000000008" && jr[1].Value("ok") == "true" && jr[1].Value("x") == "" && jr[1].Name == "" && jr[2].Value("Artikel") == "",
                   "JSON: columns in order, numbers/true/null as text, a missing name an empty cell");
             Check(DataFile.Read(Encoding.UTF8.GetBytes("{\"a\":\"b\"}"), null).Rows.Count == 1 && DataFile.IsJson(Encoding.UTF8.GetBytes("\uFEFF ["), "daten.txt") &&
                   !DataFile.IsJson(Encoding.UTF8.GetBytes("[a]\n1"), "x.csv"), "JSON by extension or content; .csv stays CSV");
@@ -158,10 +158,10 @@ namespace QlLabels.Tests
             var doc = new LabelDoc();
             doc.Objects.Add(new TextObject { Text = "{Artikel}", Font = "Arial", Size = 12, X = 3, Y = 3, W = 40, H = 8 });
             doc.Objects.Add(new TextObject { Text = "{Lager}", Font = "Arial", Size = 8, X = 3, Y = 15, W = 40, H = 6 });
-            doc.Objects.Add(new BarcodeObject { Kind = Symbology.Ean13, Data = "{EAN|4006381333931}", X = 3, Y = 30, W = 40, H = 15 });
+            doc.Objects.Add(new BarcodeObject { Kind = Symbology.Ean13, Data = "{EAN|2000000000008}", X = 3, Y = 30, W = 40, H = 15 });
             var label = new LabelChoice { Name = "Test 62", Media = MediaTable.ById(259), LengthMm = 50, FeedMm = 3, IsFormat = true };
             var job = new LabelJob(doc, LabelLayout.Estimate(label, false, false)) { Copies = 2 };
-            job.Records = DataRecord.FromTable(Csv("Artikel;EAN;copies\nSchraube;4006381333931;3\nMutter;123;\nx;;y"));
+            job.Records = DataRecord.FromTable(Csv("Artikel;EAN;copies\nSchraube;2000000000008;3\nMutter;123;\nx;;y"));
             var p0 = job.Check(job.Records[0]);
             Check(p0.Count == 1 && p0[0].Kind == RecordProblemKind.MissingField && p0[0].Field == "Lager" && p0[0].Blocks, "missing field blocks: " + string.Join("; ", p0));
             var p1 = job.Check(job.Records[1]);

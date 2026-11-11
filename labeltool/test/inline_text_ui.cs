@@ -81,6 +81,77 @@ namespace QlLabels.Tests
         }
 
         // A key as the window gets it (its ProcessCmdKey first, as for a real key press). True: handled there.
+        [DllImport("user32.dll")] static extern IntPtr GetFocus();
+
+        // A key as Windows sends it to the field that has the focus (the message loop: PreProcessMessage, then the field).
+        static void FieldKey(Control field, Keys key)
+        {
+            if (!field.ContainsFocus) field.Focus();   // not again: the number field would move it off its edit box
+            Pump(30);
+            IntPtr h = GetFocus();
+            PostMessage(h, WM_KEYDOWN, (IntPtr)(int)key, IntPtr.Zero);
+            PostMessage(h, WM_CHAR, (IntPtr)(key == Keys.Enter ? 13 : 27), IntPtr.Zero);
+            Pump(120);
+        }
+
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        // Typed into a field as Windows sends it (all of its text selected first, then the characters).
+        static void TypeInto(Control field, string text)
+        {
+            if (!field.ContainsFocus) field.Focus();   // not again: the number field would move it off its edit box
+            Pump(30);
+            IntPtr h = GetFocus();
+            SendMessage(h, 0x00B1, IntPtr.Zero, (IntPtr)(-1));   // EM_SETSEL: all
+            foreach (char c in text) PostMessage(h, WM_CHAR, (IntPtr)c, IntPtr.Zero);
+            Pump(60);
+        }
+
+        static void FieldKeys(TextObject p)
+        {
+            canvas.Select(new LabelObject[] { p });
+            Pump(60);
+            var size = F<StepCombo>("sizeBox");
+            var lineBox = F<ComboBox>("lineSpacingBox");
+            var letters = F<StepUpDown>("letterSpacingNum");
+            var stack = (System.Collections.IList)typeof(UndoStack).GetField("undo", All).GetValue(F<UndoStack>("undo"));
+            Func<string> sizes = () => string.Join("|", p.FullRuns().Select(r => (r.Size ?? p.Size).ToString()));
+            Func<string> spacings = () => string.Join("|", p.FullRuns().Select(r => (r.Spacing ?? p.Spacing).ToString()));
+            string size0 = sizes(), sizeText0 = size.Text, spacing0 = spacings(), letterText0 = letters.Text;
+            double line0 = p.LineSpacing;
+            var runs0 = p.FullRuns().ToArray();
+
+            TypeInto(size, "33");
+            FieldKey(size, Keys.Escape);
+            Check(sizes() == size0 && size.Text == sizeText0, "size box: typed 33 + Escape changes nothing (" + sizes() + ", shows " + size.Text + ")");
+            TypeInto(lineBox, "180");
+            FieldKey(lineBox, Keys.Escape);
+            Check(Math.Abs(p.LineSpacing - line0) < 1e-9 && lineBox.Text == LineText(line0), "line spacing: typed 180 + Escape changes nothing (" + p.LineSpacing + ", shows " + lineBox.Text + ")");
+            TypeInto(letters, "150");
+            FieldKey(letters, Keys.Escape);
+            Check(spacings() == spacing0 && letters.Text == letterText0, "letter spacing: typed 150 + Escape changes nothing (" + spacings() + ", shows " + letters.Text + ")");
+
+            int steps = stack.Count;
+            TypeInto(size, "13");
+            FieldKey(size, Keys.Enter);
+            Check(p.FullRuns().All(r => (r.Size ?? p.Size) == 13) && stack.Count == steps + 1 && !size.Focused,
+                  "size box: typed 13 + Enter sets 13 pt, one undo step (" + sizes() + ", steps +" + (stack.Count - steps) + ")");
+            Check(size.Text == size.FormatValue(13), "size box shows " + size.Text);
+            steps = stack.Count;
+            TypeInto(lineBox, "130");
+            FieldKey(lineBox, Keys.Enter);
+            Check(Math.Abs(p.LineSpacing - 130) < 1e-9 && stack.Count == steps + 1, "line spacing: typed 130 + Enter, one undo step (steps +" + (stack.Count - steps) + ")");
+            steps = stack.Count;
+            TypeInto(letters, "110");
+            FieldKey(letters, Keys.Enter);
+            Check(p.FullRuns().All(r => (r.Spacing ?? p.Spacing) == 110) && stack.Count == steps + 1, "letter spacing: typed 110 + Enter, one undo step (" + spacings() + ", steps +" + (stack.Count - steps) + ")");
+            // back as before (no undo: it puts copies in place, and the test goes on with p)
+            p.SetRuns(runs0);
+            Call("SetLineSpacing", line0, false);
+            Call("UpdateTextBar");
+            Pump(60);
+        }
+
         static bool Key(Keys keys)
         {
             var m = Message.Create(canvas.Handle, WM_KEYDOWN, (IntPtr)(int)(keys & Keys.KeyCode), IntPtr.Zero);
@@ -271,9 +342,9 @@ namespace QlLabels.Tests
             Check(canvas.ShowOverflow, "View > Show overflow while editing is on by default");
             using (var shot = Shot())
             {
-                // light grey ink just below the frame
-                var below = canvas.MmToClient(new PointF((float)(o.X + 2), (float)(o.Y + o.H + 1.5)));
-                var r = canvas.RectangleToScreen(new Rectangle((int)below.X, (int)below.Y - 4, (int)(16 * canvas.PixelsPerMm), 10));
+                // light grey ink in the 5 mm below the frame (a band, not a few rows: at a high zoom those can fall between lines)
+                var below = canvas.MmToClient(new PointF((float)(o.X + 2), (float)(o.Y + o.H + 0.3)));
+                var r = canvas.RectangleToScreen(new Rectangle((int)below.X, (int)below.Y, (int)(16 * canvas.PixelsPerMm), (int)(5 * canvas.PixelsPerMm)));
                 r = form.RectangleToClient(r);
                 int grey = 0;
                 for (int x = r.Left; x < r.Right; x++)
@@ -439,7 +510,7 @@ namespace QlLabels.Tests
             var invert = F<ToolStripButton>("invertButton");
             var aligns = F<ToolStripButton[]>("alignButtons");
             var lineBox = F<ComboBox>("lineSpacingBox");
-            var letters = F<NumericUpDown>("letterSpacingNum");
+            var letters = F<StepUpDown>("letterSpacingNum");
             var mixed = F<bool[]>("textMixed");
             var all = new ToolStripItem[] { bold, italic, underline, invert }.Concat(aligns).ToArray();
             bool de = Lang.Current == "de";
@@ -477,20 +548,27 @@ namespace QlLabels.Tests
             invert.PerformClick();
             Pump(60);
             Check(!art.Invert, "Invert: off again");
-            Check(letters.Text == (0.0).ToString("F1"), "letter spacing shows the text's 0: " + letters.Text);
-            for (int i = 0; i < 4; i++) letters.UpButton();   // 4 × 0.5 pt, as the arrows (the first one pushes the undo step)
+            Check(letters.Text == "100 %", "letter spacing shows the text's 100 %: " + letters.Text);
+            for (int i = 0; i < 4; i++) letters.UpButton();   // 4 × 1 %, as the arrows and the wheel (the first one pushes the undo step)
             Pump(60);
-            Check(Math.Abs(art.Spacing - 2) < 0.001, "letter spacing in the toolbar: " + art.Spacing);
-            for (int i = 0; i < 4; i++) letters.DownButton();
+            Check(Math.Abs(art.Spacing - 104) < 0.001 && letters.Text == "104 %", "letter spacing in the toolbar: " + art.Spacing + " (" + letters.Text + ")");
+            StepUpDown.Modifiers = () => Keys.Shift;
+            letters.UpButton();
+            StepUpDown.Modifiers = () => Keys.Control;
+            letters.DownButton();
+            StepUpDown.Modifiers = () => Keys.None;
             Pump(60);
-            Check(art.Spacing == 0, "letter spacing back to 0: " + art.Spacing);
+            Check(Math.Abs(art.Spacing - 113.9) < 0.001 && letters.Text == (113.9).ToString("0.#") + " %", "Shift: 10 %, Ctrl: 0.1 %: " + art.Spacing + " (" + letters.Text + ")");
+            letters.Value = 100;
+            Pump(60);
+            Check(art.Spacing == 100, "letter spacing back to 100 %: " + art.Spacing);
             Check(bold.ToolTipText.Contains(KeyText(Keys.Control | Keys.Shift | Keys.F)) && italic.ToolTipText.Contains(KeyText(Keys.Control | Keys.I)),
                   "selected: the tips name the keys: " + bold.ToolTipText);
 
             // a paragraph text, edited: a mixed selection is hatched; click 1 all on, click 2 all off (as in Word)
             var p = AddText("verzinkt 100 Stück im Karton, lose", TextKind.Frame, 4, 50, 34, 14);
             objects = Doc().Objects.Count;
-            Check(aligns.All(a => a.Enabled) && aligns[0].Checked && lineBox.Enabled && lineBox.Text == LineText(1.0), "paragraph text: alignment Left, line spacing " + lineBox.Text);
+            Check(aligns.All(a => a.Enabled) && aligns[0].Checked && lineBox.Enabled && lineBox.Text == LineText(100), "paragraph text: alignment Left, line spacing " + lineBox.Text);
             canvas.BeginEdit(p);
             Pump(60);
             canvas.EditChange(e => e.Select(0, 8));   // "verzinkt"
@@ -517,9 +595,9 @@ namespace QlLabels.Tests
             Check(p.FullRuns().Where(r => r.Invert == true).Select(r => r.Text).SequenceEqual(new[] { "100" }) && !p.Invert && invert.Checked,
                   "paragraph: Invert on the selected word only");
             Check(invert.ToolTipText == (de ? "Invertieren: weiß auf Schwarz" : "Invert: white on black"), "Invert's tip: " + invert.ToolTipText);
-            letters.Value = 4;
+            letters.Value = 140;
             Pump(60);
-            Check(p.FullRuns().Where(r => r.Spacing == 4).Select(r => r.Text).SequenceEqual(new[] { "100" }) && p.Spacing == 0, "paragraph: letter spacing on the selected word only");
+            Check(p.FullRuns().Where(r => r.Spacing == 140).Select(r => r.Text).SequenceEqual(new[] { "100" }) && p.Spacing == 100, "paragraph: letter spacing on the selected word only");
             Check(canvas.EditedText == p && canvas.Editing.SelectionLength == 3, "after the toolbar: still editing, the selection kept");
             canvas.EditChange(e => e.Select(0, 12));
             Pump(60);
@@ -527,12 +605,12 @@ namespace QlLabels.Tests
             SaveShot(BarShot(bar), "textbar-invert-mixed");
             canvas.EditChange(e => e.Select(9, 12));
             Pump(60);
-            Check(letters.Text == (4m).ToString("F1", System.Globalization.CultureInfo.CurrentCulture) && invert.Checked && !mixed[3], "the word's own values shown again: " + letters.Text);
+            Check(letters.Text == "140 %" && invert.Checked && !mixed[3], "the word's own values shown again: " + letters.Text);
             SaveShot(Shot(), "invert-word");
             invert.PerformClick();
-            letters.Value = 0;
+            letters.Value = 100;
             Pump(60);
-            Check(p.FullRuns().All(r => r.Invert == false && r.Spacing == 0), "invert and spacing off again");
+            Check(p.FullRuns().All(r => r.Invert == false && r.Spacing == 100), "invert and spacing off again");
 
             // alignment while editing: Ctrl+L/E/R/J and the buttons, always the whole text
             Check(Key(Keys.Control | Keys.E) && p.Align == TextAlign.Center && aligns[1].Checked, "editing: Ctrl+E centres");
@@ -544,24 +622,62 @@ namespace QlLabels.Tests
             Check(p.Align == TextAlign.Justify && canvas.EditedText == p, "the Justify button while editing");
             Check(EditorRender.MapText(p).Lines.Count >= 2, "the justified paragraph wraps");
 
-            // line spacing: a choice from the list and a value of one's own
-            Call("SetLineSpacing", 1.5, false);
+            // line spacing in %: a choice from the list, a value of one's own (also below 100 %), an old factor
+            Call("SetLineSpacing", 150.0, false);
             Pump(60);
-            Check(Math.Abs(p.LineHeight - 1.5) < 0.001 && lineBox.Text == LineText(1.5), "line spacing 1.5: " + lineBox.Text);
+            Check(Math.Abs(p.LineSpacing - 150) < 0.001 && lineBox.Text == LineText(150), "line spacing 150 %: " + lineBox.Text);
+            lineBox.Text = "87";
+            Call("CommitLineSpacing");
+            Pump(60);
+            Check(Math.Abs(p.LineSpacing - 87) < 0.001 && lineBox.Text == LineText(87), "line spacing of one's own, below 100 %: " + lineBox.Text);
+            lineBox.Text = "30 %";
+            Call("CommitLineSpacing");
+            Pump(60);
+            Check(Math.Abs(p.LineSpacing - 30) < 0.001, "line spacing 30 %: not raised to a minimum of 50 % (" + p.LineSpacing + ")");
             lineBox.Text = de ? "1,3" : "1.3";
             Call("CommitLineSpacing");
             Pump(60);
-            Check(Math.Abs(p.LineHeight - 1.3) < 0.001, "line spacing of one's own: " + p.LineHeight);
+            Check(Math.Abs(p.LineSpacing - 130) < 0.001, "a factor below 10 counts as before: 1.3 = 130 %: " + p.LineSpacing);
             lineBox.Text = "abc";
             Call("CommitLineSpacing");
             Pump(60);
-            Check(Math.Abs(p.LineHeight - 1.3) < 0.001 && lineBox.Text == LineText(1.3), "line spacing: not a number keeps the value: " + lineBox.Text);
-            lineBox.Text = "9";
+            Check(Math.Abs(p.LineSpacing - 130) < 0.001 && lineBox.Text == LineText(130), "line spacing: not a number keeps the value: " + lineBox.Text);
+            lineBox.Text = "900";
             Call("CommitLineSpacing");
-            Check(Math.Abs(p.LineHeight - TextObject.MaxLineHeight) < 0.001, "line spacing: limited to " + TextObject.MaxLineHeight);
-            Call("SetLineSpacing", 1.0, false);
+            Check(Math.Abs(p.LineSpacing - TextObject.MaxLineSpacing) < 0.001, "line spacing: limited to " + TextObject.MaxLineSpacing);
+            Call("SetLineSpacing", 87.0, false);
+            Call("StepLineSpacing", 1);
+            StepUpDown.Modifiers = () => Keys.Shift;
+            Call("StepLineSpacing", 1);
+            StepUpDown.Modifiers = () => Keys.Control;
+            Call("StepLineSpacing", -1);
+            StepUpDown.Modifiers = () => Keys.None;
+            Pump(60);
+            Check(Math.Abs(p.LineSpacing - 97.9) < 0.001 && lineBox.Text == LineText(97.9), "line spacing steps 1 %, Shift 10 %, Ctrl 0.1 %: " + lineBox.Text);
+            Call("SetLineSpacing", 100.0, false);
             Key(Keys.Escape);
             Pump(60);
+
+            // selected, not edited, letter spacing mixed: the field blank; a typed value + Enter sets all of it
+
+            p.SetRuns(new[] { new TextRun("verzinkt ", spacing: 130), new TextRun(p.Text.Substring(9), spacing: 100) });
+            Call("UpdateTextBar");
+            Pump(60);
+            Check(canvas.EditedText == null && letters.Text == "", "selected, letter spacing mixed: the field blank (" + letters.Text + "; " + string.Join("|", p.FullRuns().Select(r => r.Text + ":" + r.Spacing)) +
+                  ", focused " + letters.Focused + ", selected " + (canvas.Selected == p) + ")");
+            letters.Focus();
+            letters.Text = "120";
+            typeof(StepUpDown).GetMethod("OnKeyDown", All).Invoke(letters, new object[] { new KeyEventArgs(Keys.Enter) });
+            Pump(60);
+            Check(p.FullRuns().All(r => r.Spacing == 120) && p.FormatRuns == null, "typed 120 + Enter: all of the frame 120 % (" +
+                  string.Join("|", p.FullRuns().Select(r => r.Text + ":" + r.Spacing)) + ")");
+            Check(letters.Text == "120 %", "the field shows the value as typed: " + letters.Text);
+            letters.Value = 100;
+            Pump(60);
+
+            // Escape in a field of the group: back to the text's value, nothing applied (also not when the focus goes back
+            // to the label); Enter applies once (one undo step). Real key messages to the focused field.
+            FieldKeys(p);
 
             // selected only: Ctrl+J justify; Left's tip names Ctrl+L as an editing key (outside it adds a line)
             Call("SetTextAlign", TextAlign.Left);
@@ -619,20 +735,66 @@ namespace QlLabels.Tests
             Pump(60);
             Check(UndoCount() == steps + 2, "each alignment click one undo step (" + (UndoCount() - steps) + ")");
 
-            // the panel: font and size stay, bold/italic/underline/invert/alignment/spacings went
+            // the panel: font, size, bold/italic/underline/invert/alignment/spacings all in the toolbar (CorelDRAW's
+            // property bar); the "doesn't fit" hint the panel's last row (it moves nothing below it)
             Check(typeof(EditorForm).GetField("boldCheck", All) == null && typeof(EditorForm).GetField("alignBox", All) == null, "the panel's moved rows are gone");
+            var props = F<TableLayoutPanel>("props");
+            Check(!props.Contains(F<ComboBox>("fontBox")) && !props.Contains(F<StepCombo>("sizeBox")) && F<ComboBox>("fontBox").Parent is ToolStrip &&
+                  F<StepCombo>("sizeBox").Parent is ToolStrip, "font and size in the toolbar, not in the panel");
+            string fitText = Lang.T("The text doesn't fit the box and is cut off: make the box larger or the text smaller.");
+            var lastRow = props.Controls.Cast<Control>().OrderByDescending(c => props.GetRow(c)).First();
+            Check(lastRow is Label && lastRow.Text == fitText, "the \u201cdoesn't fit\u201d hint is the panel's last row: " + lastRow.Text);
+
+            // a paragraph text's frame options in the panel (CorelDRAW's Text docker): vertical alignment, space before /
+            // after paragraphs; not for artistic text; each click or value one undo step
+            var vbuttons = F<CheckBox[]>("verticalButtons");
+            var before = F<StepUpDown>("spaceBeforeNum");
+            var after = F<StepUpDown>("spaceAfterNum");
+            Check(p.Kind == TextKind.Frame && vbuttons.All(b => b.Visible) && before.Visible && after.Visible && vbuttons[0].Checked,
+                  "paragraph text: Vertical, Before and After paragraph in the panel, top pressed");
+            Action<CheckBox> press = b => typeof(CheckBox).GetMethod("OnClick", All).Invoke(b, new object[] { EventArgs.Empty });
+            steps = UndoCount();
+            press(vbuttons[1]); Pump(60);
+            Check(p.VerticalAlign == VerticalAlign.Middle && vbuttons[1].Checked && !vbuttons[0].Checked && UndoCount() == steps + 1, "Middle: pressed, one undo step");
+            before.Value = 25; Pump(30); after.Value = 40; Pump(60);
+            Check(p.SpaceBefore == 25 && p.SpaceAfter == 40 && UndoCount() == steps + 3, "Before / After paragraph set (" + p.SpaceBefore + ", " + p.SpaceAfter + ")");
+            StepUpDown.Modifiers = () => Keys.Shift;
+            typeof(StepUpDown).GetMethod("OnMouseWheel", All).Invoke(after, new object[] { new MouseEventArgs(MouseButtons.None, 0, 0, 0, 120) });
+            StepUpDown.Modifiers = () => Control.ModifierKeys;
+            Pump(60);
+            Check(p.SpaceAfter == 50, "Shift + wheel: 10 % more (" + p.SpaceAfter + ")");
+            int panelBottom = Under(props).Where(c => c.Visible).Max(c => form.PointToClient(c.PointToScreen(new Point(0, c.Height))).Y);
+            Console.WriteLine("INFO paragraph text panel ends at " + panelBottom + " px in the window (" + form.DeviceDpi + " dpi)");
+            Check(panelBottom < form.LogicalToDeviceUnits(640), "paragraph text panel within a 690 px window (ends at " + panelBottom + ")");
+            SaveShot(Shot(), "frame-options");
+            press(vbuttons[0]); before.Value = 0; after.Value = 0; Pump(60);
+            Check(p.VerticalAlign == VerticalAlign.Top && p.SpaceBefore == 0 && p.SpaceAfter == 0 && vbuttons[0].Checked, "back to top, no spacing");
+            var items = bar.Items.Cast<ToolStripItem>().ToList();
+            int fontAt = items.FindIndex(i => i is ToolStripControlHost && ((ToolStripControlHost)i).Control == F<ComboBox>("fontBox"));
+            int rotateAt = items.FindIndex(i => i.Tag is ArrangeIcon && (ArrangeIcon)i.Tag == ArrangeIcon.RotateLeft);
+            Check(fontAt == 3 && items[0].Tag is ArrangeIcon && (ArrangeIcon)items[0].Tag == ArrangeIcon.Duplicate && rotateAt > items.IndexOf(F<ToolStripControlHost>("letterSpacingHost")),
+                  "toolbar order: Duplicate, Delete | font, size, … spacings | rotate … (font at " + fontAt + ", rotate at " + rotateAt + ")");
 
             Justified();
 
-            // 1024 px window: the whole bar fits, nothing behind »
+            // 1366 px and the default 1180 px window: the whole bar fits; 1024 and the minimum 780 px: the text group whole, the object
+            // functions at the end behind »
             var size = form.Size;
             var state = form.WindowState;
             form.WindowState = FormWindowState.Normal;
-            form.Size = new Size(form.LogicalToDeviceUnits(1024), size.Height);
-            Pump(150);
-            int hidden = bar.Items.Cast<ToolStripItem>().Count(i => i.Placement != ToolStripItemPlacement.Main);
-            Check(hidden == 0 && !bar.OverflowButton.Visible, "1024 px: the bar fits without » (" + hidden + " hidden, needs " + bar.PreferredSize.Width + " of " + bar.Width + " px)");
-            Console.WriteLine("INFO toolbar needs " + bar.PreferredSize.Width + " px at " + form.DeviceDpi + " dpi (window " + form.Width + ")");
+            var texts = F<List<ToolStripItem>>("textItems").Where(i => !(i is ToolStripSeparator)).ToList();
+            foreach (int w in new[] { 1366, 1180, 1024, 780 })
+            {
+                form.Size = new Size(form.LogicalToDeviceUnits(w), size.Height);
+                Pump(150);
+                int hidden = bar.Items.Cast<ToolStripItem>().Count(i => !(i is ToolStripSeparator) && i.Placement != ToolStripItemPlacement.Main);
+                bool textWhole = texts.All(i => i.Placement == ToolStripItemPlacement.Main) && items[0].Placement == ToolStripItemPlacement.Main;
+                Check(w >= 1180 ? hidden == 0 && !bar.OverflowButton.Visible : textWhole && (hidden == 0 || bar.OverflowButton.Visible),
+                      w + " px: " + (w >= 1180 ? "the bar fits without »" : "Duplicate, Delete and the text group whole, the rest behind »") + " (" + hidden + " hidden, needs " +
+                      bar.PreferredSize.Width + " of " + bar.Width + " px, window " + form.Width + ")");
+                SaveShot(BarShot(bar), "textbar-" + w);
+            }
+            Console.WriteLine("INFO toolbar needs " + bar.PreferredSize.Width + " px at " + form.DeviceDpi + " dpi");
             form.Size = size;
             form.WindowState = state;
 
@@ -761,8 +923,8 @@ namespace QlLabels.Tests
             return part.All(x => x) ? "1" : part.All(x => !x) ? "0" : "mixed";
         }
 
-        static string LineText(double v) { return v.ToString(v == Math.Round(v) ? "0.0" : "0.0#", System.Globalization.CultureInfo.CurrentCulture); }
-        static string KeyText(Keys k) { return System.ComponentModel.TypeDescriptor.GetConverter(typeof(Keys)).ConvertToString(k); }
+        static string LineText(double v) { return v.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture) + " %"; }
+        static string KeyText(Keys k) { return KeyNames.Text(k); }   // the program's own key names (not Windows' language)
 
         static Bitmap BarShot(ToolStrip bar)
         {

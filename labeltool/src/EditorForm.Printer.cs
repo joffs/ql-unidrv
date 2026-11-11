@@ -149,6 +149,16 @@ namespace QlLabels
             ShowRoll();
         }
 
+        // Laid out again without taking the status bar from a message it shows ("4 labels sent to ...": the roll check after
+        // a print relaid out 3 s later and the note was gone; a previous print's check could also hit the next one's note).
+        void RelayoutKeepingMessage()
+        {
+            string shown = labelStatus.Text;
+            bool message = shown.Length > 0 && (labelParts.Length == 0 || !shown.StartsWith(labelParts[0]));
+            Relayout();
+            if (message) labelStatus.Text = shown;
+        }
+
         // The label line in the status bar: as many whole parts as fit next to the roll and zoom (none cut in the middle).
         string[] labelParts = new string[0];
         void FitLabelStatus()
@@ -297,7 +307,7 @@ namespace QlLabels
                 labelStatus.Text = Lang.F("Sent to {0}.", printer);
                 string sentTo = printer;
                 bool first = true;
-                PrinterCheck.AskAfterPrint(() => roll, () => { CheckRoll(); if (first) { first = false; Relayout(); } }, () => IsDisposed || printer != sentTo);
+                PrinterCheck.AskAfterPrint(() => roll, () => { CheckRoll(); if (first) { first = false; RelayoutKeepingMessage(); } }, () => IsDisposed || printer != sentTo);
             }
             catch (Exception ex) { Failed(this, Lang.T("The label couldn't be printed."), ex); }
             finally

@@ -24,7 +24,7 @@ $exe = Join-Path $out "own_field_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.OwnFieldUi /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "$Src\*.cs" test\own_field_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "/recurse:$Src\*.cs" test\own_field_ui.cs
     if ($LASTEXITCODE) { throw "own_field_ui build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

@@ -26,7 +26,7 @@ namespace QlLabels.Tests
                 var runs = new TextObject { X = 6, Y = 14, Size = 12 };
                 runs.SetRuns(new[] { new TextRun("Wort "), new TextRun("fett", size: 20, bold: true), new TextRun(" klein", size: 8), new TextRun("Ende") });
                 EditorRender.FitText(runs);
-                var spaced = new TextObject { X = 6, Y = 24, Text = "A b C", Size = 16, Spacing = 4 };
+                var spaced = new TextObject { X = 6, Y = 24, Text = "A b C", Size = 16, Spacing = 140 };
                 EditorRender.FitText(spaced);
                 var lines = new TextObject { X = 6, Y = 36, W = 40, H = 14, Text = "erste\nzweite Zeile", Size = 10, Kind = TextKind.Frame };
                 foreach (var t in new[] { plain, runs, spaced, lines }) InkBetween(t, layout, res);
@@ -69,7 +69,7 @@ namespace QlLabels.Tests
                     bool fancy = how != "plain";
                     just.SetRuns(new[] { new TextRun("Ein Absatz im Blocksatz, der in seinem Rahmen "), new TextRun("mehrmals", bold: true, underline: fancy),
                                          new TextRun(" umbricht und weiter läuft.\nKurz und gut.", underline: fancy) });
-                    if (fancy) just.Spacing = 1;
+                    if (fancy) just.Spacing = 110;
                     var jm = EditorRender.MapText(just);
                     var jl = EditorRender.LinesOf(just);
                     Check(jm.Lines.Count >= 4, "justify: wrapped lines (" + how + ")" + res + " " + jm.Lines.Count);
@@ -197,9 +197,9 @@ namespace QlLabels.Tests
 
             // underline
             var layout = LabelLayout.Estimate(Continuous62(90), false, false);
-            foreach (double spacing in new[] { 0.0, 3.0 })
+            foreach (double spacing in new[] { 100.0, 130.0 })
             {
-                string sp = spacing == 0 ? "" : " (letter spacing)";
+                string sp = spacing == 100 ? "" : " (letter spacing)";
                 Func<TextRun[], TextKind, TextObject> make = (runs, kind) =>
                 {
                     var o = new TextObject { X = 4, Y = 4, W = 50, H = 12, Size = 14, Spacing = spacing, Kind = kind };
@@ -551,20 +551,20 @@ namespace QlLabels.Tests
         static void RunFormatsTest()
         {
             var t = new TextObject { X = 4, Y = 4, W = 56, H = 20, Size = 12, Kind = TextKind.Frame };
-            t.SetRuns(new[] { new TextRun("weit ", spacing: 4), new TextRun("hell "), new TextRun("dunkel", invert: true), new TextRun(" hell") });
-            Check(!t.Invert && t.Spacing == 0 && t.Runs != null && t.Runs.Count == 4 && t.Runs[0].Spacing == 4 && t.Runs[2].Invert == true && t.Runs[1].Plain,
-                  "run formats: spacing and invert per run, the object's stay 0 and off");
+            t.SetRuns(new[] { new TextRun("weit ", spacing: 140), new TextRun("hell "), new TextRun("dunkel", invert: true), new TextRun(" hell") });
+            Check(!t.Invert && t.Spacing == 100 && t.Runs != null && t.Runs.Count == 4 && t.Runs[0].Spacing == 140 && t.Runs[2].Invert == true && t.Runs[1].Plain,
+                  "run formats: spacing and invert per run, the object's stay 100 % and off");
             var doc = new LabelDoc();
             doc.Objects.Add(t);
             string json = doc.ToJson();
             var back = (TextObject)LabelDoc.FromJson(json).Objects[0];
-            Check(json.Contains("{\"t\":\"weit \",\"spacing\":4}") && json.Contains("{\"t\":\"dunkel\",\"invert\":true}") && LabelDoc.FromJson(json).ToJson() == json &&
-                  back.Runs[2].Invert == true && back.Runs[0].Spacing == 4, "run formats: JSON round trip: " + json);
+            Check(json.Contains("{\"t\":\"weit \",\"letterSpacing\":140}") && json.Contains("{\"t\":\"dunkel\",\"invert\":true}") && LabelDoc.FromJson(json).ToJson() == json &&
+                  back.Runs[2].Invert == true && back.Runs[0].Spacing == 140, "run formats: JSON round trip: " + json);
             var all = new TextObject { Size = 12 };
-            all.SetRuns(new[] { new TextRun("ganz ", invert: true), new TextRun("invertiert", invert: true, spacing: 2), new TextRun("!", invert: true, spacing: 2) });
-            Check(all.Invert && all.Spacing == 2 && all.Runs != null && all.Runs.Count == 2 && all.Runs[0].Spacing == 0 && all.Runs.All(r => r.Invert == null),
+            all.SetRuns(new[] { new TextRun("ganz ", invert: true), new TextRun("invertiert", invert: true, spacing: 120), new TextRun("!", invert: true, spacing: 120) });
+            Check(all.Invert && all.Spacing == 120 && all.Runs != null && all.Runs.Count == 2 && all.Runs[0].Spacing == 100 && all.Runs.All(r => r.Invert == null),
                   "run formats: all inverted is the object's Invert, the main spacing the object's");
-            var bad = LabelDoc.FromJson(json.Replace("\"spacing\":4", "\"spacing\":99"));
+            var bad = LabelDoc.FromJson(json.Replace("\"letterSpacing\":140", "\"letterSpacing\":99999"));
             Check(((TextObject)bad.Objects[0]).Runs[0].Spacing == TextObject.MaxSpacing, "run formats: a run's spacing limited to " + TextObject.MaxSpacing);
 
             // drawn: the inverted word black with white letters inside its caret boundaries, white around it
@@ -581,12 +581,13 @@ namespace QlLabels.Tests
             Check(lightBefore < 0.3 && lightAfter < 0.3, "run formats: the words around it on white (" + lightBefore.ToString("0.00") + ", " + lightAfter.ToString("0.00") + ")");
             // the spaced word: its ink between its caret boundaries, wider than unspaced
             var plain = (TextObject)t.Clone();
-            plain.SetRuns(t.FullRuns().Select(r => r.With(spacing: 0, invert: false)).ToList());
+            plain.SetRuns(t.FullRuns().Select(r => r.With(spacing: 100, invert: false)).ToList());
             var pm = EditorRender.MapText(plain).Lines[0];
             float wide = l.X[Array.IndexOf(l.Index, 4)] - l.X[0], narrow = pm.X[Array.IndexOf(pm.Index, 4)] - pm.X[0];
-            Check(Math.Abs(wide - narrow - 4 * 4 * 25.4f / 72) < 0.05f, "run formats: 4 pt after each of “weit” (" + (wide - narrow).ToString("0.00") + " mm wider)");
+            float each = (float)(EditorRender.SpacingToPoints(t.Font, 12, FontStyle.Regular, 140) * 25.4 / 72);
+            Check(each > 0.1f && Math.Abs(wide - narrow - 4 * each) < 0.05f, "run formats: 40 % of a space after each of “weit” (" + (wide - narrow).ToString("0.00") + " mm wider)");
             var spacedOnly = new TextObject { X = 4, Y = 30, Size = 14 };
-            spacedOnly.SetRuns(new[] { new TextRun("Ab "), new TextRun("CdE", spacing: 5, underline: true), new TextRun(" mn", spacing: -1) });
+            spacedOnly.SetRuns(new[] { new TextRun("Ab "), new TextRun("CdE", spacing: 150, underline: true), new TextRun(" mn", spacing: 90) });
             EditorRender.FitText(spacedOnly);
             InkBetween(spacedOnly, layout, " (spacing per run)");
             var artistic = new TextObject { X = 4, Y = 42, Size = 14 };
@@ -599,9 +600,9 @@ namespace QlLabels.Tests
             // a paragraph text inverted as a whole (2026-11-09): black bands behind its lines, touching from one line
             // to the next (also at 1.5 line spacing), each as long as its line; an empty line, the rest of the frame and
             // the space beyond it stay white. An artistic text keeps its black box 1 mm beyond its frame.
-            foreach (double pitch in new[] { 1.0, 1.5 })
+            foreach (double pitch in new[] { 100.0, 150.0 })
             {
-                var pf = new TextObject { X = 4, Y = 4, W = 40, H = 34, Size = 10, Kind = TextKind.Frame, LineHeight = pitch,
+                var pf = new TextObject { X = 4, Y = 4, W = 40, H = 34, Size = 10, Kind = TextKind.Frame, LineSpacing = pitch,
                                           Text = "Eine lange erste Zeile, die im Rahmen umbricht\n\nkurz" };
                 pf.SetRuns(pf.FullRuns().Select(r => r.With(invert: true)).ToList());
                 Check(pf.Invert && !pf.InvertBox && pf.FormatRuns == null, "run formats: all of a paragraph text inverted is the object's Invert");
@@ -633,30 +634,33 @@ namespace QlLabels.Tests
             var e = new TextEditing(new TextObject { Size = 12, Text = "eins zwei drei" });
             e.Select(5, 9);
             e.Restyle(r => r.With(invert: true));
-            e.Restyle(r => r.With(spacing: 3));
+            e.Restyle(r => r.With(spacing: 130));
             var runs = e.Target.FullRuns();
-            Check(runs.Count == 3 && runs[1].Text == "zwei" && runs[1].Invert == true && runs[1].Spacing == 3 && runs[0].Invert == false && runs[2].Spacing == 0,
+            Check(runs.Count == 3 && runs[1].Text == "zwei" && runs[1].Invert == true && runs[1].Spacing == 130 && runs[0].Invert == false && runs[2].Spacing == 100,
                   "run formats: invert and spacing on the selection: " + string.Join("|", runs.Select(r => r.Text + ":" + r.Invert + ":" + r.Spacing)));
-            Check(e.Current.Invert == true && e.Current.Spacing == 3, "run formats: the selection's format");
+            Check(e.Current.Invert == true && e.Current.Spacing == 130, "run formats: the selection's format");
             e.Select(0, 9);
             Check(e.Current.Invert == null && e.Current.Spacing == null, "run formats: mixed is null (the toolbar hatches and blanks)");
             e.Undo(); e.Undo();
-            Check(e.Target.FormatRuns == null && !e.Target.Invert && e.Target.Spacing == 0, "run formats: undo");
+            Check(e.Target.FormatRuns == null && !e.Target.Invert && e.Target.Spacing == 100, "run formats: undo");
             var empty = new TextEditing(new TextObject { Size = 12, Text = "" });
-            empty.Restyle(r => r.With(invert: true, spacing: 2));
-            Check(empty.Target.Invert && empty.Target.Spacing == 2, "run formats: an empty text takes them as its own");
+            empty.Restyle(r => r.With(invert: true, spacing: 120));
+            Check(empty.Target.Invert && empty.Target.Spacing == 120, "run formats: an empty text takes them as its own");
 
             // RTF: our copy read back; Word's shading and WordPad's highlight
             string rtf = TextEditing.Rtf(t.FullRuns());
             List<string> missing;
             var rd = RtfRuns.Read(rtf, out missing);
-            Check(rtf.Contains("\\expndtw80") && rtf.Contains("\\chcbpat1") && rd.Text == t.Text &&
-                  rd.Runs.Any(r => r.Text == "dunkel" && r.Invert == true) && rd.Runs.Any(r => r.Text == "weit " && r.Spacing == 4) &&
-                  rd.Runs.Where(r => r.Text.Contains("hell")).All(r => r.Invert == false && r.Spacing == 0), "run formats: RTF round trip: " + rtf);
+            // letter spacing as points in RTF (Word's unit, twips): back within a twip of the space's width
+            int twips = (int)Math.Round(EditorRender.SpacingToPoints(t.Font, 12, FontStyle.Regular, 140) * 20);
+            double twip = 100 * 0.05 / EditorRender.SpacingToPoints(t.Font, 12, FontStyle.Regular, 200);
+            Check(rtf.Contains("\\expndtw" + twips) && rtf.Contains("\\chcbpat1") && rd.Text == t.Text &&
+                  rd.Runs.Any(r => r.Text == "dunkel" && r.Invert == true) && rd.Runs.Any(r => r.Text == "weit " && Math.Abs(r.Spacing.Value - 140) <= twip) &&
+                  rd.Runs.Where(r => r.Text.Contains("hell")).All(r => r.Invert == false && r.Spacing == 100), "run formats: RTF round trip: " + rtf);
             var word = RtfRuns.Read(@"{\rtf1\ansi{\fonttbl{\f0 Arial;}}{\colortbl;\red0\green0\blue0;\red255\green255\blue0;}" +
                                     @"\f0\fs24 a {\chshdng0\chcbpat1\cf8 schwarz} {\highlight2 gelb} {\expnd10\expndtw50 weit}\par}", out missing);
             Check(word.Runs.Any(r => r.Text == "schwarz" && r.Invert == true) && word.Runs.Any(r => r.Text.Contains("gelb") && r.Invert == false) &&
-                  word.Runs.Any(r => r.Text == "weit" && r.Spacing == 2.5), "run formats: Word's shading inverts, a light highlight doesn't, \\expndtw 2.5 pt: " +
+                  word.Runs.Any(r => r.Text == "weit" && Math.Abs(r.Spacing.Value - TextObject.LimitSpacing(EditorRender.SpacingFromPoints("Arial", 12, FontStyle.Regular, 2.5))) < 1e-9), "run formats: Word's shading inverts, a light highlight doesn't, \\expndtw 2.5 pt: " +
                   string.Join("|", word.Runs.Select(r => r.Text + ":" + r.Invert + ":" + r.Spacing)));
         }
 

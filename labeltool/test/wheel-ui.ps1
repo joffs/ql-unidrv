@@ -20,7 +20,7 @@ $exe = Join-Path $out "wheel_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.WheelUi /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "$Src\*.cs" test\wheel_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "/recurse:$Src\*.cs" test\wheel_ui.cs
     if ($LASTEXITCODE) { throw "wheel_ui build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

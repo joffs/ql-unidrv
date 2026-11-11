@@ -50,7 +50,7 @@ static class HelpShots
         Application.SetCompatibleTextRenderingDefault(false);
         Screen target = Screen.AllScreens.FirstOrDefault(s => Dpi(s) == scale * 96 / 100) ?? Screen.PrimaryScreen;
         Console.WriteLine("screen " + target.DeviceName + " dpi " + Dpi(target));
-        Size size = scale == 100 ? new Size(1100, 680) : new Size(1170, 780);
+        Size size = scale == 100 ? new Size(1180, 680) : new Size(1170, 780);
 
         Step(dir + "\\sample\\Regal 3.qllabel", target, size, () =>
         {
@@ -129,7 +129,8 @@ static class HelpShots
             Shot("tools");
             // the Shapes group's flyout, opened as by its corner triangle
             var palette = (ToolStrip)Field("palette");
-            form.GetType().GetMethod("ShowFlyout", All).Invoke(form, new object[] { palette.Items[1], false }); Pump(600);
+            var shapes = palette.Items.Cast<ToolStripItem>().First(i => i.Tag != null && (string)Member(i.Tag, "Id") == "shapes");
+            form.GetType().GetMethod("ShowFlyout", All).Invoke(form, new object[] { shapes, false }); Pump(600);
             var flyout = (Control)Field("flyout");
             ShotWith(flyout, "tools-flyout");
             ((ToolStripDropDown)flyout).Close(); Pump(300);
@@ -186,6 +187,36 @@ static class HelpShots
             form.GetType().GetMethod("PrintWithData", All).Invoke(form, new object[] { dir + "\\printdata\\teile.csv" });
             timer.Dispose();
             if (shown == null) Console.WriteLine("FAILED: the Print with data dialog didn't open");
+            Pump(300);
+        });
+        Step(dir + "\\printdata-linked\\Regal 3.qllabel", target, size, () =>
+        {
+            // the same label saved with a remembered data file ("printData", next to it): Print with data loads it at
+            // once and the data tile says "remembered"; only the tiles are cut out (make-shots.ps1)
+            System.Windows.Forms.Form shown = null;
+            var timer = new System.Windows.Forms.Timer { Interval = 50 };
+            timer.Tick += delegate
+            {
+                var d = Field("printDataDialog") as System.Windows.Forms.Form;
+                if (d == null || !d.Visible) return;
+                timer.Stop();
+                shown = d;
+                try
+                {
+                    d.Size = d.MinimumSize;
+                    Pump(800);
+                    // as in the picture above, so the missing "Lagerort" doesn't tint the data tile amber
+                    ((CheckBox)d.GetType().GetField("missingEmpty", All).GetValue(d)).Checked = true;
+                    Pump(2500);   // the file is looked for in the background, then the previews are drawn
+                    ShotOf(d, "print-data-linked");
+                }
+                catch (Exception e) { Console.WriteLine("FAILED: " + e); }
+                d.DialogResult = DialogResult.Cancel;
+            };
+            timer.Start();
+            form.GetType().GetMethod("PrintWithData", All).Invoke(form, new object[] { null });
+            timer.Dispose();
+            if (shown == null) Console.WriteLine("FAILED: the Print with data dialog didn't open (remembered file)");
             Pump(300);
         });
         Step(dir + "\\errors\\Regal 3.qllabel", target, size, () =>

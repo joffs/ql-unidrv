@@ -34,8 +34,30 @@ namespace QlLabels
             return Clean(File.ReadAllBytes(path));
         }
 
+        // Deepest element nesting read (the svg element is 0). The readers here and in Import/SvgText.cs walk the tree
+        // recursively: 20,000 nested groups ended the program on the main thread's 1 MB stack (StackOverflowException
+        // can't be caught; security review 2026-11-11). Real pictures nest a few dozen deep.
+        internal const int MaxDepth = 200;
+
+        // Nested deeper than MaxDepth; read without building a tree (XmlReader keeps no stack of its own). Not XML: false
+        // (the caller's own load says so).
+        internal static bool TooDeep(byte[] source)
+        {
+            if (source == null) return false;
+            try
+            {
+                using (var ms = new MemoryStream(source))
+                using (var reader = XmlReader.Create(ms, new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore, XmlResolver = null, MaxCharactersInDocument = MaxBytes }))
+                    while (reader.Read())
+                        if (reader.Depth > MaxDepth) return true;
+            }
+            catch (XmlException) { }
+            return false;
+        }
+
         public static byte[] Clean(byte[] source)
         {
+            if (TooDeep(source)) throw new InvalidDataException(Lang.T("This is no SVG picture, or the file is damaged."));
             var doc = new XmlDocument { XmlResolver = null, PreserveWhitespace = true };
             try
             {

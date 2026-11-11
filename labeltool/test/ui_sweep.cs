@@ -414,10 +414,12 @@ namespace QlLabels.Tests
                 if (bad2 && reported.Add("separator|" + string.Join(" ", shown) + "|" + f.DeviceDpi))
                     Find("separator", where, "link row \"" + Short(string.Join(" ", shown)) + "\"");
             }
+            // the windows are checked at their default size: there every toolbar fits whole (only a smaller window, down
+            // to the minimum, puts the last items behind »; inline_text_ui checks that the text group stays whole there)
             foreach (var strip in Walk(f).OfType<ToolStrip>())
                 foreach (ToolStripItem item in strip.Items)
                     if (item.Available && item.IsOnOverflow && reported.Add("overflow|" + item.Text + "|" + f.DeviceDpi))
-                        Find("overflow", where, "toolbar item \"" + Short(item.Text ?? item.ToolTipText) + "\" pushed into the overflow");
+                        Find("overflow", where, "toolbar item \"" + Short(item.Text ?? item.ToolTipText) + "\" pushed into the overflow at the default size (" + f.Width * 96 / f.DeviceDpi + " px logical)");
             if (bad.Count > 0) Shot(f, where, bad);
         }
 

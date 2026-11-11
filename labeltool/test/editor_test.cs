@@ -64,6 +64,115 @@ namespace QlLabels.Tests
             return failures == 0 ? 0 : 1;
         }
 
+        // Files before 0.24: the line spacing as a factor of GDI+'s line spacing, the letter spacing in points (the
+        // object's and a run's): read as %, so the text looks the same; saved as % with the new keys only.
+        static void SpacingFilesTest()
+        {
+            string json = "{\"format\":\"QL label\",\"version\":2,\"objects\":[{\"type\":\"text\",\"x\":2,\"y\":2,\"w\":40,\"h\":20,\"text\":\"ab\\ncd\"," +
+                          "\"font\":\"Arial\",\"size\":10,\"kind\":\"frame\",\"lineHeight\":1.5,\"spacing\":2," +
+                          "\"runs\":[{\"t\":\"ab\\n\"},{\"t\":\"cd\",\"spacing\":-1,\"size\":14}]}]}";
+            var t = (TextObject)LabelDoc.FromJson(json).Objects[0];
+            double line = EditorRender.LineSpacingFromFactor("Arial", 10, FontStyle.Regular, 1.5);
+            double own = EditorRender.SpacingFromPoints("Arial", 10, FontStyle.Regular, 2), run = EditorRender.SpacingFromPoints("Arial", 14, FontStyle.Regular, -1);
+            Check(line > 150 && Math.Abs(t.LineSpacing - Math.Round(line, 2)) < 1e-9, "old file: line spacing 1.5 × Arial's is " + t.LineSpacing + " % of its height");
+            Check(own > 100 && Math.Abs(t.Spacing - Math.Round(own, 2)) < 1e-9 && t.Runs != null && t.Runs[1].Spacing != null && run < 100 &&
+                  Math.Abs(t.Runs[1].Spacing.Value - Math.Round(run, 2)) < 1e-9, "old file: letter spacing 2 pt and a run's −1 pt as % (" + t.Spacing + ", " + t.Runs[1].Spacing + ")");
+            // the same pitch as before: 1.5 × GDI+'s line spacing
+            var lines = EditorRender.MapText(t).Lines;
+            float pitch = lines[1].Top - lines[0].Top;
+            using (var font = new Font("Arial", (float)(10 * 25.4 / 72), FontStyle.Regular, GraphicsUnit.World))
+            {
+                float old = (float)(1.5 * font.Size * font.FontFamily.GetLineSpacing(FontStyle.Regular) / font.FontFamily.GetEmHeight(FontStyle.Regular));
+                Check(lines.Count == 2 && Math.Abs(pitch - old) < 0.02, "old file: the line pitch as before (" + pitch + " vs " + old + " mm)");
+            }
+            var doc = new LabelDoc();
+            doc.Objects.Add(t);
+            string saved = doc.ToJson();
+            Check(saved.Contains("\"lineSpacing\":") && saved.Contains("\"letterSpacing\":") && !saved.Contains("\"lineHeight\"") && !saved.Contains("\"spacing\""),
+                  "saved with the new keys only");
+            Check(LabelDoc.FromJson(saved).ToJson() == saved, "% values round trip");
+            var pasted = new TextObject { Font = "Segoe UI", Size = 12, Kind = TextKind.Frame };
+            double em = 12 * 25.4 / 72;
+            using (var ff = new FontFamily("Segoe UI"))
+            {
+                double height = em * (ff.GetCellAscent(FontStyle.Regular) + ff.GetCellDescent(FontStyle.Regular)) / ff.GetEmHeight(FontStyle.Regular);
+                Check(Math.Abs(EditorRender.LineSpacingPct(pasted, 0.87 * height) - 87) < 0.05, "a pitch as % of the font's height (a paste)");
+            }
+        }
+
+        // Vertical alignment and the space before / after paragraphs (CorelDRAW's frame options, 2026-11-11): the gaps
+        // between paragraphs only, in % of the font's height; middle / bottom move a text that fits, one that doesn't stays
+        // at the top; the file keys only when set.
+        // The window size and place (WindowBounds.cs, 2026-11-11): saved in 96-dpi units, used on the screen it is mostly
+        // on at that screen's scaling, never larger than its working area; off every screen or damaged: not used.
+        static void WindowBoundsTest()
+        {
+            Rectangle[] two = { new Rectangle(0, 0, 1920, 1040), new Rectangle(1920, 0, 1280, 984) };
+            Func<Point, int> dpi = q => q.X >= 1920 ? 144 : 96;
+            Rectangle r;
+            bool max;
+            string v = WindowBounds.Format(new Rectangle(100, 50, 1650, 1020), 144, true);
+            Check(v == "100,50,1100,680,1", "saved in 96-dpi units: " + v);
+            Check(WindowBounds.Parse("100,50,1100,680,1", two, dpi, out r, out max) && r == new Rectangle(100, 50, 1100, 680) && max,
+                  "used at 100 %: " + r);
+            Check(WindowBounds.Parse("2000,40,800,600,0", two, dpi, out r, out max) && r.Size == new Size(1200, 900) && !max && r.Left == 2000,
+                  "the second screen at 150 %: 1200 x 900 px " + r);
+            Check(WindowBounds.Parse("2000,40,1100,680,0", two, dpi, out r, out max) && r.Width == 1280 && r.Height == 984 && r.Left >= 1920 - 12 && r.Top >= 0 && r.Bottom <= 984 + 12,
+                  "never larger than the working area: " + r);
+            Check(!WindowBounds.Parse("4000,40,800,600,0", two.Take(1).ToArray(), dpi, out r, out max), "the screen unplugged: not used");
+            Check(!WindowBounds.Parse("1700,40,800,600,0", two.Take(1).ToArray(), q => 96, out r, out max), "less than half on a screen: not used");
+            Check(WindowBounds.Parse("1300,40,800,600,0", two.Take(1).ToArray(), q => 96, out r, out max) && r.Right <= 1920 + 8,
+                  "mostly on it: moved onto it " + r);
+            foreach (var bad in new[] { null, "", "1,2,3", "a,b,c,d,e", "0,0,50,50,0", "0,0,90000,600,0" })
+                Check(!WindowBounds.Parse(bad, two, dpi, out r, out max), "damaged value not used: " + (bad ?? "null"));
+        }
+
+        static void ParagraphFrameTest()
+        {
+            Func<TextObject> make = () => new TextObject { X = 0, Y = 0, W = 40, H = 40, Text = "ab\ncd\nef", Font = "Arial", Size = 10, Kind = TextKind.Frame };
+            var plain = make();
+            var top = EditorRender.MapText(plain).Lines;
+            float pitch = top[1].Top - top[0].Top;
+            var spaced = make();
+            spaced.SpaceAfter = 50; spaced.SpaceBefore = 20;
+            var s = EditorRender.MapText(spaced).Lines;
+            float height = pitch;   // 100 % line spacing: the pitch is the font's height
+            Check(Math.Abs(s[0].Top - top[0].Top) < 1e-4, "no space before the first paragraph (" + s[0].Top + ")");
+            Check(Math.Abs((s[1].Top - s[0].Top) - pitch * 1.7f) < 0.01 && Math.Abs((s[2].Top - s[1].Top) - pitch * 1.7f) < 0.01,
+                  "after 50 % + before 20 %: 1.7 × the font's height between paragraphs (" + (s[1].Top - s[0].Top) / height + ")");
+            var wrapped = make();
+            wrapped.Text = "one two three four five six seven eight"; wrapped.W = 12; wrapped.SpaceAfter = 100; wrapped.SpaceBefore = 100;
+            var w = EditorRender.MapText(wrapped).Lines;
+            Check(w.Count > 2 && Math.Abs((w[1].Top - w[0].Top) - pitch) < 0.01, "wrapped lines of one paragraph keep their pitch (" + w.Count + " lines)");
+            var middle = make();
+            middle.VerticalAlign = VerticalAlign.Middle;
+            var m = EditorRender.MapText(middle).Lines;
+            float room = (float)middle.H - 0.6f - (top[2].Top - top[0].Top + top[2].Height);
+            Check(room > 5 && Math.Abs(m[0].Top - top[0].Top - room / 2) < 0.01, "middle: half the room above the text (" + (m[0].Top - top[0].Top) + " of " + room + ")");
+            middle.VerticalAlign = VerticalAlign.Bottom;
+            var bottom = EditorRender.MapText(middle).Lines;
+            Check(Math.Abs(bottom[0].Top - top[0].Top - room) < 0.01 && !EditorRender.Overflows(middle), "bottom: on the lower edge, not cut off");
+            middle.H = 6;
+            var cut = EditorRender.MapText(middle).Lines;
+            Check(EditorRender.Overflows(middle) && Math.Abs(cut[0].Top - (-3 + 0.3f)) < 0.01, "a text that doesn't fit stays at the top (" + cut[0].Top + ")");
+            // the file: keys only when set, read back; an old file: top, no spacing
+            var doc = new LabelDoc();
+            doc.Objects.Add(make());
+            string none = doc.ToJson();
+            Check(!none.Contains("verticalAlign") && !none.Contains("spaceBefore") && !none.Contains("spaceAfter"), "defaults: no new keys in the file");
+            var set = make();
+            set.VerticalAlign = VerticalAlign.Middle; set.SpaceBefore = 12.5; set.SpaceAfter = 600;
+            set.SpaceAfter = TextObject.LimitParaSpace(set.SpaceAfter);
+            doc = new LabelDoc();
+            doc.Objects.Add(set);
+            string json = doc.ToJson();
+            var back = (TextObject)LabelDoc.FromJson(json).Objects[0];
+            Check(json.Contains("\"verticalAlign\":\"middle\"") && back.VerticalAlign == VerticalAlign.Middle && back.SpaceBefore == 12.5 && back.SpaceAfter == 500,
+                  "file: middle, before 12.5 %, after limited to 500 % (" + back.SpaceAfter + ")");
+            var odd = (TextObject)LabelDoc.FromJson(json.Replace("\"middle\"", "\"sideways\"").Replace("12.5", "-4")).Objects[0];
+            Check(odd.VerticalAlign == VerticalAlign.Top && odd.SpaceBefore == 0, "file: an unknown alignment reads as top, a negative space as 0");
+        }
+
         // A hand-edited label with "NaN" or "Infinity" as text for a number (review 0.22): the defaults, never NaN (it got
         // past every clamp: letter spacing, size and line height NaN), and the label draws.
         static void OddNumbersTest()
@@ -73,7 +182,7 @@ namespace QlLabels.Tests
             TextObject t = null;
             try { t = (TextObject)LabelDoc.FromJson(json).Objects[0]; } catch (Exception ex) { Check(false, "odd numbers: opened (" + ex.Message + ")"); return; }
             Check(!double.IsNaN(t.Size) && t.Size >= 2 && t.Size <= 400, "odd numbers: size " + t.Size);
-            Check(t.Spacing == 0 && t.LineHeight == 1, "odd numbers: letter spacing " + t.Spacing + ", line height " + t.LineHeight);
+            Check(t.Spacing == 100 && t.LineSpacing == 100, "odd numbers: letter spacing " + t.Spacing + ", line spacing " + t.LineSpacing);
             Check(t.Runs != null && t.Runs.All(r => r.Spacing == null && r.Size == null), "odd numbers: run values left to the text");
             var doc = new LabelDoc();
             doc.Objects.Add(t);
@@ -925,31 +1034,40 @@ namespace QlLabels.Tests
             Check(saved.Contains("\"kind\":\"line\"") && saved.Contains("\"kind\":\"frame\"") && ((TextObject)again.Objects[1]).Kind == TextKind.Frame &&
                   again.ToJson() == saved, "kinds round trip");
 
-            // Letter spacing widens a line by the spacing between each pair of characters.
+            // Letter spacing in % (100 normal): each % more adds 1 % of a space's width between each pair of characters
+            // (CorelDRAW's character spacing + 100).
             var t = new TextObject { Text = "ABCDE", Size = 12 };
             EditorRender.FitBox(t);
             double w0 = t.W;
-            t.Spacing = 10;
+            t.Spacing = 300;
             EditorRender.FitBox(t);
-            double expected = 4 * 10 * 25.4 / 72 * 1.02;
-            Check(Math.Abs(t.W - w0 - expected) < 0.25, "spacing 10 pt: " + (t.W - w0) + " mm wider, expected " + expected);
-            t.Spacing = -2;
+            double expected = 4 * 2 * EditorRender.SpacingToPoints(t.Font, t.Size, t.Style, 200) * 25.4 / 72 * 1.02;
+            Check(expected > 1 && Math.Abs(t.W - w0 - expected) < 0.25, "spacing 300 %: " + (t.W - w0) + " mm wider, expected " + expected);
+            t.Spacing = 80;
             EditorRender.FitBox(t);
-            Check(t.W < w0, "negative spacing narrows the text");
+            Check(t.W < w0, "spacing below 100 % narrows the text");
+            Check(Math.Abs(EditorRender.SpacingFromPoints("Segoe UI", 12, FontStyle.Regular, EditorRender.SpacingToPoints("Segoe UI", 12, FontStyle.Regular, 137)) - 137) < 1e-6,
+                  "spacing: % to points and back");
 
-            // Line height: only for frames, a multiple of the font's line pitch.
+            // Line spacing: only for frames, in % of the font's ascent + descent (CorelDRAW's 100 %).
             var f = new TextObject { Text = "A\nB\nC", Size = 12, Kind = TextKind.Frame };
             EditorRender.FitBox(f);
             double h1 = f.H;
-            f.LineHeight = 2;
+            f.LineSpacing = 200;
             EditorRender.FitBox(f);
             double pitch = (h1 - 0.6) / 3;
-            Check(Math.Abs(f.H - h1 - 2 * pitch) < 0.3, "line height 2: " + f.H + " vs " + h1);
-            var line = new TextObject { Text = "A", Size = 12, LineHeight = 3 };
+            Check(Math.Abs(f.H - h1 - 2 * pitch) < 0.3, "line spacing 200 %: " + f.H + " vs " + h1);
+            f.LineSpacing = 50;
+            EditorRender.FitBox(f);
+            Check(Math.Abs(f.H - (h1 - pitch)) < 0.2, "line spacing 50 %: one pitch lower in all (" + f.H + " vs " + h1 + ")");
+            var line = new TextObject { Text = "A", Size = 12, LineSpacing = 300 };
             EditorRender.FitBox(line);
             var plain = new TextObject { Text = "A", Size = 12 };
             EditorRender.FitBox(plain);
-            Check(line.H == plain.H, "line height doesn't change a single line");
+            Check(line.H == plain.H, "line spacing doesn't change a single line");
+            SpacingFilesTest();
+            ParagraphFrameTest();
+            WindowBoundsTest();
 
             // A frame wraps at its box; too small a box cuts the text off (marked).
             var frame = new TextObject { X = 0, Y = 0, W = 20, H = 60, Text = "one two three four five six seven", Size = 12, Kind = TextKind.Frame };
@@ -959,6 +1077,21 @@ namespace QlLabels.Tests
             frame.H = 60;
             frame.Text = "Donaudampfschifffahrtsgesellschaft";
             Check(!EditorRender.Overflows(frame), "a word wider than the frame breaks at characters");
+            // Red only when a glyph is cut off: the room below capitals (descent, line gap, padding) may go.
+            var caps = new TextObject { Text = "ABC\nDEF", Size = 12, Kind = TextKind.Frame };
+            EditorRender.FitBox(caps);
+            double full = caps.H;
+            Check(!EditorRender.Overflows(caps), "capitals in their fitted frame fit");
+            caps.H = full - 1.1;
+            Check(!EditorRender.Overflows(caps), "the frame up to just below the capitals: not cut off (" + caps.H.ToString("0.00") + " of " + full.ToString("0.00") + " mm)");
+            caps.Text = "ABC\ngjp";
+            Check(EditorRender.Overflows(caps), "the same frame with descenders in the last line: cut off");
+            caps.Text = "ABC\nDEF";
+            caps.H = full - 1.8;
+            Check(EditorRender.Overflows(caps), "the frame into the capitals: cut off");
+            caps.Text = "ABC\n ";
+            caps.H = full - 3;
+            Check(!EditorRender.Overflows(caps), "a last line of only a space below the frame: nothing visible cut off");
             EditorRender.FitText(frame);
             Check(frame.W == 20 && frame.H == 60, "a frame keeps its box after a change");
 

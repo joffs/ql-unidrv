@@ -26,7 +26,7 @@ $patterns = @(
 )
 
 $failures = 0
-foreach ($file in Get-ChildItem -Path $Src -Filter *.cs) {
+foreach ($file in Get-ChildItem -Path $Src -Filter *.cs -Recurse) {
     if (@($allowedFiles | Where-Object { $file.Name -like $_ }).Count) { continue }
     $inFixed = $false
     $n = 0

@@ -20,7 +20,7 @@ $exe = Join-Path $out "pan_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.PanUi /win32manifest:app.manifest "/resource:assets\pan-move.cur,pan-move.cur" `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "$Src\*.cs" test\pan_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll "/recurse:$Src\*.cs" test\pan_ui.cs
     if ($LASTEXITCODE) { throw "pan_ui build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

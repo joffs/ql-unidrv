@@ -592,6 +592,15 @@ public static class QlShell {
         Set-KeyDefault $fileTypeKeys[1] "QL Label"
         Set-KeyDefault "$($fileTypeKeys[1])\DefaultIcon" (Get-IconLocation "qllabel.ico" $editorApp)
         Set-KeyDefault "$($fileTypeKeys[1])\shell\open\command" "`"$editorApp`" `"%1`""
+        # Explorer's "Print with data..." (classic menu; Windows 11: "Show more options"): the label, then Print with data
+        # with its remembered data file. One text for the machine (HKLM): the installed Windows language, German or English.
+        # "open" stays the double-click.
+        Set-KeyDefault "$($fileTypeKeys[1])\shell" "open"
+        $printData = if ([Globalization.CultureInfo]::InstalledUICulture.TwoLetterISOLanguageName -eq "de") { "Mit Daten drucken" } else { "Print with data" }
+        Set-KeyDefault "$($fileTypeKeys[1])\shell\printdata" ($printData + [char]0x2026)
+        # with QL Label Maker's icon, so the entry stands out in the menu (as 7-Zip's do)
+        Set-ItemProperty -Path "$($fileTypeKeys[1])\shell\printdata" -Name "Icon" -Value "`"$editorApp`",0"
+        Set-KeyDefault "$($fileTypeKeys[1])\shell\printdata\command" "`"$editorApp`" --print-data `"%1`""
         Update-Explorer
     }
     function Unregister-LabelFiles {

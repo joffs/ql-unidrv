@@ -284,6 +284,18 @@ namespace QlLabels
         {
             var doc = LoadTemplate(o.Template);
             answer["template"] = Path.GetFullPath(o.Template);
+            // without --data and --set: the label's remembered data file (Print with data), next to the label first
+            if (o.Data == null && o.Set.Count == 0 && doc.PrintData != null)
+            {
+                LinkState state;
+                string found = doc.PrintData.Resolve(o.Template, out state);
+                if (found == null)
+                    throw new Stop(DataError, state == LinkState.FolderOffline
+                        ? Lang.F("The folder of the label's data file isn't reachable: {0}", doc.PrintData.Absolute)
+                        : Lang.F("The label's data file {0} doesn't exist (next to the label or at that place).", doc.PrintData.Absolute));
+                o.Data = found;
+                answer["data"] = found;
+            }
             LabelLayout layout;
             string printer = ChoosePrinter(o, doc, out layout);
             answer["printer"] = printer;

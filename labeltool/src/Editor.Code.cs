@@ -268,25 +268,44 @@ namespace QlLabels
             var r = QuietDots(b, layout, now);   // drawn with its quiet zone (transparent: it covers nothing)
             if (r.Width < 1 || r.Height < 1) return;
             bool turned = b.Rotation == 90 || b.Rotation == 270;
-            // The symbol upright: its own width/height in dots and dots per inch (fewer for a giant box: Workable).
-            var s = Workable(r, layout);
-            double k = (double)s.Width / r.Width;
-            int w = turned ? s.Height : s.Width, h = turned ? s.Width : s.Height;
-            int dpiW = Math.Max(1, (int)Math.Round((turned ? layout.DpiY : layout.DpiX) * k)), dpiH = Math.Max(1, (int)Math.Round((turned ? layout.DpiX : layout.DpiY) * k));
-            using (var bmp = BarcodeBitmap(b, w, h, dpiW, dpiH, now))
+            var state = g.Save();
+            try
             {
-                if (bmp == null) return;
-                bmp.RotateFlip(b.Rotation == 90 ? RotateFlipType.Rotate90FlipNone : b.Rotation == 180 ? RotateFlipType.Rotate180FlipNone
-                               : b.Rotation == 270 ? RotateFlipType.Rotate270FlipNone : RotateFlipType.RotateNoneFlipNone);
-                var state = g.Save();
-                try
+                g.ResetTransform();
+                // Only the part of the box that lands on the surface (the label, or the part being drawn again) is made, at
+                // the printer's dots: the same dots as the whole box made and drawn, but a box of 10000 mm doesn't make a
+                // bitmap of millions of dots for a few visible ones (a damaged file with 269 such codes took 5 s to open).
+                // (a dot more on each side: drawn with PixelOffsetMode.Half, an image that starts right at the surface's
+                // edge loses its first column there)
+                var seen = Rectangle.Intersect(r, Rectangle.Inflate(Rectangle.Ceiling(g.VisibleClipBounds), 2, 2));
+                if (seen.Width < 1 || seen.Height < 1) return;
+                int w = turned ? r.Height : r.Width, h = turned ? r.Width : r.Height;
+                int dpiW = turned ? layout.DpiY : layout.DpiX, dpiH = turned ? layout.DpiX : layout.DpiY;
+                using (var bmp = BarcodeBitmap(b, w, h, dpiW, dpiH, now, Upright(seen, r, b.Rotation)))
                 {
-                    g.ResetTransform();
+                    if (bmp == null) return;
+                    bmp.RotateFlip(b.Rotation == 90 ? RotateFlipType.Rotate90FlipNone : b.Rotation == 180 ? RotateFlipType.Rotate180FlipNone
+                                   : b.Rotation == 270 ? RotateFlipType.Rotate270FlipNone : RotateFlipType.RotateNoneFlipNone);
                     g.InterpolationMode = InterpolationMode.NearestNeighbor;
                     g.PixelOffsetMode = PixelOffsetMode.Half;
-                    g.DrawImage(bmp, r, 0, 0, bmp.Width, bmp.Height, GraphicsUnit.Pixel);
+                    g.DrawImage(bmp, seen, 0, 0, bmp.Width, bmp.Height, GraphicsUnit.Pixel);
                 }
-                finally { g.Restore(state); }
+            }
+            finally { g.Restore(state); }
+        }
+
+        // A part of a box turned by rotation (clockwise; dots on the surface) as the same part of the upright box, the
+        // window the upright symbol is made in before it is turned (RotateFlip).
+        static Rectangle Upright(Rectangle part, Rectangle box, int rotation)
+        {
+            int x0 = part.Left - box.Left, x1 = part.Right - box.Left, y0 = part.Top - box.Top, y1 = part.Bottom - box.Top;
+            int bw = box.Width, bh = box.Height;   // the turned box
+            switch (rotation)
+            {
+                case 90: return Rectangle.FromLTRB(y0, bw - x1, y1, bw - x0);    // upright (u, v) went to (H - 1 - v, u)
+                case 180: return Rectangle.FromLTRB(bw - x1, bh - y1, bw - x0, bh - y0);
+                case 270: return Rectangle.FromLTRB(bh - y1, x0, bh - y0, x1);   // upright (u, v) went to (v, W - 1 - u)
+                default: return Rectangle.FromLTRB(x0, y0, x1, y1);
             }
         }
 
@@ -295,13 +314,22 @@ namespace QlLabels
         // null when the content can't be encoded (BarcodeObject.Problem says why).
         public static Bitmap BarcodeBitmap(BarcodeObject b, int w, int h, int dpiW, int dpiH, DateTime now)
         {
+            return BarcodeBitmap(b, w, h, dpiW, dpiH, now, new Rectangle(0, 0, w, h));
+        }
+
+        // Only the window's part of it (dots of the upright box): the bitmap has the window's size.
+        static Bitmap BarcodeBitmap(BarcodeObject b, int w, int h, int dpiW, int dpiH, DateTime now, Rectangle window)
+        {
             if (b.Problem(now) != null) return null;
+            window.Intersect(new Rectangle(0, 0, w, h));
+            if (window.Width < 1 || window.Height < 1) return null;
             string content = b.Content(now);
-            var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+            var bmp = new Bitmap(window.Width, window.Height, PixelFormat.Format32bppArgb);
             bmp.SetResolution(dpiW, dpiH);
             using (var g = Graphics.FromImage(bmp))
             {
                 g.Clear(Color.Transparent);
+                g.TranslateTransform(-window.X, -window.Y);
                 g.SmoothingMode = SmoothingMode.None;
                 g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
                 if (b.Kind == Symbology.Qr)
@@ -321,9 +349,16 @@ namespace QlLabels
             QrModule(total, w, h, dpiW, dpiH, out mx, out my);
             int x0 = (w - mx * total) / 2 + 4 * mx, y0 = (h - my * total) / 2 + 4 * my;
             g.FillRectangle(invert ? Brushes.Black : Brushes.White, x0, y0, n * mx, n * my);
+            // the dark modules of a row as runs, one rectangle each (the same dots; a large code has 15,000 dark modules)
             for (int y = 0; y < n; y++)
                 for (int x = 0; x < n; x++)
-                    if (m[y, x]) g.FillRectangle(invert ? Brushes.White : Brushes.Black, x0 + x * mx, y0 + y * my, mx, my);
+                {
+                    if (!m[y, x]) continue;
+                    int end = x + 1;
+                    while (end < n && m[y, end]) end++;
+                    g.FillRectangle(invert ? Brushes.White : Brushes.Black, x0 + x * mx, y0 + y * my, (end - x) * mx, my);
+                    x = end;
+                }
         }
 
         static void DrawLinear(Graphics g, BarcodeObject b, string content, int w, int h, int dpiW, int dpiH)

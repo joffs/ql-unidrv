@@ -26,13 +26,25 @@ namespace QlLabels
         public float Width;             // along the baseline (mm)
         public double Angle;            // clockwise degrees
         public float Ascent, Descent;   // mm
+        public bool White;              // drawn in white (or nearly): shows only on something dark
         public float Em { get { return (float)(SizePt / 72 * 25.4); } }
         public PointF End { get { var d = EmfText.Dir(Angle); return new PointF(Start.X + d.X * Width, Start.Y + d.Y * Width); } }
 
+        // A copy (Lines joins runs into the first of a line).
+        public EmfRun Copy() { return (EmfRun)MemberwiseClone(); }
+
         public bool SameFormat(EmfRun o)
         {
-            return o.Font == Font && Math.Abs(o.SizePt - SizePt) < 0.25 && o.Bold == Bold && o.Italic == Italic && o.Underline == Underline;
+            return o.Font == Font && Math.Abs(o.SizePt - SizePt) < 0.25 && o.Bold == Bold && o.Italic == Italic && o.Underline == Underline && o.White == White;
         }
+    }
+
+    // A filled path of four corners (mm on the frame, y down) and its FillPath record (without it the path draws
+    // nothing): CorelDRAW draws an underline so, under each line of text.
+    sealed class EmfBar
+    {
+        public PointF[] Corners;
+        public int Fill;
     }
 
     sealed class EmfLine
@@ -54,14 +66,41 @@ namespace QlLabels
         public double Angle { get { return Lines[0].Angle; } }
     }
 
+    // What one program writes differently from GDI's own text records (set per source: Corel/CorelEmf.cs).
+    sealed class EmfQuirks
+    {
+        // The last character of each text record has an advance of almost nothing (CorelDRAW: dx = 1): its measured
+        // advance is used instead.
+        public bool ShortLastAdvance;
+        // The face name carries the style in the program's language ("Arial Fett", "Arial Kursiv"; the weight and
+        // italic flag say it too): a face that isn't installed is tried without its trailing style words.
+        public bool StyleInFaceName;
+
+        public static readonly EmfQuirks None = new EmfQuirks();
+
+        public static EmfQuirks For(ImportSource source)
+        {
+            if (source != null && source.IsCorelDraw) return CorelEmf.Quirks;
+            return None;
+        }
+    }
+
     static class EmfText
     {
         public const string Substitute = "Segoe UI";
 
         // The paragraphs of a text-only EMF (InvalidDataException: no EMF or damaged); missing: fonts not installed.
-        public static List<EmfParagraph> Read(byte[] emf, out List<string> missing)
+        public static List<EmfParagraph> Read(byte[] emf, out List<string> missing) { return Read(emf, EmfQuirks.None, out missing); }
+
+        public static List<EmfParagraph> Read(byte[] emf, EmfQuirks quirks, out List<string> missing)
         {
-            var runs = Runs(emf);
+            return Paragraphs(Lines(ReadRuns(emf, quirks, out missing)));
+        }
+
+        // The text records' runs in record order, fonts not installed replaced (and named in missing).
+        internal static List<EmfRun> ReadRuns(byte[] emf, EmfQuirks quirks, out List<string> missing)
+        {
+            var runs = Runs(emf, null, quirks ?? EmfQuirks.None);
             var installed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using (var fonts = new InstalledFontCollection())
                 foreach (var f in fonts.Families) installed.Add(f.Name);
@@ -72,7 +111,35 @@ namespace QlLabels
                     if (!missing.Contains(r.Font)) missing.Add(r.Font);
                     r.Font = Substitute;
                 }
-            return Paragraphs(Lines(runs));
+            return runs;
+        }
+
+        static readonly string[] StyleWords = { "Fett", "Kursiv", "Standard", "Bold", "Italic", "Regular", "Normal", "Oblique" };
+
+        static HashSet<string> installedFamilies;
+
+        // The installed font families (read once).
+        static HashSet<string> InstalledFamilies()
+        {
+            var set = installedFamilies;
+            if (set != null) return set;
+            set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var fonts = new InstalledFontCollection())
+                foreach (var f in fonts.Families) set.Add(f.Name);
+            return installedFamilies = set;
+        }
+
+        // The installed family a face name is with style words at its end taken off; null: none.
+        static string WithoutStyle(string face, HashSet<string> installed)
+        {
+            var words = face.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            while (words.Count > 1 && StyleWords.Contains(words[words.Count - 1], StringComparer.OrdinalIgnoreCase))
+            {
+                words.RemoveAt(words.Count - 1);
+                string family = string.Join(" ", words);
+                if (installed.Contains(family)) return family;
+            }
+            return null;
         }
 
         // ---------- records ----------
@@ -91,18 +158,30 @@ namespace QlLabels
             public SizeF WindowExt = new SizeF(1, 1), ViewportExt = new SizeF(1, 1);
             public float[] World = { 1, 0, 0, 1, 0, 0 };   // m11 m12 m21 m22 dx dy
             public int Font = -1;
+            public int TextColor;           // COLORREF 0x00bbggrr
             public State Copy() { var s = (State)MemberwiseClone(); s.World = (float[])World.Clone(); return s; }
         }
 
         // Every text record as a run on the frame, in record order.
-        internal static List<EmfRun> Runs(byte[] emf) { return Runs(emf, null); }
+        internal static List<EmfRun> Runs(byte[] emf) { return Runs(emf, null, EmfQuirks.None); }
+
+        // The filled four-corner paths (see EmfBar), in record order.
+        internal static List<EmfBar> Bars(byte[] emf, EmfQuirks quirks)
+        {
+            var bars = new List<EmfBar>();
+            Runs(emf, null, quirks ?? EmfQuirks.None, bars);
+            return bars;
+        }
 
         // More text records than a label has (thousands take seconds): not read as text (pasted as a picture, not repaired).
         const int MaxTexts = 1000;
 
         // fixes: the text records read with the first mapping (record position, that mapping, the mapping in force)
-        static List<EmfRun> Runs(byte[] emf, List<Tuple<int, State, State>> fixes)
+        static List<EmfRun> Runs(byte[] emf, List<Tuple<int, State, State>> fixes, EmfQuirks quirks, List<EmfBar> bars = null)
         {
+            EmfBar bar = null;            // the path being read (bars only)
+            var corners = new List<PointF>();
+            bool plain = false;           // only MoveTo, LineTo, CloseFigure so far
             EmfPicture.Check(emf);
             float pxPerMmX = Int(emf, 72) / (float)Math.Max(1, Int(emf, 80)), pxPerMmY = Int(emf, 76) / (float)Math.Max(1, Int(emf, 84));
             if (pxPerMmX <= 0 || pxPerMmY <= 0) { pxPerMmX = pxPerMmY = 96 / 25.4f; }
@@ -119,6 +198,35 @@ namespace QlLabels
                 int type = Int(emf, pos), size = Int(emf, pos + 4);
                 if (type == 14 || size < 8) break;   // EMR_EOF (sizes were checked by EmfPicture.Check)
                 int a = pos + 8;
+                if (bars != null)
+                {
+                    if (bar != null)
+                    {
+                        if ((type == 27 && corners.Count == 0) || type == 54)          // MOVETOEX, LINETO
+                        {
+                            if (size >= 16) corners.Add(ToMm(s, new PointF(Int(emf, a), Int(emf, a + 4)), pxPerMmX, pxPerMmY, frame));
+                            else plain = false;
+                        }
+                        else if (type == 62)                                          // FILLPATH
+                        {
+                            if (plain && corners.Count == 4 && corners.All(p => Finite(p.X) && Finite(p.Y)))
+                            {
+                                bar.Corners = corners.ToArray();
+                                bar.Fill = pos;
+                                bars.Add(bar);
+                            }
+                            bar = null;
+                        }
+                        else if (type != 61 && type != 60 && type != 70) plain = false;   // CLOSEFIGURE, ENDPATH, COMMENT
+                        if (type == 68 || type == 59) bar = null;                       // ABORTPATH, another BEGINPATH
+                    }
+                    if (type == 59 && bar == null)                                    // BEGINPATH
+                    {
+                        bar = new EmfBar();
+                        corners.Clear();
+                        plain = true;
+                    }
+                }
                 switch (type)
                 {
                     case 9: s.WindowExt = new SizeF(Int(emf, a), Int(emf, a + 4)); break;             // SETWINDOWEXTEX
@@ -127,6 +235,7 @@ namespace QlLabels
                     case 12: s.ViewportOrg = new PointF(Int(emf, a), Int(emf, a + 4)); break;         // SETVIEWPORTORGEX
                     case 17: s.MapMode = Int(emf, a); break;                                          // SETMAPMODE
                     case 22: s.TextAlign = Int(emf, a); break;                                        // SETTEXTALIGN
+                    case 24: s.TextColor = Int(emf, a); break;                                        // SETTEXTCOLOR
                     case 33:                                                                           // SAVEDC
                         if (outer == null) outer = s.Copy();
                         stack.Push(s.Copy());
@@ -157,7 +266,7 @@ namespace QlLabels
                     case 84:                                                                           // EXTTEXTOUTW
                         if (++texts > MaxTexts) throw new InvalidDataException(Lang.T("This is no EMF picture, or it is damaged."));
                         var font = s.Font >= 0 && fonts.ContainsKey(s.Font) ? fonts[s.Font] : null;
-                        var run = TextRun(emf, pos, size, type == 84, s, font, pxPerMmX, pxPerMmY, frame);
+                        var run = TextRun(emf, pos, size, type == 84, s, font, pxPerMmX, pxPerMmY, frame, quirks);
                         // CorelDRAW resets the page to 1:1 before its text but still writes the text's sizes and
                         // places in the units of the mapping it set first (0.01 mm), so the text lands far outside
                         // the picture (Windows draws it there too). A run outside the frame that the first mapping
@@ -167,14 +276,18 @@ namespace QlLabels
                             var o = s.Copy();
                             o.MapMode = outer.MapMode; o.WindowOrg = outer.WindowOrg; o.ViewportOrg = outer.ViewportOrg;
                             o.WindowExt = outer.WindowExt; o.ViewportExt = outer.ViewportExt;
-                            var again = TextRun(emf, pos, size, type == 84, o, font, pxPerMmX, pxPerMmY, frame);
+                            var again = TextRun(emf, pos, size, type == 84, o, font, pxPerMmX, pxPerMmY, frame, quirks);
                             if (Inside(again, frameSize))
                             {
                                 run = again;
                                 if (fixes != null) fixes.Add(Tuple.Create(pos, outer.Copy(), s.Copy()));
                             }
                         }
-                        if (run != null) runs.Add(run);
+                        if (run != null)
+                        {
+                            run.White = (s.TextColor & 0xF0F0F0) == 0xF0F0F0;
+                            runs.Add(run);
+                        }
                         break;
                 }
                 pos += size;
@@ -187,7 +300,7 @@ namespace QlLabels
         public static byte[] Repair(byte[] emf)
         {
             var fixes = new List<Tuple<int, State, State>>();
-            Runs(emf, fixes);
+            Runs(emf, fixes, EmfQuirks.None);
             if (fixes.Count == 0) return emf;
             var o = new MemoryStream();
             int total = Int(emf, 48), at = 0, added = 0;
@@ -263,6 +376,16 @@ namespace QlLabels
             };
         }
 
+        // A logical point in mm on the frame (y down), with the mapping in force.
+        static PointF ToMm(State s, PointF p, float pxPerMmX, float pxPerMmY, PointF frame)
+        {
+            var page = PageScale(s, pxPerMmX, pxPerMmY);
+            var w = s.World;
+            float wx = p.X * w[0] + p.Y * w[2] + w[4], wy = p.X * w[1] + p.Y * w[3] + w[5];
+            float dx = (wx - s.WindowOrg.X) * page.Width + s.ViewportOrg.X, dy = (wy - s.WindowOrg.Y) * page.Height + s.ViewportOrg.Y;
+            return new PointF(dx / pxPerMmX - frame.X, dy / pxPerMmY - frame.Y);
+        }
+
         // The page transform's scale (logical units to device pixels) for the map mode.
         static SizeF PageScale(State s, float pxPerMmX, float pxPerMmY)
         {
@@ -285,7 +408,8 @@ namespace QlLabels
             return new SizeF(mm * pxPerMmX, -mm * pxPerMmY);   // y up
         }
 
-        static EmfRun TextRun(byte[] d, int pos, int size, bool unicode, State s, LogFont font, float pxPerMmX, float pxPerMmY, PointF frame)
+        static EmfRun TextRun(byte[] d, int pos, int size, bool unicode, State s, LogFont font, float pxPerMmX, float pxPerMmY, PointF frame,
+                              EmfQuirks quirks)
         {
             int at = pos + 36;   // EMRTEXT
             if (size < 76) return null;
@@ -295,6 +419,15 @@ namespace QlLabels
             string text = unicode ? Encoding.Unicode.GetString(d, pos + offString, n * 2) : Encoding.Default.GetString(d, pos + offString, n);
             if (text.Trim().Length == 0) return null;
             if (font == null) font = new LogFont { Height = -16, Face = Substitute, Weight = 400 };
+            if (quirks.StyleInFaceName)
+            {
+                var installed = InstalledFamilies();
+                if (!installed.Contains(font.Face))
+                {
+                    string family = WithoutStyle(font.Face, installed);
+                    if (family != null) font.Face = family;
+                }
+            }
             var page = PageScale(s, pxPerMmX, pxPerMmY);
             // logical -> mm on the frame
             Func<PointF, PointF> map = p =>
@@ -339,9 +472,14 @@ namespace QlLabels
             if (offDx > 0 && offDx <= size - 4 * n)
             {
                 int step = (options & 0x2000) != 0 ? 8 : 4;   // ETO_PDY: x and y per character
+                int last = 0;
                 if (offDx <= size - step * n)
-                    for (int i = 0; i < n; i++) width += Int(d, pos + offDx + step * i);
+                    for (int i = 0; i < n; i++) width += last = Int(d, pos + offDx + step * i);
                 width = Math.Abs(width) * len;
+                // the last character's advance too short (a quirk): its own advance instead
+                float lastMm = Math.Abs(last) * len;
+                if (quirks.ShortLastAdvance && n > 0 && lastMm < 0.05f * emMm && text[n - 1] != '\0')
+                    width += Advance(text[n - 1], font.Face, style, emMm) - lastMm;
             }
             if (width <= 0) width = Measure(text, font.Face, style, emMm);
             var origin = map(refPt);
@@ -353,10 +491,17 @@ namespace QlLabels
             return new EmfRun
             {
                 Text = text.Replace("\0", ""), Font = font.Face.Length > 0 ? font.Face : Substitute,
-                SizePt = Math.Max(1, Math.Round(emMm / 25.4 * 72 * 2) / 2), Bold = bold, Italic = font.Italic, Underline = font.Underline,
+                SizePt = Math.Max(1, Math.Round(emMm / 25.4 * 72, 2)), Bold = bold, Italic = font.Italic, Underline = font.Underline,
                 Start = start, Width = width, Angle = Math.Round(Math.Atan2(D.Y, D.X) * 180 / Math.PI, 1),
                 Ascent = ascent * emMm, Descent = descent * emMm,
             };
+        }
+
+        // One character's advance (mm): the width of two of them minus one, so the side bearings count as when typed.
+        static float Advance(char c, string face, FontStyle style, float emMm)
+        {
+            string one = c.ToString();
+            return Measure(one + one, face, style, emMm) - Measure(one, face, style, emMm);
         }
 
         static float Measure(string text, string face, FontStyle style, float emMm)
@@ -390,27 +535,40 @@ namespace QlLabels
 
         static bool SameAngle(double a, double b) { double x = Math.Abs(a - b) % 360; return Math.Min(x, 360 - x) < 1; }
 
-        // Runs on one baseline, next to each other, make a line (a space where the gap is a word's).
+        // Runs on one baseline, next to each other, make a line (a space where the gap is a word's). The runs of a
+        // baseline are taken in their order along it: a program may write a line's right part first (CorelDRAW).
         internal static List<EmfLine> Lines(List<EmfRun> runs)
         {
-            var lines = new List<EmfLine>();
+            var baselines = new List<List<EmfRun>>();
             foreach (var r in runs)
             {
+                var on = baselines.FirstOrDefault(b => SameAngle(b[0].Angle, r.Angle)
+                                                       && Math.Abs(Across(r.Start, b[0].Start, b[0].Angle)) < 0.3f * Math.Max(b[0].Em, r.Em));
+                if (on == null) baselines.Add(new List<EmfRun> { r }); else on.Add(r);
+            }
+            var lines = new List<EmfLine>();
+            foreach (var b in baselines)
+            {
+                double angle = b[0].Angle;
+                var origin = b[0].Start;
                 EmfLine into = null;
-                foreach (var l in lines)
+                foreach (var r in b.OrderBy(x => Along(x.Start, origin, angle)))   // stable: record order where equal
                 {
-                    var last = l.Runs[l.Runs.Count - 1];
-                    if (!SameAngle(l.Angle, r.Angle)) continue;
-                    float em = Math.Max(last.Em, r.Em);
-                    float across = Math.Abs(Across(r.Start, last.Start, l.Angle)), gap = Along(r.Start, last.End, l.Angle);
-                    if (across < 0.3f * em && gap > -0.5f * em && gap < 2f * em) { into = l; break; }
+                    if (into != null)
+                    {
+                        var prev = into.Runs[into.Runs.Count - 1];
+                        float em = Math.Max(prev.Em, r.Em), gap = Along(r.Start, prev.End, angle);
+                        if (gap > -0.5f * em && gap < 2f * em)
+                        {
+                            if (gap > 0.2f * em && !prev.Text.EndsWith(" ") && !r.Text.StartsWith(" ")) prev.Text += " ";
+                            if (prev.SameFormat(r)) { prev.Text += r.Text; prev.Width = Along(r.End, prev.Start, angle); }
+                            else into.Runs.Add(r);
+                            continue;
+                        }
+                    }
+                    into = new EmfLine { Runs = { r } };
+                    lines.Add(into);
                 }
-                if (into == null) { lines.Add(new EmfLine { Runs = { r } }); continue; }
-                var prev = into.Runs[into.Runs.Count - 1];
-                float g = Along(r.Start, prev.End, into.Angle);
-                if (g > 0.2f * Math.Max(prev.Em, r.Em) && !prev.Text.EndsWith(" ") && !r.Text.StartsWith(" ")) prev.Text += " ";
-                if (prev.SameFormat(r)) { prev.Text += r.Text; prev.Width = Along(r.End, prev.Start, into.Angle); }
-                else into.Runs.Add(r);
             }
             return lines;
         }
@@ -433,10 +591,12 @@ namespace QlLabels
                         float em = Math.Max(prev.Em, l.Em);
                         float pitch = Across(l.Start, prev.Start, angle);
                         float left = Along(l.Start, prev.Start, angle), right = left + l.Width - prev.Width, centre = left + (l.Width - prev.Width) / 2;
+                        // the edge or centre the lines share best (lines of similar width are near on all three)
                         TextAlign? align = null;
-                        if (Math.Abs(left) < em) align = TextAlign.Left;
-                        else if (Math.Abs(centre) < em) align = TextAlign.Center;
-                        else if (Math.Abs(right) < em) align = TextAlign.Right;
+                        float best = em;
+                        if (Math.Abs(left) < best) { align = TextAlign.Left; best = Math.Abs(left); }
+                        if (Math.Abs(centre) < best - 0.02f * em) { align = TextAlign.Center; best = Math.Abs(centre); }
+                        if (Math.Abs(right) < best - 0.02f * em) align = TextAlign.Right;
                         if (pitch > 0.8f * em && pitch < 2.2f * em && align.HasValue && (p.Lines.Count == 1 || p.Align == align.Value))
                         {
                             if (p.Lines.Count == 1) p.Align = align.Value;
@@ -472,6 +632,13 @@ namespace QlLabels
             }
             var t = Make(p.Lines[0].Runs[0], "", p.Lines.Count > 1 ? TextKind.Frame : TextKind.Line, p.Align);
             t.SetRuns(runs);
+            // the line spacing from the mean pitch, baseline to baseline
+            int n = p.Lines.Count;
+            if (n > 1)
+            {
+                float pitch = Across(p.Lines[n - 1].Start, p.Lines[0].Start, p.Angle) / (n - 1);
+                if (pitch > 0) t.LineSpacing = EditorRender.LineSpacingPct(t, pitch);
+            }
             Place(t, p, p.Lines);
             return new List<TextObject> { t };
         }

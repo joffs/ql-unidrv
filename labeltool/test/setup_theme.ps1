@@ -22,7 +22,7 @@ $exe = Join-Path $out "setup_theme.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.SetupTheme /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs test\setup_theme.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /recurse:src\*.cs test\setup_theme.cs
     if ($LASTEXITCODE) { throw "setup_theme build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

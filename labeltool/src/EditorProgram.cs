@@ -1,5 +1,7 @@
 // QlLabelMaker.exe - the label editor "QL Label Maker" as its own program:
 //   QlLabelMaker.exe [file.qllabel] [--printer name] [--format name] [--lang en|de]
+//   QlLabelMaker.exe --print-data file.qllabel   (Explorer's "Print with data...": the label, then Print with data with
+//                                                 its remembered data file)
 // Built from the same sources as QlLabelFormats.exe (labeltool\build.cmd, /main:QlLabels.EditorProgram); .qllabel files open
 // here (file association written by install.ps1).
 using System;
@@ -41,10 +43,16 @@ namespace QlLabels
             var files = FilePrinters(args, start);
             var form = new EditorForm(file, files.Count > 0 && files[0].Value != null ? files[0].Value : printerName, formName);
             foreach (var more in files.Skip(1)) form.OpenMore(more.Key, more.Value);   // a restart in another language: every tab
+            if (PrintData(args, start) && file != null) form.PrintDataSoon(file);
             SingleInstance.Serve(form, form.StartedAgain);   // later starts: this window
             StartupTrace.Mark("window built");
             Application.Run(form);
         }
+
+        public const string PrintDataFlag = "--print-data";
+
+        // --print-data among the arguments (from index start).
+        internal static bool PrintData(string[] args, int start) { return args.Skip(start).Contains(PrintDataFlag); }
 
         // [file] [--printer name] [--format name] [--lang x] from index start.
         internal static void Parse(string[] args, int start, out string file, out string printerName, out string formName)
@@ -55,6 +63,7 @@ namespace QlLabels
                 if (args[i] == "--printer" && i + 1 < args.Length) printerName = args[++i];
                 else if (args[i] == "--format" && i + 1 < args.Length) formName = args[++i];
                 else if (args[i] == "--lang" && i + 1 < args.Length) i++;   // Lang.cs reads it
+                else if (args[i] == PrintDataFlag) { }
                 else if (file == null) file = args[i];
             }
         }
@@ -70,6 +79,7 @@ namespace QlLabels
             {
                 if (args[i] == "--printer" && i + 1 < args.Length) pending = args[++i];
                 else if ((args[i] == "--format" || args[i] == "--lang") && i + 1 < args.Length) i++;
+                else if (args[i] == PrintDataFlag) { }
                 else { list.Add(new KeyValuePair<string, string>(args[i], pending)); pending = null; }
             }
             if (pending != null)
@@ -99,6 +109,7 @@ namespace QlLabels
             }
             if (files.Count == 0 && printerName != null) { list.Add("--printer"); list.Add(printerName); }
             if (formName != null) { list.Add("--format"); list.Add(formName); }
+            if (PrintData(args, 0)) list.Add(PrintDataFlag);
             return list.ToArray();
         }
 

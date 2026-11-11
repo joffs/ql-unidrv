@@ -32,7 +32,7 @@ if (-not $NoPrint) {
     try {
         & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.BarcodePrint `
             /win32manifest:app.manifest /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll `
-            /r:System.Drawing.dll src\*.cs test\barcode_print.cs
+            /r:System.Drawing.dll /recurse:src\*.cs test\barcode_print.cs
         if ($LASTEXITCODE) { throw "build failed" }
         Copy-Item app.config "$exe.config" -Force
     } finally { Pop-Location }
@@ -70,7 +70,7 @@ $uiExe = Join-Path $out "barcode_ui.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$uiExe" /main:QlLabels.Tests.BarcodeUi /win32manifest:app.manifest `
-        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll src\*.cs test\barcode_ui.cs
+        /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /recurse:src\*.cs test\barcode_ui.cs
     if ($LASTEXITCODE) { throw "barcode_ui build failed" }
     Copy-Item app.config "$uiExe.config" -Force
 } finally { Pop-Location }

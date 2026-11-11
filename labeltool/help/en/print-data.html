@@ -87,6 +87,16 @@ Nut M4,4712,Shelf 3</pre>
         <figure class="frame" style="max-width:800px"><img src="../img/en/print-data-dialog.png" width="780" height="660" alt="Print with data: three tiles at the top, printer Brother QL-800 (Unidrv), ready, 62 mm continuous; template Regal 3.qllabel, 62 mm, 3 fields; data teile.csv, CSV, 20 rows, with Change…; fields: Lagerort stays empty, Artikel and Nummer found, Preis not on the label; Leave missing fields empty switched on; the previews of the labels, label 4 selected; at the bottom Copies per label and Print (1 label)"></figure>
         <p>A missing field without a default stops printing: add the column, or switch on
           <span class="ui">Leave missing fields empty</span>. A field's default still applies then.</p>
+        <p>The label remembers the data file you choose: a saved label keeps it at once, the tile says
+          <span class="ui">Data · 🔗 remembered</span>. If the label has other unsaved changes (or was never saved), it
+          says <span class="ui">Data · 🔗 when saved</span> until you save the label. The next time
+          <span class="path">Print with data…</span> loads it at once. It is found even when you move the label and its
+          data together. If it isn't there (moved, or the network folder is offline), the tile turns amber and says so;
+          choose it again under <span class="ui">Change ▾</span>, or <span class="ui">Retry</span> when the folder is
+          back. <span class="ui">Don't remember the file</span> removes it from the label. In Explorer, right-click a
+          label &gt; <span class="ui">Print with data…</span> (Windows 11: under <span class="ui">Show more options</span>)
+          opens it straight into this window.</p>
+        <figure class="frame" style="max-width:770px"><img src="../img/en/print-data-remembered.png" width="750" height="60" alt="The three tiles of a label with a remembered data file: Printer, Template Regal 3.qllabel, and Data · remembered with teile.csv, CSV, 20 rows and the Change button with its arrow"></figure>
       </div>
     </li>
 
@@ -130,7 +140,8 @@ Nut M4,4712,Shelf 3</pre>
         <h2 id="command-line">Without a window: QlLabelPrint.exe</h2>
         <p>The same works from scripts with <code>QlLabelPrint.exe</code> in <code>C:\Program Files\QLUnidrv</code>. It
           prints a <code>.qllabel</code> file with a CSV or JSON file and never asks: it reports problems with an exit
-          code. With <code>--name A1234</code> it prints only the label with that
+          code. Without <code>--data</code> it takes the data file the label remembers (see above), next to the label
+          first. With <code>--name A1234</code> it prints only the label with that
           <code>labelname</code>. <code>QlLabelPrint.exe --help</code> shows all options.</p>
         <pre>"C:\Program Files\QLUnidrv\QlLabelPrint.exe" --print Shelf.qllabel --data parts.csv --dry-run</pre>
       </div>

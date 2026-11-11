@@ -7,6 +7,10 @@
 // few hand-made worst cases (deep nesting, long text). Passes when no call throws anything but InvalidDataException
 // (what the editor treats as "not readable") and none takes longer than 1 s. Changes nothing, no clipboard, no printer.
 // Usage: labeltool\test\parser_fuzz.ps1 [-Count 3000] [-Seed 20261108]   (builds and runs it; exit 1 on a finding)
+//        labeltool\test\parser_fuzz.ps1 -Dumps <folder> [-Count 20]: the saved clipboard dumps (out\clipboard: one folder
+//        per copy, formats.txt + one file per format) instead, each pasted as saved and then Count times with one of its
+//        formats mutated (cut off, bits flipped, numbers at record and chunk offsets overwritten): the whole paste as
+//        QL Label Maker makes it (read, text import, layers, pictures) and the objects drawn; 8 s per case
 //        labeltool\build.cmd runs it quick: parser_fuzz.exe 200 20261108 --quick (no hand-made worst cases)
 using System;
 using System.Collections.Generic;
@@ -24,7 +28,7 @@ namespace QlLabels.Tests
 {
     static class ParserFuzz
     {
-        const int LimitMs = 1000;
+        const int LimitMs = 1000, LayersLimitMs = 4000;
         static int findings, calls;
         static long slowestMs; static string slowest = "";
         static bool warming;
@@ -44,19 +48,24 @@ namespace QlLabels.Tests
         {
             bool quick = args.Contains("--quick");   // build.cmd's run: mutated inputs only
             args = args.Where(a => a != "--quick").ToArray();
+            int di = Array.IndexOf(args, "--dumps");
+            string dumps = di >= 0 && di + 1 < args.Length ? args[di + 1] : null;
+            if (di >= 0) args = args.Where((a, i) => i != di && i != di + 1).ToArray();
             int count = args.Length > 0 ? int.Parse(args[0]) : 3000;
             int seed = args.Length > 1 ? int.Parse(args[1]) : 20261108;
             string dump = args.Length > 2 ? args[2] : null;   // folder for the inputs of findings
             if (dump != null) Directory.CreateDirectory(dump);
             Lang.Force("en");
             var rnd = new Random(seed);
+            if (dumps != null) return Dumps(dumps, count, seed, rnd, dump);
             var emfs = EmfFixtures();
             var rtfs = RtfFixtures();
             var svgs = SvgFixtures();
             var dibs = DibFixtures();
             var labels = LabelFixtures();
+            var cmxs = CmxFixtures();
             Console.WriteLine("parser_fuzz: seed " + seed + ", " + count + " inputs per kind, fixtures " + emfs.Count + " EMF, " + rtfs.Count + " RTF, " + svgs.Count + " SVG, "
-                              + dibs.Count + " DIB, " + labels.Count + " labels");
+                              + dibs.Count + " DIB, " + labels.Count + " labels, " + cmxs.Count + " CMX");
 
             // warm-up, not timed: the first calls load fonts, GDI+ and Direct2D and compile the code (two seconds)
             warming = true;
@@ -67,6 +76,19 @@ namespace QlLabels.Tests
             foreach (var r in rtfs) Rtf(r, dump, "fixture");
             foreach (var s in svgs) Svg(s, dump, "fixture");
             foreach (var l in labels) Label(l, dump, "fixture");
+            labelEmf = emfs[5];   // a rectangle with a text on it: a whole label
+            foreach (var x in cmxs) Corel(x, emfs[0], dump, "fixture");
+            // the label splits into the rectangle below and the text on it
+            var layers = EmfLayers.Split(labelEmf);
+            if (layers == null || layers.Pictures.Count != 1 || layers.Pictures[0].Level != 0 || layers.Texts.Count != 1 || layers.Texts[0].Key != 1)
+            { findings++; Console.WriteLine("FINDING: the label fixture doesn't split into a picture and a text above it"); }
+            // and the CMX fixtures must read as made, or the fuzz would only shake the RIFF header
+            var first = Cmx.Read(cmxs[0]);
+            if (first.Count != 1 || first[0].Text != "Hallo" || first[0].Font != "Arial" || first[0].LineSpacingPct != 87 || first[0].Glyphs.Count != 1
+                || Cmx.Read(cmxs[1])[0].Text != "Ha\nllo" || Cmx.Read(cmxs[1])[0].FrameWidthMm < 26.35 || Cmx.Read(cmxs[2]).Count != 2
+                || Cmx.Read(cmxs[4])[0].Text != "Hal\nlo" || Cmx.Read(cmxs[4])[0].Paragraphs.Count != 2 || Cmx.Read(cmxs[4])[0].Paragraphs[1].Align != 2
+                || Cmx.Read(cmxs[4])[0].Paragraphs[1].CharSpacingPct != 20 || Cmx.Read(cmxs[4])[0].FrameHeightMm != 20 || !Cmx.Read(cmxs[4])[0].Frame)
+            { findings++; Console.WriteLine("FINDING: the CMX fixtures don't read as made"); }
             // worst cases made by hand (not in the quick run: some take a second by design)
             if (!quick)
             {
@@ -88,6 +110,7 @@ namespace QlLabels.Tests
                 if (i % 4 == 0) Svg(MutateBytes(rnd, svgs[rnd.Next(svgs.Count)]), dump, "svgbytes#" + i);
                 Dib(MutateDib(rnd, dibs[rnd.Next(dibs.Count)]), dump, "dib#" + i);
                 Label(MutateLabel(rnd, labels[rnd.Next(labels.Count)]), dump, "label#" + i);
+                Corel(MutateCmx(rnd, cmxs[rnd.Next(cmxs.Count)]), emfs[0], dump, "cmx#" + i);
             }
             Console.WriteLine("parser_fuzz: " + calls + " calls, slowest " + slowestMs + " ms (" + slowest + "); ms per entry point: "
                               + string.Join(", ", totals.OrderByDescending(t => t.Value).Select(t => t.Key + " " + t.Value)));
@@ -109,6 +132,27 @@ namespace QlLabels.Tests
             });
             Call("EmfText.Repair", name, b, dump, "emf", () => { var r = EmfText.Repair(b); if (r != b) EmfPicture.Check(r); });
             Call("EditorClipboard.Read(EMF)", name, b, dump, "emf", () => EditorClipboard.Read(new Source().Add(EditorClipboard.EmfFormat, b)));
+            // a whole label's layers: drawn item by item, so it has its own time budget (3 s) and limit
+            Call("EmfLayers.Split", name, b, dump, "emf", () => EmfLayers.Split(b), LayersLimitMs);
+        }
+
+        // CorelDRAW's CMX: read alone, and laid over the EMF fixture "Hallo" as a paste from CorelDRAW does.
+        static readonly ImportSource corel = new ImportSource { Program = SourceProgram.CorelDraw };
+        static byte[] labelEmf;
+
+        static void Corel(byte[] cmx, byte[] emf, string dump, string name)
+        {
+            Call("Cmx.Read", name, cmx, dump, "cmx", () => Cmx.Read(cmx));
+            Call("TextImport.FromEmf(CMX)", name, cmx, dump, "cmx", () =>
+            {
+                List<string> missing; string how;
+                TextImport.FromEmf(new ClipContent { Emf = emf, Cmx = cmx, Source = corel }, out missing, out how);
+            });
+            Call("TextImport.FromLabel(CMX)", name, cmx, dump, "cmx", () =>
+            {
+                List<string> missing; string how;
+                TextImport.FromLabel(new ClipContent { Emf = labelEmf, Cmx = cmx, Source = corel }, out missing, out how);
+            }, LayersLimitMs);
         }
 
         static void Rtf(string s, string dump, string name)
@@ -125,6 +169,14 @@ namespace QlLabels.Tests
 
         static void Svg(byte[] b, string dump, string name)
         {
+            Call("SvgText.Read", name, b, dump, "svg", () =>
+            {
+                foreach (var q in new[] { SvgQuirks.None, AffinityClip.Quirks })
+                {
+                    var r = SvgText.Read(b, null, q);
+                    if (r != null) InRange(r.Objects);
+                }
+            });
             Call("SvgPicture.Clean+Size+Missing", name, b, dump, "svg", () =>
             {
                 var c = SvgPicture.Clean(b);
@@ -184,7 +236,7 @@ namespace QlLabels.Tests
                         catch (Exception ex) { Error = ex; }
                         finished.Set();
                     }
-                }, 64 * 1024 * 1024);
+                }, 1024 * 1024);   // the UI thread's stack (the exe's default): what overflows here ends QL Label Maker
                 t.IsBackground = true;
                 t.SetApartmentState(ApartmentState.STA);
                 t.Start();
@@ -232,11 +284,187 @@ namespace QlLabels.Tests
         // the finding without its numbers (ms), to count the same kind once
         static string Kind(string s) { return System.Text.RegularExpressions.Regex.Replace(s, @"took \d+ ms", "took > 1 s"); }
 
+        // ---------- the saved clipboard dumps ----------
+
+        const int DumpLimitMs = 8000;   // a whole label: read, split into layers, drawn (the largest dumps take about 2 s)
+
+        static int Dumps(string folder, int perDump, int seed, Random rnd, string dump)
+        {
+            var dirs = Directory.GetDirectories(folder).Where(d => File.Exists(Path.Combine(d, "formats.txt"))).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
+            Console.WriteLine("parser_fuzz: seed " + seed + ", " + dirs.Count + " dumps in " + folder + ", " + perDump + " mutations each");
+            warming = true;
+            if (dirs.Count > 0) PasteDump(DumpFormats(dirs[0]), null, "warm-up", "warm-up");
+            warming = false;
+            foreach (var d in dirs)
+            {
+                var formats = DumpFormats(d);
+                string name = Path.GetFileName(d);
+                PasteDump(formats, dump, name + "#as-saved", "as saved");
+                // a format the paste reads; the largest (the EMF, CMX or SVG) every other time
+                var parts = formats.Where(f => f.Data.Length > 0 && f.Wanted != null).ToList();
+                if (parts.Count == 0) continue;
+                var largest = parts.OrderByDescending(x => x.Data.Length).First();
+                for (int i = 0; i < perDump; i++)
+                {
+                    var f = rnd.Next(2) == 0 ? largest : parts[rnd.Next(parts.Count)];
+                    var mutated = formats.Select(x => x == f ? x.With(MutateFormat(rnd, x)) : x).ToList();
+                    PasteDump(mutated, dump, name + "#" + i, f.Name);
+                }
+            }
+            Console.WriteLine("parser_fuzz: " + calls + " calls, slowest " + slowestMs + " ms (" + slowest + ")");
+            foreach (var kv in seen.OrderBy(k => k.Key)) Console.WriteLine("  " + kv.Value + "x " + kv.Key);
+            Console.WriteLine(findings == 0 ? "parser_fuzz: all OK" : "parser_fuzz: " + findings + " finding(s)");
+            return findings == 0 ? 0 : 1;
+        }
+
+        static byte[] MutateFormat(Random r, DumpFormat f)
+        {
+            if (f.Id == 14) return MutateEmf(r, f.Data);
+            if (f.Name.IndexOf("Presentation Exchange", StringComparison.OrdinalIgnoreCase) >= 0) return MutateCmx(r, f.Data);
+            if (f.Id == 8 || f.Id == 17) return MutateDib(r, f.Data);
+            if (f.Text && r.Next(2) == 0)
+            {
+                string t = Encoding.UTF8.GetString(f.Data);
+                return Encoding.UTF8.GetBytes(MutateText(r, t, t.TrimStart().StartsWith("{\\rtf") ? RtfTokens : SvgTokens));
+            }
+            return MutateBytes(r, f.Data);
+        }
+
+        // The paste as QL Label Maker makes it (EditorForm.Make): the same readers in the same order, then the objects drawn
+        // on a label (what the canvas does next). Only InvalidDataException may leave a reader (the paste falls back).
+        static void PasteDump(List<DumpFormat> formats, string dump, string name, string what)
+        {
+            var src = new Source();
+            foreach (var f in formats) if (f.Wanted != null) src.Add(f.Wanted, f.Value());
+            var big = formats.OrderByDescending(f => f.Data.Length).FirstOrDefault();
+            Call("paste " + what, name, big != null ? big.Data : new byte[0], dump, "bin", () =>
+            {
+                var c = EditorClipboard.Read(src);
+                var made = new List<LabelObject>();
+                List<string> missing; string how;
+                try
+                {
+                    switch (c.Kind)
+                    {
+                        case ClipKind.Svg:
+                            var texts = SvgText.Read(c.SvgSource, c.SizeMm, SvgQuirks.For(c.Source));
+                            if (texts != null && texts.Objects.Count > 0)
+                            {
+                                if (!texts.OnlyText && texts.Rest != null)
+                                    try { made.Add(ImageObject.FromSvg(SvgPicture.Clean(texts.Rest))); } catch (InvalidDataException) { }
+                                made.AddRange(texts.Objects);
+                            }
+                            made.Add(ImageObject.FromSvg(c.Svg));
+                            break;
+                        case ClipKind.Emf:
+                            if (c.EmfKind == EmfPicture.Content.TextOnly)
+                                try { made.AddRange(TextImport.FromEmf(c, out missing, out how)); } catch (InvalidDataException) { }
+                            var parts = TextImport.FromLabel(c, out missing, out how);
+                            if (parts != null)
+                                foreach (var part in parts)
+                                {
+                                    var pic = part as EmfLayers.Picture;
+                                    made.Add(pic != null ? ImageObject.FromEmf(pic.Emf, c.Cmx) : (LabelObject)part);
+                                }
+                            made.Add(ImageObject.FromEmf(c.Emf, c.Cmx));
+                            break;
+                        case ClipKind.Picture: made.Add(ImageObject.FromBitmap(c.Picture)); break;
+                        case ClipKind.Rtf: made.Add(RtfRuns.Object(RtfRuns.Read(c.Rtf, out missing))); break;
+                        case ClipKind.Objects: made.AddRange(EditorForm.ObjectsFrom(c.ObjectsJson)); break;
+                    }
+                }
+                finally { if (c.Picture != null) c.Picture.Dispose(); }
+                InRange(made);
+                var doc = new LabelDoc();
+                foreach (var o in made)
+                {
+                    o.X = 1; o.Y = 1;
+                    o.W = Math.Max(0.1, Math.Min(o.W, 200)); o.H = Math.Max(0.1, Math.Min(o.H, 200));
+                    doc.Objects.Add(o);
+                }
+                using (EditorRender.Render(doc, labelLayout, new DateTime(2026, 11, 12, 10, 0, 0))) { }
+            }, DumpLimitMs);
+        }
+
+        // Pasted objects must be within the label's ranges (NaN or a 1e29 pt text broke the panel and the drawing later).
+        static void InRange(IEnumerable<LabelObject> objects)
+        {
+            foreach (var o in objects)
+            {
+                var t = o as TextObject;
+                bool ok = t != null ? TextImport.Sane(t)
+                        : new[] { o.X, o.Y, o.W, o.H }.All(v => !double.IsNaN(v) && Math.Abs(v) <= LabelObject.MaxMm);
+                if (!ok) throw new InvalidOperationException("object out of range: " + o.Type + " " + o.X + "," + o.Y + " " + o.W + "x" + o.H + (t != null ? " " + t.Size + " pt" : ""));
+            }
+        }
+
+        sealed class DumpFormat
+        {
+            public int Id; public string Name, Wanted; public byte[] Data;
+            public bool Text { get { return Id == 1 || Id == 13 || Wanted == DataFormats.Rtf || Wanted == DataFormats.Html || Name.IndexOf("svg", StringComparison.OrdinalIgnoreCase) >= 0; } }
+            public DumpFormat With(byte[] data) { return new DumpFormat { Id = Id, Name = Name, Wanted = Wanted, Data = data }; }
+            // as a source gives it: the text formats as strings, the rest as bytes
+            public object Value()
+            {
+                if (Id == 13) return Encoding.Unicode.GetString(Data, 0, Data.Length & ~1).TrimEnd('\0');
+                if (Id == 1 || Wanted == DataFormats.Rtf) return Encoding.Default.GetString(Data).TrimEnd('\0');
+                return Data;
+            }
+        }
+
+        // A dump folder (tools\clipboard-formats.ps1 -SaveData): formats.txt names the formats, <id>-<name>.<ext> holds each
+        // one's data. Files (CF_HDROP) are left out: they would open files.
+        static List<DumpFormat> DumpFormats(string d)
+        {
+            var names = new Dictionary<int, string>();
+            foreach (var line in File.ReadAllLines(Path.Combine(d, "formats.txt")))
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(line, @"^\s*(\d+)\s+(.+?)\s{2,}\S");
+                if (m.Success) names[int.Parse(m.Groups[1].Value)] = m.Groups[2].Value.Trim();
+            }
+            var list = new List<DumpFormat>();
+            foreach (var f in Directory.GetFiles(d))
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(Path.GetFileName(f), @"^(\d+)-");
+                string n;
+                if (!m.Success || !names.TryGetValue(int.Parse(m.Groups[1].Value), out n)) continue;
+                int id = int.Parse(m.Groups[1].Value);
+                string wanted;
+                switch (id)
+                {
+                    case 1: wanted = DataFormats.Text; break;
+                    case 8: wanted = DataFormats.Dib; break;
+                    case 13: wanted = DataFormats.UnicodeText; break;
+                    case 14: wanted = EditorClipboard.EmfFormat; break;
+                    case 17: wanted = EditorClipboard.DibV5Format; break;
+                    default: wanted = id < 0xC000 ? null : n; break;
+                }
+                list.Add(new DumpFormat { Id = id, Name = n, Wanted = wanted, Data = File.ReadAllBytes(f) });
+            }
+            return list;
+        }
+
         // ---------- mutations ----------
 
         static readonly int[] Interesting = { 0, 1, -1, 2, 4, 8, 7, 0x7FFFFFFF, unchecked((int)0x80000000), 0x7FFFFFFC, 0x40000000, 0xFFFF, 0x10000,
                                               unchecked((int)0xFFFFFFF8), 1000000, 0x7FC00000 /* NaN */, 0x7F800000 /* +inf */, unchecked((int)0xFF800000),
                                               0x7149F2CA /* 1e30f */, 0x00000001 /* tiny float */ };
+
+        // CMX: bit flips and cuts, or an interesting number on an instruction's or tag's size, or anywhere.
+        static byte[] MutateCmx(Random r, byte[] src)
+        {
+            int k = r.Next(3);
+            if (k == 0) return MutateBytes(r, src);
+            var b = (byte[])src.Clone();
+            int n = 1 + r.Next(3);
+            for (int i = 0; i < n; i++)
+            {
+                int at = r.Next(b.Length);
+                if (k == 1) { if (at + 2 <= b.Length) BitConverter.GetBytes((ushort)Interesting[r.Next(Interesting.Length)]).CopyTo(b, at); }
+                else PutInt(b, at, Interesting[r.Next(Interesting.Length)]);
+            }
+            return b;
+        }
 
         static byte[] MutateBytes(Random r, byte[] src)
         {
@@ -400,6 +628,88 @@ namespace QlLabels.Tests
             DeleteObject(f);
         }
 
+        // ---------- CMX fixtures (made here, as CorelDRAW 2024 writes them; see Import/Corel/Cmx.cs) ----------
+
+        static byte[] Cat(params byte[][] parts) { return parts.SelectMany(p => p).ToArray(); }
+        static byte[] I32s(params int[] v) { return v.SelectMany(BitConverter.GetBytes).ToArray(); }
+        static byte[] U16(int v) { return BitConverter.GetBytes((ushort)v); }
+        static byte[] Utf16(string s) { return Encoding.Unicode.GetBytes(s); }
+
+        static byte[] CmxTag(int tag, params byte[][] parts)
+        {
+            var data = Cat(parts);
+            return Cat(new[] { (byte)tag }, U16(data.Length + 3), data);
+        }
+
+        // One instruction; tags: its tag list (the end mark is added), null: no tags; longForm: 0xFFFF, int32 size, code.
+        static byte[] CmxInstruction(int code, byte[][] tags, bool longForm = false)
+        {
+            var body = tags == null ? new byte[0] : Cat(Cat(tags), new byte[] { 0xFF });
+            return longForm ? Cat(U16(0xFFFF), I32s(body.Length + 8), U16(code), body) : Cat(U16(body.Length + 4), U16(code), body);
+        }
+
+        static byte[] Chunk(string id, byte[] data)
+        {
+            var c = Cat(Encoding.ASCII.GetBytes(id), I32s(data.Length), data);
+            return data.Length % 2 == 1 ? Cat(c, new byte[1]) : c;
+        }
+
+        static byte[] CmxFile(string font, params byte[][] page)
+        {
+            var body = Cat(Encoding.ASCII.GetBytes("CMX1"), Chunk("cont", new byte[16]),
+                           Chunk("rfnt", Cat(CmxTag(4, I32s(font.Length), Utf16(font)), CmxTag(1, U16(font.Length), Encoding.ASCII.GetBytes(font)), new byte[] { 0xFF })),
+                           Chunk("page", Cat(page)));
+            return Cat(Encoding.ASCII.GetBytes("RIFF"), I32s(body.Length), body);
+        }
+
+        static byte[] CmxTextStream(string text, bool frame, int size)
+        {
+            var parts = new List<byte[]> { CmxInstruction(20, null) };
+            if (frame)
+                parts.Add(CmxInstruction(98, new[] { CmxTag(1, U16(1), I32s(263571)),
+                    CmxTag(2, I32s(-57514, 0), U16(2), Cat(new[] { 1.0, 0, 0, 1, -235000.5, -180000.25 }.Select(BitConverter.GetBytes).ToArray())) }));
+            parts.Add(CmxInstruction(99, new[] { CmxTag(2, U16(1), I32s(size)), CmxTag(5, I32s(0, 0, 1000000, 870000, 0)) }));
+            parts.Add(CmxInstruction(101, new[] { CmxTag(1, I32s(1, 2, 3)) }, true));   // CharInfo: skipped
+            parts.Add(CmxInstruction(102, new[] { CmxTag(3, I32s(text.Length), Utf16(text)) }));
+            parts.Add(CmxInstruction(21, null));
+            return Cat(parts.ToArray());
+        }
+
+        // Paragraph text as CorelDRAW writes it: one BeginParagraph .. EndParagraph per paragraph (centred, 20 %
+        // character spacing), no paragraph marks in the characters.
+        static byte[] CmxParagraphs(params string[] paragraphs)
+        {
+            var parts = new List<byte[]> { CmxInstruction(20, new[] { CmxTag(1, U16(0)) }) };
+            parts.Add(CmxInstruction(98, new[] { CmxTag(1, U16(1), I32s(400000)), CmxTag(2, I32s(-200000, 0), U16(2), Cat(new[] { 1.0, 0, 0, 1, 0, 0 }.Select(BitConverter.GetBytes).ToArray())), CmxTag(3, U16(0)) }));
+            foreach (var p in paragraphs)
+            {
+                parts.Add(CmxInstruction(99, new[] { CmxTag(2, U16(1), I32s(42333)), CmxTag(4, new byte[] { 2 }), CmxTag(5, I32s(200000, 0, 1000000, 1000000, 1000000, 0)) }));
+                parts.Add(CmxInstruction(102, new[] { CmxTag(3, I32s(p.Length), Utf16(p)) }));
+                parts.Add(CmxInstruction(100, null));
+            }
+            parts.Add(CmxInstruction(21, null));
+            return Cat(parts.ToArray());
+        }
+
+        static byte[] CmxLaidOut(string text)
+        {
+            var xy = new List<int>();
+            for (int i = 0; i < text.Length; i++) { xy.Add(i * 25000); xy.Add(-40000); }
+            return Cat(CmxInstruction(70, null), CmxInstruction(65, new[] { CmxTag(1, U16(text.Length), Utf16(text), I32s(xy.ToArray())) }), CmxInstruction(71, null));
+        }
+
+        static List<byte[]> CmxFixtures()
+        {
+            return new List<byte[]>
+            {
+                CmxFile("Arial", CmxTextStream("Hallo", false, 46609), CmxLaidOut("Hallo")),
+                CmxFile("Arial", CmxTextStream("Ha\rllo\r", true, 46609), CmxLaidOut("Ha"), CmxLaidOut("llo")),
+                CmxFile("Arial", CmxTextStream("Hallo", true, 46609), CmxTextStream("Zweite Zeile", false, 30000), CmxLaidOut("Hallo")),
+                CmxFile("Arial", CmxInstruction(9, null), CmxTextStream("Hallo", false, 46609), CmxInstruction(10, null)),
+                CmxFile("Arial", CmxParagraphs("Hal", "lo")),
+            };
+        }
+
         static List<byte[]> EmfFixtures()
         {
             var list = new List<byte[]>();
@@ -508,6 +818,13 @@ namespace QlLabels.Tests
         {
             var enc = new UTF8Encoding(false);
             yield return enc.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\">" + string.Concat(Enumerable.Repeat("<g>", 20000)) + string.Concat(Enumerable.Repeat("</g>", 20000)) + "</svg>");
+            // the same with something drawn and a text inside (the text import walks it; security review 2026-11-11)
+            yield return enc.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"50\">" + string.Concat(Enumerable.Repeat("<g>", 20000))
+                                      + "<rect width=\"5\" height=\"5\" stroke=\"black\"/><text x=\"1\" y=\"10\">A<tspan>B</tspan></text>" + string.Concat(Enumerable.Repeat("</g>", 20000)) + "</svg>");
+            foreach (var t in new[] { "transform=\"scale(0)\" text-anchor=\"middle\"", "x=\"Infinity\"", "transform=\"translate(NaN)\"", "font-size=\"1e30\"",
+                                      "font-size=\"Infinity\"", "transform=\"scale(1e300) scale(1e300)\"", "letter-spacing=\"NaN\"", "transform=\"rotate(NaN)\"" })
+                yield return enc.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"50\"><rect width=\"5\" height=\"5\" stroke=\"black\"/><text y=\"10\" " + (t.StartsWith("x=") ? t : t + " x=\"1\"")
+                                          + ">Abc</text></svg>");
             yield return enc.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\"><style>" + string.Concat(Enumerable.Range(0, 3000).Select(i => ".c" + i + "{fill:red}")) + "</style>" +
                                       string.Concat(Enumerable.Range(0, 3000).Select(i => "<rect class=\"c" + i + "\"/>")) + "</svg>");   // many rules x many elements
             yield return enc.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\">" + string.Concat(Enumerable.Repeat("<text x=\"1\" y=\"1\">Text</text>", 2000)) + "</svg>");
@@ -573,7 +890,7 @@ namespace QlLabels.Tests
                 D("type", "barcode", "x", 2, "y", 44, "w", 40, "h", 10, "symbology", "code128", "data", "ABC-{gs}123", "showText", true, "level", "M"),
                 D("type", "barcode", "x", 45, "y", 44, "w", 12, "h", 12, "symbology", "qr", "data", "", "qrType", "wifi",
                   "qrFields", D("ssid", "Netz", "password", "geheim"), "level", "Q", "invert", true),
-                D("type", "barcode", "x", 2, "y", 58, "w", 30, "h", 10, "symbology", "ean13", "data", "400638133393", "showText", true),
+                D("type", "barcode", "x", 2, "y", 58, "w", 30, "h", 10, "symbology", "ean13", "data", "200000000000", "showText", true),
                 D("type", "image", "x", 35, "y", 58, "w", 10, "h", 10, "png", png, "mode", "threshold", "threshold", 128, "invert", false),
                 D("type", "image", "x", 48, "y", 58, "w", 10, "h", 5, "png", png, "mode", "dither",
                   "svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 10\"><rect x=\"1\" y=\"1\" width=\"18\" height=\"8\"/></svg>"),
@@ -675,6 +992,14 @@ namespace QlLabels.Tests
             var runs = Enumerable.Range(0, 20000).Select(i => (object)D("t", "a", "bold", i % 2 == 0)).ToArray();
             var runText = D("type", "text", "x", 0, "y", 0, "w", 60, "h", 60, "kind", "frame", "text", new string('a', 20000), "runs", runs);
             yield return Json.Serialize(D("format", "QL label", "objects", new object[] { runText }));   // 20,000 runs
+            // 300 QR codes in boxes of 10000 mm (each made a bitmap of millions of dots: 5 s, seed 7 label#1444) and 100
+            // different QR codes of 2,000 characters each (encoded several times per code before)
+            var wide = Enumerable.Range(0, 300).Select(i => (object)D("type", "barcode", "symbology", "qr", "x", 20, "y", 16, "w", 10000, "h", 26,
+                                                                         "data", "https://example.org/" + i % 3)).ToArray();
+            yield return Json.Serialize(D("format", "QL label", "objects", wide));
+            var full = Enumerable.Range(0, 100).Select(i => (object)D("type", "barcode", "symbology", "qr", "x", 5, "y", 5, "w", 50, "h", 50,
+                                                                         "data", i + new string('x', 2000))).ToArray();
+            yield return Json.Serialize(D("format", "QL label", "objects", full));
         }
 
         static List<byte[]> DibFixtures()

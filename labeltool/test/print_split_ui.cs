@@ -143,9 +143,10 @@ namespace QlLabels.Tests
             var file = bar.Items.OfType<ToolStripMenuItem>().First();
             var fileItem = file.DropDownItems.OfType<ToolStripMenuItem>().First(i => i.Text == Lang.T("Print with &data..."));
             var filePrint = file.DropDownItems.OfType<ToolStripMenuItem>().First(i => i.Text == Lang.T("&Print"));
-            var conv = System.ComponentModel.TypeDescriptor.GetConverter(typeof(Keys));
-            Check(fileItem.ShortcutKeys == (Keys.Control | Keys.Shift | Keys.P) && items[1].ShortcutKeyDisplayString == conv.ConvertToString(fileItem.ShortcutKeys)
-                  && items[0].ShortcutKeyDisplayString == conv.ConvertToString(filePrint.ShortcutKeys),
+            // the program's own key names (KeyNames.cs, 2026-11-11), as the File menu shows them
+            Check(fileItem.ShortcutKeys == (Keys.Control | Keys.Shift | Keys.P) && items[1].ShortcutKeyDisplayString == KeyNames.Text(fileItem.ShortcutKeys)
+                  && items[0].ShortcutKeyDisplayString == KeyNames.Text(filePrint.ShortcutKeys)
+                  && items[1].ShortcutKeyDisplayString == fileItem.ShortcutKeyDisplayString,
                   "the shortcuts as in the File menu: " + items[0].ShortcutKeyDisplayString + ", " + items[1].ShortcutKeyDisplayString);
             if (pictures != null && menu.Visible)
             {

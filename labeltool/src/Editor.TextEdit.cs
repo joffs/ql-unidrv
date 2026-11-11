@@ -541,7 +541,7 @@ namespace QlLabels
         }
 
         // RTF for runs (Word, WordPad and Outlook paste it formatted; RtfRuns reads it back). Letter spacing: \expnd
-        // (quarter points) and \expndtw (twips), as Word writes it; invert: white letters (\cf2) on black shading
+        // (quarter points) and \expndtw (twips), as Word writes it, from the % with the run's font; invert: white letters (\cf2) on black shading
         // (\chcbpat1, Word) and highlight (\highlight1, WordPad).
         internal static string Rtf(List<TextRun> runs)
         {
@@ -559,9 +559,13 @@ namespace QlLabels
                 if (r.Bold == true) b.Append(@"\b");
                 if (r.Italic == true) b.Append(@"\i");
                 if (r.Underline == true) b.Append(@"\ul");
-                if (r.Spacing != null && r.Spacing != 0)
-                    b.Append(@"\expnd").Append(((int)Math.Round(r.Spacing.Value * 4)).ToString(CultureInfo.InvariantCulture))
-                     .Append(@"\expndtw").Append(((int)Math.Round(r.Spacing.Value * 20)).ToString(CultureInfo.InvariantCulture));
+                if (r.Spacing != null && r.Spacing != 100)
+                {
+                    var style = (r.Bold == true ? FontStyle.Bold : 0) | (r.Italic == true ? FontStyle.Italic : 0);
+                    double pt = EditorRender.SpacingToPoints(r.Font ?? RtfRuns.DefaultFont, r.Size ?? 12, style, r.Spacing.Value);
+                    b.Append(@"\expnd").Append(((int)Math.Round(pt * 4)).ToString(CultureInfo.InvariantCulture))
+                     .Append(@"\expndtw").Append(((int)Math.Round(pt * 20)).ToString(CultureInfo.InvariantCulture));
+                }
                 if (r.Invert == true) b.Append(@"\cf2\chcbpat1\highlight1");
                 b.Append(' ');
                 var parts = r.Text.Split('\n');

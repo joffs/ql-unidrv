@@ -126,7 +126,7 @@ namespace QlLabels
                 using (var g = Graphics.FromImage(pic)) Brand.DrawArrangeIcon(g, icon, new RectangleF(0, 0, n, n), Theme.Of(Role.Text));
                 var b = new Button { Image = pic, Size = new Size(S(30), S(26)), Margin = new Padding(S(6), S(1), 0, 0), UseVisualStyleBackColor = true };
                 b.Click += (s, e) => Edit(s, o => o.SetAngle(by == 0 ? 0 : o.Angle + by));   // by 0: back to 0°
-                turnButtons.Add(new KeyValuePair<Button, ArrangeIcon>(b, icon));
+                turnButtons.Add(new KeyValuePair<ButtonBase, ArrangeIcon>(b, icon));
                 tips.SetToolTip(b, tip);
                 return b;
             };
@@ -143,6 +143,7 @@ namespace QlLabels
             rotBox.SelectedIndexChanged += (s, e) => Edit(s, o => { while (o.Rotation != rotBox.SelectedIndex * 90) o.Rotate90(); });
             Row(Lang.T("Rotation:"), rotBox, quarters);
             SpanRow(Hint(Lang.T("Barcodes and QR codes: only 0°, 90°, 180°, 270° (scanners read them best straight).")), quarters);
+            BuildEndRows();   // Editor.Text.cs: the text's "doesn't fit", where it moves nothing
             props.ResumeLayout(false);
         }
 
@@ -315,7 +316,7 @@ namespace QlLabels
                 angleNum.Value = Clamp(angleNum, o.Angle);
                 resetButton.Enabled = o.Angle != 0;
                 var t = o as TextObject;
-                if (t != null) sizeNum.Value = Clamp(sizeNum, t.Size);
+                if (t != null) sizeBox.Show(Current(t).Size);
                 var l = o as LineObject;
                 if (l != null) { lineAngleNum.Value = Clamp(lineAngleNum, l.LineAngle); lineLengthNum.Value = Clamp(lineLengthNum, l.Length); }
             }

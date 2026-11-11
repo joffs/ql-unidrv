@@ -431,8 +431,29 @@ namespace QlLabels
             return result.ToArray();
         }
 
-        // The symbol without quiet zone: [y, x], true = dark. level 0-3 = L, M, Q, H.
+        // The symbol without quiet zone: [y, x], true = dark. level 0-3 = L, M, Q, H. The same array for the same text and
+        // level (callers only read it): drawing, the quiet zone and the checks each ask for it, and a long text takes about
+        // 30 ms to encode (a label with dozens of codes opened in seconds).
         public static bool[,] Encode(string text, int level)
+        {
+            string key = level + "|" + text;
+            lock (encoded)
+            {
+                bool[,] m;
+                if (encoded.TryGetValue(key, out m)) return m;
+            }
+            var made = EncodeNew(text, level);
+            lock (encoded)
+            {
+                if (encoded.Count >= 256) encoded.Clear();   // a few labels' worth; a print run with data changes them each time
+                encoded[key] = made;
+            }
+            return made;
+        }
+
+        static readonly Dictionary<string, bool[,]> encoded = new Dictionary<string, bool[,]>();
+
+        static bool[,] EncodeNew(string text, int level)
         {
             var bytes = Encoding.UTF8.GetBytes(text);
             int ver = VersionFor(bytes.Length, level);
@@ -590,45 +611,46 @@ namespace QlLabels
             }
 
             // ISO penalty rules (runs, 2x2 blocks, finder-like patterns, dark balance): used only to pick a mask.
+            // Read from a flat copy (rows, and columns by stepping a row's length): the two-dimensional array's checked
+            // reads made a long text's encoding take 30 ms.
             public int Penalty()
             {
-                int p = 0, dark = 0;
+                int p = 0, dark = 0, n = size;
+                var m = new bool[n * n];
+                for (int y = 0; y < n; y++) for (int x = 0; x < n; x++) m[y * n + x] = Modules[y, x];
                 for (int pass = 0; pass < 2; pass++)
-                    for (int a = 0; a < size; a++)
+                    for (int a = 0; a < n; a++)
                     {
-                        int run = 1;
-                        for (int b = 1; b <= size; b++)
+                        // pass 0: row a, step 1; pass 1: column a, step n
+                        int first = pass == 0 ? a * n : a, step = pass == 0 ? 1 : n;
+                        int run = 1, window = 0;   // window: the last 11 modules as bits, the oldest highest
+                        for (int b = 0; b < n; b++)
                         {
-                            bool same = b < size && Get(pass, a, b) == Get(pass, a, b - 1);
-                            if (same) run++;
-                            else { if (run >= 5) p += run - 2; run = 1; }
-                        }
-                        for (int b = 0; b + 11 <= size; b++)
-                        {
-                            bool f1 = true, f2 = true;
-                            for (int k = 0; k < 11; k++)
+                            bool v = m[first + b * step];
+                            if (b > 0)
                             {
-                                bool v = Get(pass, a, b + k);
-                                if (v != "10111010000"[k].Equals('1')) f1 = false;
-                                if (v != "00001011101"[k].Equals('1')) f2 = false;
+                                if (v == m[first + (b - 1) * step]) run++;
+                                else { if (run >= 5) p += run - 2; run = 1; }
                             }
-                            if (f1) p += 40;
-                            if (f2) p += 40;
+                            window = (window << 1 | (v ? 1 : 0)) & 0x7FF;
+                            if (b >= 10 && (window == FinderBefore || window == FinderAfter)) p += 40;
                         }
+                        if (run >= 5) p += run - 2;
                     }
-                for (int y = 0; y < size; y++)
-                    for (int x = 0; x < size; x++)
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
                     {
-                        if (Modules[y, x]) dark++;
-                        if (x + 1 < size && y + 1 < size && Modules[y, x] == Modules[y, x + 1] &&
-                            Modules[y, x] == Modules[y + 1, x] && Modules[y, x] == Modules[y + 1, x + 1]) p += 3;
+                        bool v = m[y * n + x];
+                        if (v) dark++;
+                        if (x + 1 < n && y + 1 < n && v == m[y * n + x + 1] && v == m[(y + 1) * n + x] && v == m[(y + 1) * n + x + 1]) p += 3;
                     }
-                int total = size * size;
+                int total = n * n;
                 p += Math.Abs(dark * 100 / total - 50) / 5 * 10;
                 return p;
             }
 
-            bool Get(int pass, int a, int b) { return pass == 0 ? Modules[a, b] : Modules[b, a]; }
+            // the finder-like pattern 1011101 with four light modules after it (10111010000) or before it (00001011101)
+            const int FinderBefore = 0x5D0, FinderAfter = 0x05D;
         }
     }
 }

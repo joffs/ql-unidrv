@@ -1,9 +1,13 @@
-// Label editor window (EditorForm.cs), part: the text group of the Arrange toolbar. Bold, italic, underline and invert;
+// Label editor window (EditorForm.cs), part: the text group of the Arrange toolbar, first after Duplicate and Delete (as
+// CorelDRAW's property bar: text before the object functions). Font and size (a list of the usual sizes, any typed);
+// bold, italic, underline and invert;
 // left, centre, right and justify; line spacing and letter spacing. Greyed without a text (nothing jumps); for an
 // artistic text the alignment and the line spacing are greyed. Bold, italic, underline, invert and the letter spacing
 // act on the selection while the text is edited (with nothing selected on what is typed next), else on the whole text;
 // a mixed one is hatched ("partly"), a click turns it on for all, the next off again (as in Word); a mixed letter
-// spacing is blank. Alignment and line spacing always act on the whole text.
+// spacing is blank. Alignment and line spacing always act on the whole text. Both spacings in % as in CorelDRAW (line
+// spacing: of the font's height; letter spacing: 100 % normal); the mouse wheel and the arrow keys step by 1 %, with
+// Shift 10 %, with Ctrl 0.1 % (StepUpDown); a typed value + Enter applies even when the field showed it already.
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,9 +23,10 @@ namespace QlLabels
         ToolStripButton boldButton, italicButton, underlineButton, invertButton;
         ToolStripButton[] alignButtons;           // left, centre, right, justify (TextAlign order)
         ToolStripLabel lineSpacingIcon, letterSpacingIcon;
-        ComboBox lineSpacingBox;                  // 1.0 / 1.15 / 1.5 / 2.0 or the user's own value
-        NumericUpDown letterSpacingNum;           // pt
-        ToolStripControlHost lineSpacingHost, letterSpacingHost;
+        ComboBox lineSpacingBox;                  // 100 / 115 / 150 / 200 % or the user's own value
+        StepUpDown letterSpacingNum;              // %
+        ToolStripControlHost lineSpacingHost, letterSpacingHost, fontHost, sizeHost;
+        StepCombo sizeBox;                        // pt
         readonly List<ToolStripItem> textItems = new List<ToolStripItem>();
         readonly bool[] textMixed = new bool[4];  // bold, italic, underline, invert are mixed in what the buttons act on
         bool textBarFilling;
@@ -29,11 +34,45 @@ namespace QlLabels
 
         enum TextIcon { Invert, Left, Centre, Right, Justify, LineSpacing, LetterSpacing }
 
-        static readonly double[] LineSpacings = { 1.0, 1.15, 1.5, 2.0 };
+        static readonly double[] LineSpacings = { 100, 115, 150, 200 };
 
         // The group's items, added after the arrange buttons (BuildArrangeBar).
         IEnumerable<ToolStripItem> BuildTextBar()
         {
+            fontBox = new FieldCombo { DropDownStyle = ComboBoxStyle.DropDown, AutoCompleteMode = AutoCompleteMode.SuggestAppend, AutoCompleteSource = AutoCompleteSource.ListItems, IntegralHeight = false };
+            // The installed fonts are listed when the box is first used: listing them loads GDI+'s table of every installed
+            // font (seconds after a restart with many fonts), which the window's start doesn't need (UiFont.cs).
+            fontBox.Enter += delegate { FillFonts(); };
+            fontBox.DropDown += delegate { FillFonts(); fontBox.DropDownWidth = Math.Max(fontBox.Width, S(220)); };
+            fontBox.SelectedIndexChanged += (s, e) => { if (textBarFilling) return; string name = fontBox.Text; Style(s, r => With(r, font: name), false); };
+            fontBox.Leave += (s, e) =>
+            {
+                string name = fontBox.Text;
+                if (fontBox.Items.Contains(name)) Style(s, r => With(r, font: name), false);
+            };
+            fontBox.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    FillFonts();
+                    string name = fontBox.Items.Cast<string>().FirstOrDefault(n => string.Equals(n, fontBox.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (name != null) Style(fontBox, r => With(r, font: name), false); else UpdateTextBar();
+                    BackToLabel();
+                }
+                else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; fontBox.Text = ""; BackToLabel(); UpdateTextBar(); }
+            };
+            fontHost = new ToolStripControlHost(fontBox) { AutoSize = false };
+            sizeBox = new StepCombo { Min = 2, Max = 400, Step = 1, Decimals = 1 };
+            sizeBox.SetItems(6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72);
+            sizeBox.Committed += v => Style(sizeBox, r => With(r, size: v), false);
+            sizeBox.Reverted += delegate { sizeBox.Show(null); UpdateTextBar(); };
+            sizeBox.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; BackToLabel(); }
+            };
+            sizeHost = new ToolStripControlHost(sizeBox) { AutoSize = false };
+
             Func<ToolStripButton> letter = () => new ToolStripButton { DisplayStyle = ToolStripItemDisplayStyle.Text, AutoSize = false };
             boldButton = letter();
             boldButton.Click += delegate { ToggleStyle(new object(), "bold", false); };
@@ -59,7 +98,7 @@ namespace QlLabels
             }
 
             lineSpacingIcon = new ToolStripLabel { DisplayStyle = ToolStripItemDisplayStyle.Image, Tag = TextIcon.LineSpacing, ImageScaling = ToolStripItemImageScaling.None };
-            lineSpacingBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown, IntegralHeight = false };
+            lineSpacingBox = new FieldCombo { DropDownStyle = ComboBoxStyle.DropDown, IntegralHeight = false };
             foreach (var v in LineSpacings) lineSpacingBox.Items.Add(LineSpacingText(v));
             lineSpacingBox.SelectionChangeCommitted += delegate
             {
@@ -68,34 +107,87 @@ namespace QlLabels
             lineSpacingBox.KeyDown += (s, e) =>
             {
                 if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; CommitLineSpacing(); BackToLabel(); }
-                else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; UpdateTextBar(); BackToLabel(); }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    // the text's value back before the box is left (leaving it applies what it shows)
+                    e.SuppressKeyPress = true;
+                    var t = canvas.Selected as TextObject;
+                    lineSpacingBox.Text = t != null && t.Kind == TextKind.Frame ? LineSpacingText(t.LineSpacing) : "";
+                    BackToLabel();
+                    UpdateTextBar();
+                }
+                else if ((e.KeyCode == Keys.Up || e.KeyCode == Keys.Down) && !lineSpacingBox.DroppedDown)
+                {
+                    // a step from the value, not the next item of the list
+                    e.Handled = e.SuppressKeyPress = true;
+                    StepLineSpacing(e.KeyCode == Keys.Up ? 1 : -1);
+                }
+            };
+            lineSpacingBox.MouseWheel += (s, e) =>
+            {
+                if (lineSpacingBox.DroppedDown) return;
+                var handled = e as HandledMouseEventArgs;
+                if (handled != null) handled.Handled = true;
+                lineWheel += e.Delta;
+                while (Math.Abs(lineWheel) >= 120)
+                {
+                    int d = Math.Sign(lineWheel);
+                    lineWheel -= d * 120;
+                    StepLineSpacing(d);
+                }
             };
             lineSpacingBox.Leave += delegate { CommitLineSpacing(); };
             lineSpacingHost = new ToolStripControlHost(lineSpacingBox) { AutoSize = false };
             lineSpacingBox.HandleCreated += delegate { lineSpacingBox.BeginInvoke((Action)NoBlueValue); };
 
             letterSpacingIcon = new ToolStripLabel { DisplayStyle = ToolStripItemDisplayStyle.Image, Tag = TextIcon.LetterSpacing, ImageScaling = ToolStripItemImageScaling.None };
-            letterSpacingNum = Number((decimal)TextObject.MinSpacing, (decimal)TextObject.MaxSpacing, 0.5m, 1);
-            letterSpacingNum.ValueChanged += delegate
+            letterSpacingNum = new StepUpDown
             {
-                if (textBarFilling) return;
-                double v = (double)letterSpacingNum.Value;   // before Style: its undo step refreshes the bar
-                Style(letterSpacingNum, r => r.With(spacing: v), false);
+                Minimum = (decimal)TextObject.MinSpacing, Maximum = (decimal)TextObject.MaxSpacing, DecimalPlaces = 1, Step = 1, Unit = " %",
+                Value = 100,
             };
+            letterSpacingNum.ValueChanged += delegate { if (!textBarFilling) SetLetterSpacing(); };
+            // typed + Enter: also when the field showed that value already (a mixed text: then all of it)
+            letterSpacingNum.Committed += delegate { SetLetterSpacing(); };
             letterSpacingNum.KeyDown += (s, e) =>
             {
-                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; BackToLabel(); }
+                if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; BackToLabel(); }
+                else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; BackToLabel(); UpdateTextBar(); }   // reverted by the field
             };
             letterSpacingHost = new ToolStripControlHost(letterSpacingNum) { AutoSize = false };
 
             textItems.Clear();
             textItems.AddRange(new ToolStripItem[]
             {
-                new ToolStripSeparator(), boldButton, italicButton, underlineButton, invertButton, new ToolStripSeparator(),
+                fontHost, sizeHost, new ToolStripSeparator(),
+                boldButton, italicButton, underlineButton, invertButton, new ToolStripSeparator(),
                 alignButtons[0], alignButtons[1], alignButtons[2], alignButtons[3], new ToolStripSeparator(),
-                lineSpacingIcon, lineSpacingHost, letterSpacingIcon, letterSpacingHost,
+                lineSpacingIcon, lineSpacingHost, letterSpacingIcon, letterSpacingHost, new ToolStripSeparator(),
             });
             return textItems;
+        }
+
+        int lineWheel;
+
+        // The letter spacing in the field for the selection while editing, else for the whole text.
+        void SetLetterSpacing()
+        {
+            if (letterSpacingNum.Blank) return;
+            double v = (double)letterSpacingNum.Value;   // before Style: its undo step refreshes the bar
+            Style(letterSpacingNum, r => r.With(spacing: v), false);
+        }
+
+        // The wheel or an arrow key in the line spacing box: 1 %, Shift 10 %, Ctrl 0.1 % from the value shown.
+        void StepLineSpacing(int direction)
+        {
+            var t = canvas.Selected as TextObject;
+            if (t == null || t.Kind != TextKind.Frame || !lineSpacingBox.Enabled) return;
+            double now;
+            if (!ReadLineSpacing(out now)) now = t.LineSpacing;
+            var keys = StepUpDown.Modifiers();
+            double step = (keys & Keys.Control) != 0 ? 0.1 : (keys & Keys.Shift) != 0 ? 10 : 1;
+            SetLineSpacing(Math.Round(now + direction * step, 1), false);
+            lineSpacingBox.SelectionLength = 0;
         }
 
         ToolStripButton IconButton(TextIcon icon)
@@ -135,9 +227,13 @@ namespace QlLabels
                 if (old != null) old.Dispose();
                 letters[i].Size = size;
             }
-            lineSpacingHost.Size = new Size(S(56), lineSpacingBox.PreferredHeight);
+            fontHost.Size = new Size(S(132), fontBox.PreferredHeight);
+            sizeHost.Size = new Size(S(56), sizeBox.PreferredHeight);
+            fontHost.Margin = new Padding(S(2), S(1), S(2), S(1));
+            sizeHost.Margin = new Padding(0, S(1), S(4), S(1));
+            lineSpacingHost.Size = new Size(S(64), lineSpacingBox.PreferredHeight);
             NoBlueValue();   // also after a switch of the scheme (ThemeChanged)
-            letterSpacingHost.Size = new Size(S(58), letterSpacingNum.PreferredHeight);
+            letterSpacingHost.Size = new Size(S(66), letterSpacingNum.PreferredHeight);
             lineSpacingHost.Margin = letterSpacingHost.Margin = new Padding(0, S(1), S(6), S(1));
         }
 
@@ -201,37 +297,49 @@ namespace QlLabels
                 b.AccessibleName = alignNames[i];
             }
 
-            // the spacings: the field the user types in keeps its text
+            // font and size, the spacings: the field the user types in keeps its text
             textBarFilling = true;
             try
             {
+                fontBox.Enabled = sizeBox.Enabled = on;
+                string fontTip = Lang.T("Font") + (on ? "" : select);
+                string sizeTip = Lang.T("Font size (pt) – wheel or ↑↓: 1 pt, Shift 10 pt, Ctrl 0.1 pt") + (on ? "" : select);
+                fontBox.AccessibleName = Lang.T("Font");
+                sizeBox.AccessibleName = Lang.T("Font size (pt)");
+                tips.SetToolTip(fontBox, fontTip);
+                tips.SetToolTip(sizeBox, sizeTip);
+                if (!on)
+                {
+                    if (!fontBox.Focused && fontBox.Text != "") fontBox.Text = "";
+                    sizeBox.Show(null);
+                }
+                else FillStyleRows(t);
                 lineSpacingBox.Enabled = lineSpacingIcon.Enabled = para;
-                string lineTip = Lang.T("Line spacing: 1.0 / 1.15 / 1.5 / 2.0 or your own value") + (!on ? select : !para ? paraOnly : "");
+                string lineTip = Lang.T("Line spacing in % of the font's height – wheel or ↑↓: 1 %, Shift 10 %, Ctrl 0.1 %") + (!on ? select : !para ? paraOnly : "");
                 lineSpacingIcon.ToolTipText = lineTip;
                 lineSpacingBox.AccessibleName = Lang.T("Line spacing");
                 tips.SetToolTip(lineSpacingBox, lineTip);
                 if (!lineSpacingBox.Focused)
                 {
-                    string text = para ? LineSpacingText(t.LineHeight) : "";
+                    string text = para ? LineSpacingText(t.LineSpacing) : "";
                     if (lineSpacingBox.Text != text) lineSpacingBox.Text = text;
                     NoBlueValue();
                 }
 
                 letterSpacingNum.Enabled = letterSpacingIcon.Enabled = on;
-                string letterTip = Lang.T("Letter spacing (pt): more or less room between the letters") + (on ? "" : select);
+                string letterTip = Lang.T("Letter spacing in % (100 % normal) – wheel or ↑↓: 1 %, Shift 10 %, Ctrl 0.1 %") + (on ? "" : select);
                 letterSpacingIcon.ToolTipText = letterTip;
-                letterSpacingNum.AccessibleName = Lang.T("Letter spacing (pt)");
+                letterSpacingNum.AccessibleName = Lang.T("Letter spacing (%)");
                 tips.SetToolTip(letterSpacingNum, letterTip);
                 if (!letterSpacingNum.Focused)
                 {
+                    // no text, or mixed: blank (not an in-between value)
                     if (on && c.Spacing != null)
                     {
-                        // the text too: after the blank (no text, or mixed) the same Value doesn't write it again
                         letterSpacingNum.Value = Clamp(letterSpacingNum, c.Spacing.Value);
-                        string s = letterSpacingNum.Value.ToString("F1", CultureInfo.CurrentCulture);
-                        if (letterSpacingNum.Text != s) letterSpacingNum.Text = s;
+                        letterSpacingNum.Blank = false;
                     }
-                    else letterSpacingNum.Text = "";
+                    else letterSpacingNum.Blank = true;
                 }
             }
             finally { textBarFilling = false; }
@@ -244,19 +352,28 @@ namespace QlLabels
             if (!lineSpacingBox.Focused && lineSpacingBox.IsHandleCreated && lineSpacingBox.SelectionLength > 0) lineSpacingBox.SelectionLength = 0;
         }
 
-        // 1.0, 1.15, 1.5, 2.0 (German 1,0 ...): at least one decimal, as Word shows them.
+        // 87 %, 102,9 % (German comma): at most one decimal.
         static string LineSpacingText(double v)
         {
-            return Math.Round(v, 2).ToString(v == Math.Round(v) ? "0.0" : "0.0#", CultureInfo.CurrentCulture);
+            return Math.Round(v, 1).ToString("0.#", CultureInfo.CurrentCulture) + " %";
+        }
+
+        // The number in the line spacing box: "87", "87 %", "87,5"; a value below 10 is a factor as before (1,5 = 150 %).
+        bool ReadLineSpacing(out double v)
+        {
+            string s = lineSpacingBox.Text.Trim().TrimEnd('%', '×', 'x', ' ');
+            if (!double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out v) &&
+                !double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v))
+                return false;
+            if (v > 0 && v < TextObject.MinLineSpacing) v *= 100;
+            return true;
         }
 
         void CommitLineSpacing()
         {
             if (textBarFilling || !lineSpacingBox.Enabled) return;
             double v;
-            string s = lineSpacingBox.Text.Trim().TrimEnd('×', 'x', ' ');
-            if (!double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out v) &&
-                !double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v))
+            if (!ReadLineSpacing(out v))
             {
                 UpdateTextBar();   // not a number: back to the text's value
                 return;
@@ -268,9 +385,9 @@ namespace QlLabels
         {
             var t = canvas.Selected as TextObject;
             if (t == null || t.Kind != TextKind.Frame) return;
-            v = Math.Min(TextObject.MaxLineHeight, Math.Max(TextObject.MinLineHeight, Math.Round(v, 2)));
-            if (Math.Abs(t.LineHeight - v) > 1e-9) Edit(lineSpacingBox, o => ((TextObject)o).LineHeight = v);
-            lineSpacingBox.Text = LineSpacingText(t.LineHeight);
+            v = TextObject.LimitLineSpacing(Math.Round(v, 1));
+            if (Math.Abs(t.LineSpacing - v) > 1e-9) Edit(lineSpacingBox, o => ((TextObject)o).LineSpacing = v);
+            lineSpacingBox.Text = LineSpacingText(t.LineSpacing);
             if (back) BackToLabel();
         }
 

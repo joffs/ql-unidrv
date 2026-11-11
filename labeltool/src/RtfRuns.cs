@@ -7,6 +7,7 @@
 // tables' shapes, pictures and objects are left out.
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing.Text;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,7 @@ namespace QlLabels
 
     static class RtfRuns
     {
+        const double MaxSpacingPt = 100;   // a letter spacing beyond this (points, either way) is taken as this
         public const string DefaultFont = "Segoe UI";
 
         // Destinations whose text isn't part of the document.
@@ -47,7 +49,7 @@ namespace QlLabels
             public int Font = -1;
             public double Size = 12;
             public bool Bold, Italic, Underline, Hidden;
-            public double Spacing;      // points
+            public double Spacing;      // points (made % per run, with its font)
             public int Back = -1;       // background colour (highlight or shading): an index into the colour table
             public Fmt Copy() { return (Fmt)MemberwiseClone(); }
         }
@@ -132,7 +134,10 @@ namespace QlLabels
                 // inverted: a dark highlight or shading (Word draws its "auto" text white on it)
                 int back = f.Back > 0 && f.Back < colors.Count ? colors[f.Back] : -1;
                 bool invert = back >= 0 && ((back >> 16) * 299 + ((back >> 8) & 255) * 587 + (back & 255) * 114) / 1000 < 128;
-                var run = new TextRun(s, fontName(f), f.Size, f.Bold, f.Italic, f.Underline, f.Spacing, invert);
+                // the letter spacing in points (Word's) as % with the run's font
+                double spacing = f.Spacing == 0 ? 100 : TextObject.LimitSpacing(EditorRender.SpacingFromPoints(fontName(f), f.Size,
+                                     (f.Bold ? FontStyle.Bold : 0) | (f.Italic ? FontStyle.Italic : 0), f.Spacing));
+                var run = new TextRun(s, fontName(f), f.Size, f.Bold, f.Italic, f.Underline, spacing, invert);
                 var last = doc.Runs.Count > 0 ? doc.Runs[doc.Runs.Count - 1] : null;
                 if (last != null && last.SameFormat(run))
                     tail.Append(s);
@@ -269,8 +274,8 @@ namespace QlLabels
                     case "ulthldash": case "ululdbwave": case "ulw": case "ulwave":
                         g.Fmt.Underline = on; break;
                     case "v": g.Fmt.Hidden = on; break;
-                    case "expnd": if (hasNum) g.Fmt.Spacing = Math.Min(TextObject.MaxSpacing, Math.Max(TextObject.MinSpacing, num / 4.0)); break;
-                    case "expndtw": if (hasNum) g.Fmt.Spacing = Math.Min(TextObject.MaxSpacing, Math.Max(TextObject.MinSpacing, num / 20.0)); break;
+                    case "expnd": if (hasNum) g.Fmt.Spacing = Math.Min(MaxSpacingPt, Math.Max(-MaxSpacingPt, num / 4.0)); break;
+                    case "expndtw": if (hasNum) g.Fmt.Spacing = Math.Min(MaxSpacingPt, Math.Max(-MaxSpacingPt, num / 20.0)); break;
                     case "highlight": case "chcbpat": case "cb": if (hasNum) g.Fmt.Back = num; break;
                     case "pard": align = TextAlign.Left; break;
                     case "ql": case "qd": align = TextAlign.Left; break;

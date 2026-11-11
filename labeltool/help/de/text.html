@@ -35,7 +35,7 @@
           Ist der Text ausgewählt, funktionieren auch <kbd>F2</kbd>, die Eingabetaste, <span class="ui">Text bearbeiten
           (F2)</span> rechts oder einfach Lostippen; die Schreibmarke steht dann am Ende. Ein neuer Text ist zuerst nur
           ausgewählt, so können Sie ihn an seinen Platz schieben; tippen Sie dann los, ersetzt das den Platzhalter „Text“.</p>
-        <figure class="frame" style="max-width:363px"><img src="../img/de/text-panel.png" width="343" height="225" alt="Einstellungen eines Grafiktexts: Hinweis „Doppelklicken Sie den Text auf dem Etikett, um ihn zu bearbeiten.“, Text bearbeiten (F2), Feld einfügen, Art, Schriftart, Größe"></figure>
+        <figure class="frame" style="max-width:363px"><img src="../img/de/text-panel.png" width="343" height="165" alt="Einstellungen eines Grafiktexts: Hinweis „Doppelklicken Sie den Text auf dem Etikett, um ihn zu bearbeiten.“, Text bearbeiten (F2), Feld einfügen, Art"></figure>
         <p>Beim Bearbeiten hat der Text einen dünnen Rahmen ohne Anfasser; verschieben und vergrößern können Sie ihn erst
           danach. Die Statusleiste sagt „Text bearbeiten – Esc oder ein Klick daneben beendet.“ <kbd>Esc</kbd>, ein Klick
           neben den Text oder ein anderes Werkzeug beendet das Bearbeiten, die Änderungen bleiben. Ein Text, der dabei
@@ -61,7 +61,7 @@
         <h2 id="single-line">Grafiktext</h2>
         <p>Werkzeug <span class="ui">Grafiktext</span> oder <span class="path">Einfügen &gt; Grafiktext</span>. Der Rahmen passt sich
           immer dem Text an. Ziehen Sie an einem Anfasser, um den Text zu vergrößern oder zu verkleinern; die
-          gegenüberliegende Seite bleibt dabei stehen. Oder tippen Sie die <span class="ui">Größe (pt)</span> ein.</p>
+          gegenüberliegende Seite bleibt dabei stehen. Oder tippen Sie oben in der Symbolleiste die Schriftgröße ein.</p>
         <p>Die Eingabetaste beendet hier das Bearbeiten; eingefügte Zeilenumbrüche werden zu Leerzeichen.</p>
       </div>
       <aside class="keys" aria-label="Tasten">
@@ -78,12 +78,18 @@
           getrennt.</p>
         <p>Oben in der Symbolleiste richten Sie die Zeilen aus (<span class="ui">Linksbündig</span>,
           <span class="ui">Zentriert</span>, <span class="ui">Rechtsbündig</span>, <span class="ui">Blocksatz</span>) und wählen
-          den <span class="ui">Zeilenabstand</span>: 1,0, 1,15, 1,5, 2,0 oder einen eigenen Wert von 0,5 bis 3. Im Blocksatz
+          den <span class="ui">Zeilenabstand</span> in % der Schrifthöhe: 100, 115, 150, 200 % oder einen eigenen Wert von 10 bis
+          500 %. Im Blocksatz
           reichen die umbrochenen Zeilen bis an beide Ränder des Rahmens; die letzte Zeile eines Absatzes bleibt
           linksbündig, wie in Word.</p>
         <p>Die Eingabetaste beginnt einen neuen Absatz.</p>
+        <p>Rechts in den Einstellungen unter dem Hinweis setzt <span class="ui">Vertikal</span> den Text oben, in die Mitte
+          oder unten in seinen Rahmen (drei Schaltflächen; ein Text, der nicht hineinpasst, bleibt oben).
+          <span class="ui">Absatz</span> <span class="ui">vor</span> / <span class="ui">nach</span> fügt Abstand zwischen
+          Absätzen ein, in % der Schrifthöhe: nie vor dem ersten oder nach dem letzten Absatz; wo beide aufeinandertreffen,
+          zählen sie zusammen, wie in Word.</p>
         <p>Passt der Text nicht in den Rahmen, wird er am Rahmen abgeschnitten. Der Rahmen bekommt dann auf dem
-          Bildschirm einen roten Rand, und rechts steht ein roter Hinweis. Beim Bearbeiten erscheinen die abgeschnittenen
+          Bildschirm einen roten Rand, und rechts am Ende der Einstellungen steht ein roter Hinweis. Beim Bearbeiten erscheinen die abgeschnittenen
           Zeilen hellgrau unter dem Rahmen, damit Sie sehen, was Sie dort tippen; gedruckt werden sie nicht.</p>
         <figure class="frame" style="max-width:450px"><img src="../img/de/text-overflow.png" width="430" height="100" alt="Ein Mengentext beim Bearbeiten mit rotem Rahmen; die Zeile, die nicht hineinpasst, steht hellgrau darunter"></figure>
         <p>Mit <span class="path">Ansicht &gt; Überlauf beim Bearbeiten zeigen</span> schalten Sie das aus: Dann rollt
@@ -104,14 +110,13 @@
           oder in einer anderen Schrift oder Größe sein. Markieren Sie sie beim Bearbeiten auf dem Etikett und drücken Sie
           <kbd>Strg</kbd> + <kbd>B</kbd>, <kbd>I</kbd> oder <kbd>U</kbd>, oder klicken Sie oben in der Symbolleiste auf
           <span class="ui">F</span>, <span class="ui">K</span>, <span class="ui">U</span> oder
-          <span class="ui">Invertieren</span>, oder ändern Sie dort den <span class="ui">Zeichenabstand (pt)</span>.
-          <span class="ui">Schriftart</span> und <span class="ui">Größe (pt)</span> ändern Sie rechts; eine Zeile dort
-          sagt, wofür sie gelten.</p>
-        <figure class="frame" style="max-width:408px"><img src="../img/de/text-toolbar.png" width="388" height="28" alt="Die Textgruppe der Symbolleiste: F, K (gedrückt), U, Invertieren, Linksbündig (gedrückt), Zentriert, Rechtsbündig, Blocksatz, Zeilenabstand 1,0 und Zeichenabstand 0,0"></figure>
+          <span class="ui">Invertieren</span>, oder ändern Sie dort Schriftart, Größe oder Zeichenabstand. Eine Zeile
+          rechts sagt, wofür sie gelten.</p>
+        <figure class="frame" style="max-width:627px"><img src="../img/de/text-toolbar.png" width="607" height="28" alt="Die Textgruppe der Symbolleiste: Schriftart Segoe UI, Größe 12, F, K (gedrückt), U, Invertieren, Linksbündig (gedrückt), Zentriert, Rechtsbündig, Blocksatz, Zeilenabstand 100 % und Zeichenabstand 100 %"></figure>
         <figure class="frame" style="max-width:450px"><img src="../img/de/text-edit-canvas.png" width="430" height="160" alt="Ein Mengentext beim Bearbeiten: M4 × 20 fett, die Schreibmarke im Text"></figure>
         <p>Ohne Markierung gelten die Formate für das, was Sie als Nächstes tippen. Wird der Text nicht bearbeitet,
           gelten die Knöpfe und Einstellungen für den ganzen Text. Wo sich die markierten Wörter unterscheiden, bleiben
-          Schriftart, Größe und Zeichenabstand leer, und <span class="ui">F</span>, <span class="ui">K</span>,
+          Schriftart, Größe und Zeichenabstand leer (die Eingabetaste dort setzt den Wert für alle), und <span class="ui">F</span>, <span class="ui">K</span>,
           <span class="ui">U</span> oder <span class="ui">Invertieren</span> sind schraffiert (teilweise). Ein Klick darauf formatiert die ganze Markierung, der nächste nimmt das Format
           überall wieder weg.</p>
         <p>Text aus Word oder WordPad behält beim Einfügen seine Formate; reiner Text bekommt das Format an der
@@ -139,12 +144,14 @@
     <li>
       <div class="step">
         <h2 id="font">Schrift</h2>
-        <p><span class="ui">Schriftart</span> und <span class="ui">Größe (pt)</span> stehen rechts. Oben in der
-          Symbolleiste stehen <span class="ui">F</span>, <span class="ui">K</span>, <span class="ui">U</span>,
-          <span class="ui">Invertieren</span> und der <span class="ui">Zeichenabstand (pt)</span> von −5 bis +20; sie
-          gelten für beide Arten, beim Bearbeiten für die markierten Zeichen. <span class="ui">Invertieren</span> druckt den Text weiß auf schwarz:
+        <p>Oben in der Symbolleiste stehen gleich nach <span class="ui">Duplizieren</span> und <span class="ui">Löschen</span>
+          die Schriftart, die Schriftgröße in pt, <span class="ui">F</span>, <span class="ui">K</span>, <span class="ui">U</span>,
+          <span class="ui">Invertieren</span> und der Zeichenabstand in % (100 % ist normal, von 0 bis 300 %); sie
+          gelten für beide Arten, beim Bearbeiten für die markierten Zeichen. In den Feldern für Größe und Abstände ändern
+          Mausrad oder Pfeiltasten den Wert um 1, mit <kbd>Umschalt</kbd> um 10, mit <kbd>Strg</kbd> um 0,1. In einem
+          schmalen Fenster rücken die Knöpfe zum Anordnen hinter <span class="ui">»</span> am Ende der Symbolleiste. <span class="ui">Invertieren</span> druckt den Text weiß auf schwarz:
           <a href="invert.html">Weiß auf Schwarz</a>.</p>
-        <p>Ohne ausgewählten Text sind die Knöpfe grau. Beim Grafiktext sind Ausrichtung und Zeilenabstand grau, denn er
+        <p>Ohne ausgewählten Text sind Felder und Knöpfe grau. Beim Grafiktext sind Ausrichtung und Zeilenabstand grau, denn er
           ist einzeilig. Fährt die Maus über einen Knopf, nennt er seine Taste.</p>
       </div>
     </li>

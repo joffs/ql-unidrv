@@ -81,10 +81,10 @@ namespace QlLabels
         readonly List<KeyValuePair<Control[], Func<LabelObject, bool>>> rows = new List<KeyValuePair<Control[], Func<LabelObject, bool>>>();
         readonly Label nothingSelected = Theme.Fore(new Label { AutoSize = true }, Role.Dim);
         readonly Label severalSelected = new Label { AutoSize = true };
-        NumericUpDown numX, numY, numW, numH, sizeNum, thickNum, lineAngleNum, lineLengthNum;
+        NumericUpDown numX, numY, numW, numH, thickNum, lineAngleNum, lineLengthNum;
         NumericUpDown angleNum;
         Button resetButton;
-        readonly List<KeyValuePair<Button, ArrangeIcon>> turnButtons = new List<KeyValuePair<Button, ArrangeIcon>>();   // redrawn at each DPI
+        readonly List<KeyValuePair<ButtonBase, ArrangeIcon>> turnButtons = new List<KeyValuePair<ButtonBase, ArrangeIcon>>();   // redrawn at each DPI
         ComboBox rotBox, fontBox, modeBox, kindBox, levelBox, textKindBox, qrTypeBox;
         Label notationLabel;
         readonly Dictionary<string, Control> qrEditors = new Dictionary<string, Control>();   // a QR type's fields by key
@@ -107,9 +107,12 @@ namespace QlLabels
             Font = UiFont.MessageBox;
             AutoScaleMode = AutoScaleMode.Dpi;  // scales nothing here (no AutoScaleDimensions): sizes go through S()
             StartPosition = FormStartPosition.CenterScreen;
-            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-            Size = new Size(Math.Min(S(1100), area.Width), Math.Min(S(680), area.Height));
+            var area = Screen.FromPoint(WindowBounds.StartPoint(WindowBounds.LabelMaker)).WorkingArea;   // the screen it opens on (as startDpi)
+            // 1180: the whole toolbar fits beside the tool palette at 100 % and 125 % (about 1050 px of buttons and fields);
+            // a smaller screen gets its working area (1280 px of a FHD laptop at 150 %), the rest goes behind the bar's »
+            Size = new Size(Math.Min(S(1180), area.Width), Math.Min(S(680), area.Height));
             MinimumSize = new Size(Math.Min(S(780), area.Width), Math.Min(S(520), area.Height));   // 520: all six tools fit the palette
+            WindowBounds.Use(this, WindowBounds.LabelMaker);   // the size and place it had when it was last closed
             KeyPreview = true;
             HelpPages.SetPage(this, HelpPages.LabelMaker);   // F1 in its dialogs (About, language question); its own F1: ProcessCmdKey
             sizedDpi = startDpi;
@@ -208,7 +211,7 @@ namespace QlLabels
         // (scaling changed without signing out, a second screen): the constructor sizes for that screen (as MainForm).
         int S(int pixels) { return IsHandleCreated ? LogicalToDeviceUnits(pixels) : (int)Math.Round(pixels * startDpi / 96.0); }
 
-        readonly int startDpi = Brand.ScreenDpi(Cursor.Position);
+        readonly int startDpi = Brand.ScreenDpi(WindowBounds.StartPoint(WindowBounds.LabelMaker));   // the screen it opens on
         int sizedDpi;   // the DPI the S() sizes were set for
 
 

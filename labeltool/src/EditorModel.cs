@@ -184,6 +184,7 @@ namespace QlLabels
         public List<LabelObject> Objects = new List<LabelObject>();
         public int Skipped;            // objects of unknown types not loaded (from a newer version)
         public int FileVersion;        // the opened file's "version" (0: none, a new label)
+        public PrintDataLink PrintData;   // the data file for Print with data ("printData"), or null; not undone (EditorForm.Undo keeps it)
         // Objects of unknown types (from a newer version), kept as they were and written back on save (0.21 safeguard):
         // Key = how many known objects came before it in the file, so it keeps its place in the stacking order as far
         // as the known objects allow. Never shown, selected or printed.
@@ -237,7 +238,8 @@ namespace QlLabels
             return c;
         }
 
-        public string ToJson()
+        // labelPath: where it is saved (the data file's relative path is for that folder); null: as the link is
+        public string ToJson(string labelPath = null)
         {
             var d = new Dictionary<string, object>(extra);
             d["format"] = "QL label";
@@ -249,6 +251,7 @@ namespace QlLabels
             // the unknown objects back at their places (from the end, so the earlier places stay right)
             foreach (var u in Enumerable.Reverse(unknown)) objects.Insert(Math.Min(u.Key, Objects.Count), u.Value);
             d["objects"] = objects;
+            if (PrintData != null) d["printData"] = (labelPath != null ? PrintData.SavedAt(labelPath) : PrintData).ToJson();
             return new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(d);
         }
 
@@ -264,10 +267,11 @@ namespace QlLabels
             if (d == null || LabelObject.Str(d, "format", "") != "QL label") throw new InvalidDataException(Lang.T("Not a QL label file."));
             var doc = new LabelDoc();
             doc.extra = new Dictionary<string, object>(d);
-            foreach (var k in new[] { "format", "version", "label", "objects" }) doc.extra.Remove(k);
+            foreach (var k in new[] { "format", "version", "label", "objects", "printData" }) doc.extra.Remove(k);
             double version = LabelObject.Num(d, "version", 0);
             doc.FileVersion = double.IsNaN(version) || version < 0 ? 0 : (int)Math.Min(version, int.MaxValue);
             object v;
+            doc.PrintData = d.TryGetValue("printData", out v) ? PrintDataLink.FromJson(v) : null;
             var label = d.TryGetValue("label", out v) ? v as Dictionary<string, object> : null;
             if (label != null)
             {
@@ -295,7 +299,7 @@ namespace QlLabels
         }
 
         public static LabelDoc Load(string path) { return FromJson(File.ReadAllText(path, Encoding.UTF8)); }
-        public void Save(string path) { LabelStore.WriteAtomic(path, ToJson()); }
+        public void Save(string path) { LabelStore.WriteAtomic(path, ToJson(path)); }
     }
 
     // Undo/redo as document snapshots (JSON keeps it simple and exact; images are shared byte arrays in Clone).

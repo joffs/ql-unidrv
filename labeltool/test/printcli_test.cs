@@ -41,6 +41,8 @@ namespace QlLabels.Tests
                 Template();
                 PrinterChoice();
                 Data();
+                LinkTest();
+                LinkedData();
                 Roll();
                 Output();
             }
@@ -93,6 +95,104 @@ namespace QlLabels.Tests
             return path;
         }
 
+        // The label's remembered data file (PrintDataLink.cs): the relative path, where it is looked for, the file keys.
+        static void LinkTest()
+        {
+            Check(PrintDataLink.Relative(@"X:\Lager", @"X:\Lager\Daten\teile.csv") == @"Daten\teile.csv", "relative: a subfolder");
+            Check(PrintDataLink.Relative(@"X:\Lager\Etiketten", @"X:\Lager\Daten\teile.csv") == @"..\Daten\teile.csv", "relative: a sibling folder");
+            Check(PrintDataLink.Relative(@"x:\lager", @"X:\Lager\teile.csv") == "teile.csv", "relative: the same folder, case ignored");
+            Check(PrintDataLink.Relative(@"C:\Etiketten", @"X:\Lager\teile.csv") == null, "relative: another drive has none");
+            Check(PrintDataLink.Relative(@"\\nas\files\a", @"\\nas\files\b\t.csv") == @"..\b\t.csv", "relative: the same share");
+            Check(PrintDataLink.Relative(@"\\nas\files\a", @"\\nas\other\t.csv") == null, "relative: another share has none");
+
+            var link = PrintDataLink.For(@"X:\Lager\Daten\teile.csv", @"X:\Lager\Regal.qllabel");
+            Check(link.File == @"Daten\teile.csv" && link.Absolute == @"X:\Lager\Daten\teile.csv" && !link.Saved, "For: relative and absolute, not saved yet");
+            Check(PrintDataLink.For(@"X:\Lager\teile.csv", null).File == null, "For: an unsaved label has no relative path yet");
+            LinkState state;
+            // moved together with the label: found next to it first
+            var exists = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"Y:\Neu\Daten\teile.csv", @"X:\Lager\Daten\teile.csv" };
+            Check(link.Resolve(@"Y:\Neu\Regal.qllabel", out state, f => exists.Contains(f), d => true) == @"Y:\Neu\Daten\teile.csv" && state == LinkState.Found,
+                  "resolve: relative to the label first");
+            exists.Remove(@"Y:\Neu\Daten\teile.csv");
+            Check(link.Resolve(@"Y:\Neu\Regal.qllabel", out state, f => exists.Contains(f), d => true) == @"X:\Lager\Daten\teile.csv", "resolve: then the full path");
+            Check(link.Resolve(@"Y:\Neu\Regal.qllabel", out state, f => false, d => true) == null && state == LinkState.NotFound, "resolve: not found");
+            Check(link.Resolve(@"Y:\Neu\Regal.qllabel", out state, f => false, d => d != @"X:\") == null && state == LinkState.FolderOffline,
+                  "resolve: the drive or share gone: folder offline");
+            Check(PrintDataLink.FromJson(null) == null && PrintDataLink.FromJson("x") == null && PrintDataLink.FromJson(new Dictionary<string, object>()) == null,
+                  "FromJson: nothing usable is no link");
+            var rel = PrintDataLink.FromJson(new Dictionary<string, object> { { "file", @"C:\abs.csv" }, { "absolute", "relative.csv" } });
+            Check(rel == null, "FromJson: a rooted file and a relative absolute are not used");
+            var bad = PrintDataLink.FromJson(new Dictionary<string, object> { { "file", "a*b.csv" }, { "absolute", @"X:\x.csv" } });
+            Check(bad != null && bad.File == null && bad.Absolute == @"X:\x.csv" && bad.Saved, "FromJson: a bad relative path dropped, the absolute kept");
+
+            // only "printData" changed in a file's text, the rest byte for byte (2026-11-11)
+            var l2 = PrintDataLink.For(@"X:\L\d.csv", @"X:\L\a.qllabel");
+            string pd = "\"printData\":{\"file\":\"d.csv\",\"absolute\":\"X:\\\\L\\\\d.csv\"}";
+            Check(PrintDataLink.WithLink("{\"a\":1}", l2, @"X:\L\a.qllabel") == "{\"a\":1," + pd + "}", "splice: added at the end");
+            Check(PrintDataLink.WithLink("{ }", l2, @"X:\L\a.qllabel") == "{ " + pd + "}", "splice: added to an empty object");
+            Check(PrintDataLink.WithLink("{\"printData\":{\"x\":\"}\"},\"b\":\"{\\\"\"}", l2, @"X:\L\a.qllabel") == "{" + pd + ",\"b\":\"{\\\"\"}",
+                  "splice: replaced in place (braces and quotes in strings)");
+            Check(PrintDataLink.WithoutLink("{\"a\":[1,{\"printData\":2}],\"printData\":{},\"b\":2}") == "{\"a\":[1,{\"printData\":2}],\"b\":2}",
+                  "splice: removed in the middle, a nested key of that name kept");
+            Check(PrintDataLink.WithoutLink("{\"printData\":{} , \"b\":2}") == "{ \"b\":2}" && PrintDataLink.WithoutLink("{\"a\":1,\"printData\":{}}") == "{\"a\":1}",
+                  "splice: removed first and last, with its comma");
+            Check(PrintDataLink.WithoutLink("{\"a\":1") == null && PrintDataLink.WithoutLink("[1]") == null && PrintDataLink.WithoutLink("{\"a\":1}x") == null,
+                  "splice: not one JSON object: null");
+
+            // in the file: written only with a link, the relative path for the folder it is saved in
+            string lager = Path.Combine(dir, "Lager"), daten = Path.Combine(lager, "Daten"), other = Path.Combine(dir, "Andere");
+            Directory.CreateDirectory(daten);
+            Directory.CreateDirectory(other);
+            var doc = new LabelDoc { FormName = "Test 62", PaperId = 259 };
+            Check(!doc.ToJson(Path.Combine(lager, "x.qllabel")).Contains("printData"), "no link: no printData key");
+            string data = Path.Combine(daten, "teile.csv");
+            doc.PrintData = PrintDataLink.For(data, null);
+            string label = Path.Combine(lager, "Regal.qllabel");
+            doc.Save(label);
+            var back = LabelDoc.Load(label);
+            Check(back.PrintData != null && back.PrintData.File == @"Daten\teile.csv" && back.PrintData.Absolute == data && back.PrintData.Saved,
+                  "saved and read: relative Daten\\teile.csv + absolute");
+            string moved = Path.Combine(other, "Regal.qllabel");
+            back.Save(moved);
+            var again = LabelDoc.Load(moved);
+            Check(again.PrintData.File == @"..\Lager\Daten\teile.csv" && again.PrintData.Absolute == data, "Save as elsewhere: the relative path recomputed: " + again.PrintData.File);
+            Check(!again.ToJson().Contains("\"printData\":{\"printData\""), "printData not kept twice");
+            string json = System.IO.File.ReadAllText(label).Replace("\"printData\":", "\"printData\":7,\"x\":");
+            System.IO.File.WriteAllText(label, json);
+            var damaged = LabelDoc.Load(label);
+            Check(damaged.PrintData == null && !damaged.ToJson(label).Contains("printData"), "a damaged printData: no link, not written back");
+        }
+
+        // QlLabelPrint without --data: the label's remembered data file; moved with the label; gone: 3 with the path.
+        static void LinkedData()
+        {
+            string folder = Path.Combine(dir, "linked"), sub = Path.Combine(folder, "Daten");
+            Directory.CreateDirectory(sub);
+            string data = Path.Combine(sub, "liste.csv");
+            System.IO.File.WriteAllText(data, "Artikel\nSchraube\nMutter\n", new UTF8Encoding(false));
+            var doc = LabelDoc.Load(templatePath);
+            doc.PrintData = PrintDataLink.For(data, null);
+            string label = Path.Combine(folder, "Artikel.qllabel");
+            doc.Save(label);
+            printed.Clear();
+            var a = Run("--print", label);
+            Check(Code(a) == 0 && (int)a["records"] == 2 && printed.SequenceEqual(new[] { 2 }) && (string)a["data"] == data,
+                  "without --data: the remembered file, 2 labels: " + Err(a));
+            printed.Clear();
+            var s = Run("--print", label, "--set", "Artikel=x");
+            Check(Code(s) == 0 && (int)s["records"] == 1 && !s.ContainsKey("data"), "--set without --data: one label, the link not used");
+            // the label and its data moved together: found next to the label
+            string movedFolder = Path.Combine(dir, "moved");
+            Directory.Move(folder, movedFolder);
+            printed.Clear();
+            var m = Run("--print", Path.Combine(movedFolder, "Artikel.qllabel"));
+            Check(Code(m) == 0 && (string)m["data"] == Path.Combine(movedFolder, "Daten", "liste.csv"), "moved with the label: found next to it: " + Err(m));
+            System.IO.File.Delete(Path.Combine(movedFolder, "Daten", "liste.csv"));
+            printed.Clear();
+            var g = Run("--print", Path.Combine(movedFolder, "Artikel.qllabel"));
+            Check(Code(g) == 3 && printed.Count == 0 && Err(g).Contains(data), "the data file gone: 3, its path named: " + Err(g));
+        }
+
         static void Usage()
         {
             Check(Code(Run()) == 1, "no command: 1");
@@ -112,7 +212,7 @@ namespace QlLabels.Tests
             var doc = new LabelDoc { FormName = "Test 62", PaperId = 259 };
             doc.Objects.Add(new TextObject { Text = "{Artikel}", Font = "Arial", Size = 12, X = 3, Y = 3, W = 40, H = 8 });
             doc.Objects.Add(new TextObject { Text = "{Lager|A1}", Font = "Arial", Size = 8, X = 3, Y = 15, W = 40, H = 6 });
-            doc.Objects.Add(new BarcodeObject { Kind = Symbology.Ean13, Data = "{EAN|4006381333931}", X = 3, Y = 30, W = 40, H = 15 });
+            doc.Objects.Add(new BarcodeObject { Kind = Symbology.Ean13, Data = "{EAN|2000000000008}", X = 3, Y = 30, W = 40, H = 15 });
             templatePath = Path.Combine(dir, "Artikel.qllabel");
             doc.Save(templatePath);
 
@@ -154,7 +254,7 @@ namespace QlLabels.Tests
 
         static void Data()
         {
-            string csv = File("liste.csv", "Artikel;EAN;copies\nSchraube;4006381333931;2\nMutter;;1\nScheibe;;0\n");
+            string csv = File("liste.csv", "Artikel;EAN;copies\nSchraube;2000000000008;2\nMutter;;1\nScheibe;;0\n");
             printed.Clear();
             var a = Run("--print", templatePath, "--data", csv, "--copies", "3");
             Check(Code(a) == 0 && (bool)a["printed"] && printed.SequenceEqual(new[] { 9 }) && (int)a["labels"] == 9 && (int)a["records"] == 3,
@@ -164,7 +264,7 @@ namespace QlLabels.Tests
             Check(Code(r) == 0 && (int)r["records"] == 1 && printed.SequenceEqual(new[] { 1 }), "--rows 2: one row");
             Check(Code(Run("--print", templatePath, "--data", csv, "--rows", "9-")) == 3, "--rows past the end: 3");
 
-            string missing = File("missing.csv", "EAN\n4006381333931\n");
+            string missing = File("missing.csv", "EAN\n2000000000008\n");
             printed.Clear();
             var m = Run("--print", templatePath, "--data", missing);
             var mp = (List<Dictionary<string, object>>)m["problems"];
@@ -204,7 +304,7 @@ namespace QlLabels.Tests
             var nmProblems = (List<Dictionary<string, object>>)namedMissing["problems"];
             Check(Code(namedMissing) == 3 && nmProblems.Count > 0 && (string)nmProblems[0]["name"] == "A1", "a problem names the labelname (JSON data)");
 
-            string json = File("liste.json", "[{\"Artikel\":\"Schraube\",\"copies\":2},{\"Artikel\":\"Mutter\",\"EAN\":4006381333931}]");
+            string json = File("liste.json", "[{\"Artikel\":\"Schraube\",\"copies\":2},{\"Artikel\":\"Mutter\",\"EAN\":2000000000008}]");
             printed.Clear();
             var j = Run("--print", templatePath, "--data", json);
             Check(Code(j) == 0 && printed.SequenceEqual(new[] { 3 }), "JSON list with copies: " + Err(j));

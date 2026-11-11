@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Keys = System.Windows.Forms.Keys;
 
 namespace QlLabels.Tests
 {
@@ -30,7 +31,7 @@ namespace QlLabels.Tests
         public static int Run()
         {
             var used = new Dictionary<string, string>();  // text -> first file
-            foreach (var file in Directory.GetFiles("src", "*.cs"))
+            foreach (var file in Directory.GetFiles("src", "*.cs", SearchOption.AllDirectories))
             {
                 string source = File.ReadAllText(file, Encoding.UTF8);
                 foreach (Match m in Call.Matches(source))
@@ -64,8 +65,13 @@ namespace QlLabels.Tests
             Check(Lang.T("Test print") == "Testdruck" && Lang.F("{0} QL printers", 2) == "2 QL-Drucker", "lang: German");
             Check(Lang.T("not in the table") == "not in the table", "lang: missing text stays English");
             Check(Lang.InEnglish(() => Lang.T("Test print")) == "Test print" && Lang.German, "lang: InEnglish only inside");
+            // key names in the program's language, whatever Windows' language is
+            Check(KeyNames.Text(Keys.Control | Keys.Shift | Keys.V) == "Strg+Umschalt+V" && KeyNames.Text(Keys.Delete) == "Entf" &&
+                  KeyNames.Text(Keys.Control | Keys.PageUp) == "Strg+Bild↑", "lang: German key names: " + KeyNames.Text(Keys.Control | Keys.Shift | Keys.V));
             Lang.Force("en");
             Check(Lang.T("Test print") == "Test print" && !Lang.German, "lang: English");
+            Check(KeyNames.Text(Keys.Control | Keys.Shift | Keys.V) == "Ctrl+Shift+V" && KeyNames.Text(Keys.Control | Keys.Z) == "Ctrl+Z" &&
+                  KeyNames.Text(Keys.Alt | Keys.F4) == "Alt+F4" && KeyNames.Text(Keys.Control | Keys.D1) == "Ctrl+1", "lang: English key names: " + KeyNames.Text(Keys.Control | Keys.Shift | Keys.V));
             Check(Lang.NameOf("de") == "Deutsch" && Lang.NameOf("en") == "English", "lang: language names");
             Switch();
             return failures;

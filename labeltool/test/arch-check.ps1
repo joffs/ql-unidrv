@@ -30,9 +30,9 @@ $refs = "/r:System.Web.Extensions.dll", "/r:System.ServiceProcess.dll", "/r:Syst
 $check = Join-Path $out "arch_check.exe"; $bprint = Join-Path $out "barcode_print.exe"
 Push-Location (Join-Path $root "labeltool")
 try {
-    & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$check" /main:QlLabels.Tests.ArchCheck /win32manifest:app.manifest @refs src\*.cs test\arch_check.cs
+    & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$check" /main:QlLabels.Tests.ArchCheck /win32manifest:app.manifest @refs /recurse:src\*.cs test\arch_check.cs
     if ($LASTEXITCODE) { throw "arch_check build failed" }
-    & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$bprint" /main:QlLabels.Tests.BarcodePrint /win32manifest:app.manifest @refs src\*.cs test\barcode_print.cs
+    & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$bprint" /main:QlLabels.Tests.BarcodePrint /win32manifest:app.manifest @refs /recurse:src\*.cs test\barcode_print.cs
     if ($LASTEXITCODE) { throw "barcode_print build failed" }
     Copy-Item app.config "$check.config" -Force; Copy-Item app.config "$bprint.config" -Force
 } finally { Pop-Location }

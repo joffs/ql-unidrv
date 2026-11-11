@@ -100,10 +100,12 @@ namespace QlLabels
         }
 
         // A pasted or dropped picture: an SVG (cleaned), an EMF (checked; CorelDRAW's misplaced text put back:
-        // EmfText.Repair) or a bitmap.
+        // EmfText.Repair; with CorelDRAW's CMX its outline widths and small text as CorelDRAW draws them:
+        // Import/Corel/CorelPicture.cs) or a bitmap.
         public static ImageObject FromSvg(byte[] svg) { using (var src = SvgPreview(svg)) return FromPicture(src, svg, null); }
-        public static ImageObject FromEmf(byte[] emf)
+        public static ImageObject FromEmf(byte[] emf, byte[] cmx = null)
         {
+            emf = CorelPicture.Fix(emf, cmx);
             try { emf = EmfText.Repair(emf); }
             catch (InvalidDataException) { }   // drawn as it is
             using (var src = EmfPreview(emf)) return FromPicture(src, null, emf);
@@ -357,7 +359,9 @@ namespace QlLabels
 
         static bool Sideways(int rotation) { return rotation == 90 || rotation == 270; }
 
-        // The picture turned by quarter turns, scaled to w x h dots and made black and white.
+        // The picture turned by quarter turns, scaled to w x h dots and made black and white. What the picture leaves
+        // transparent (an EMF's or SVG's empty parts) stays transparent: no white box over what lies below; drawn white
+        // stays white.
         static Bitmap Convert(ImageObject img, int rotation, int w, int h)
         {
             using (var turned = Sideways(rotation) ? Unturned(img, h, w) : Unturned(img, w, h))
@@ -368,7 +372,7 @@ namespace QlLabels
                 {
                     using (var g = Graphics.FromImage(scaled))
                     {
-                        g.Clear(Color.White);
+                        g.Clear(Color.Transparent);
                         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                         using (var attr = new ImageAttributes())
@@ -377,10 +381,12 @@ namespace QlLabels
                             g.DrawImage(turned, new Rectangle(0, 0, w, h), 0, 0, turned.Width, turned.Height, GraphicsUnit.Pixel, attr);
                         }
                     }
-                    var grey = Grey(scaled);
+                    var grey = Grey(scaled);   // transparent as white
+                    var shown = Opaque(scaled);
                     var bits = img.Mode == ImageMode.Dither ? Dither(grey, w, h) : Threshold(grey, img.Threshold);
                     if (img.Invert) for (int i = 0; i < bits.Length; i++) bits[i] = !bits[i];
-                    return FromBits(bits, w, h);
+                    if (shown != null) for (int i = 0; i < bits.Length; i++) bits[i] &= shown[i];
+                    return FromBits(bits, w, h, shown);
                 }
             }
         }
@@ -420,6 +426,7 @@ namespace QlLabels
                 gg.RotateTransform((float)img.Tilt);
             };
             byte[] grey, shape;
+            bool[] opaque;
             double dots = Math.Max(w / bounds.Width, h / bounds.Height);   // per mm, the finer direction
             int pw = Math.Max(1, (int)Math.Ceiling(img.W * dots)), ph = Math.Max(1, (int)Math.Ceiling(img.H * dots));
             using (var turned = Sideways(img.Rotation) ? Unturned(img, ph, pw) : Unturned(img, pw, ph))
@@ -431,7 +438,7 @@ namespace QlLabels
                 using (var g = Graphics.FromImage(pic))
                 using (var attr = new ImageAttributes())
                 {
-                    g.Clear(Color.White);
+                    g.Clear(Color.Transparent);
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     place(g);
@@ -448,9 +455,10 @@ namespace QlLabels
                 }
                 grey = Grey(pic);
                 shape = Grey(mask);
+                opaque = Opaque(pic);
             }
             var inside = new bool[grey.Length];
-            for (int i = 0; i < grey.Length; i++) { inside[i] = shape[i] < 128; if (!inside[i]) grey[i] = 255; }
+            for (int i = 0; i < grey.Length; i++) { inside[i] = shape[i] < 128 && (opaque == null || opaque[i]); if (!inside[i]) grey[i] = 255; }
             var bits = img.Mode == ImageMode.Dither ? Dither(grey, w, h) : Threshold(grey, img.Threshold);
             for (int i = 0; i < bits.Length; i++) bits[i] = inside[i] && (img.Invert ? !bits[i] : bits[i]);
             return FromBits(bits, w, h, inside);
@@ -529,6 +537,27 @@ namespace QlLabels
             }
             finally { bmp.UnlockBits(data); }
             return grey;
+        }
+
+        // Where the picture is drawn (at least half opaque); null: everywhere (a bitmap, or a picture without empty parts).
+        static bool[] Opaque(Bitmap bmp)
+        {
+            int w = bmp.Width, h = bmp.Height;
+            var shown = new bool[w * h];
+            bool all = true;
+            var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                var row = new int[w];
+                for (int y = 0; y < h; y++)
+                {
+                    Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, w);
+                    for (int x = 0; x < w; x++)
+                        if (!(shown[y * w + x] = ((row[x] >> 24) & 255) >= 128)) all = false;
+                }
+            }
+            finally { bmp.UnlockBits(data); }
+            return all ? null : shown;
         }
 
         // true = black

@@ -90,7 +90,7 @@ namespace QlLabels
         void AddClipboardItems(ToolStripMenuItem edit)
         {
             var items = new[] { CutItem(), CopyItem(), PasteItem(null), PastePlainItem(null) };
-            foreach (var i in items) { i.ShortcutKeys = (Keys)i.Tag; i.ShortcutKeyDisplayString = null; edit.DropDownItems.Add(i); }
+            foreach (var i in items) { i.ShortcutKeys = (Keys)i.Tag; i.ShortcutKeyDisplayString = KeyText(i.ShortcutKeys); edit.DropDownItems.Add(i); }
             edit.DropDownOpening += delegate
             {
                 bool field = FocusedField() != null, any = canvas.Selection.Count > 0;
@@ -282,24 +282,77 @@ namespace QlLabels
             switch (c.Kind)
             {
                 case ClipKind.Objects: list.AddRange(ObjectsFrom(c.ObjectsJson)); break;
-                case ClipKind.Svg: list.Add(AsCopied(ImageObject.FromSvg(c.Svg), c.SizeMm)); break;
+                case ClipKind.Svg:
+                    {
+                        // its text (Affinity puts its copies here as SVG) as editable text objects at their places, not
+                        // the curves the picture would make of them; the rest of a whole label as a picture on the same
+                        // frame, under the text (Import/SvgText.cs)
+                        var texts = SvgText.Read(c.SvgSource, c.SizeMm, SvgQuirks.For(c.Source));
+                        if (texts != null && texts.Objects.Count > 0)
+                        {
+                            ImageObject rest = null;
+                            if (!texts.OnlyText && texts.Rest != null)
+                            {
+                                // the text import's extra: whatever goes wrong there, the whole picture is pasted instead
+                                try { rest = AsCopied(ImageObject.FromSvg(SvgPicture.Clean(texts.Rest)), c.SizeMm); }
+                                catch (Exception) { rest = null; }
+                            }
+                            if (texts.OnlyText || rest != null)
+                            {
+                                if (rest != null) list.Add(rest);
+                                list.AddRange(texts.Objects);
+                                if (texts.Missing.Count > 0)
+                                    note = Lang.F("This text prints with a substitute font: {0} isn't installed on this PC.", string.Join(", ", texts.Missing));
+                                break;
+                            }
+                        }
+                        list.Add(AsCopied(ImageObject.FromSvg(c.Svg), c.SizeMm));
+                        break;
+                    }
                 case ClipKind.Emf:
                     if (c.EmfKind == EmfPicture.Content.TextOnly)
                     {
                         // text only (CorelDRAW's text): editable text objects with their fonts, at their places
+                        // (CorelDRAW: its CMX laid over the EMF for the real paragraphs, Import/TextImport.cs)
                         List<string> missing;
-                        List<EmfParagraph> paragraphs;
-                        try { paragraphs = EmfText.Read(c.Emf, out missing); }
-                        catch (InvalidDataException) { paragraphs = null; missing = null; }
-                        if (paragraphs != null && paragraphs.Count > 0)
+                        List<TextObject> texts;
+                        string how;
+                        try { texts = TextImport.FromEmf(c, out missing, out how); }
+                        catch (Exception) { texts = null; missing = null; }   // the picture then
+                        if (texts != null && texts.Count > 0)
                         {
-                            foreach (var p in paragraphs) list.AddRange(EmfText.Objects(p));
+                            list.AddRange(texts);
                             if (missing.Count > 0)
                                 note = Lang.F("This text prints with a substitute font: {0} isn't installed on this PC.", string.Join(", ", missing));
                             break;
                         }
                     }
-                    list.Add(AsCopied(ImageObject.FromEmf(c.Emf), c.SizeMm));
+                    {
+                        // a whole label from CorelDRAW: its texts as text objects, its drawing as picture(s) below
+                        // (and above) them in its own z-order (Import/EmfLayers.cs)
+                        List<string> missing;
+                        string how;
+                        List<LabelObject> split = null;
+                        try
+                        {
+                            var parts = TextImport.FromLabel(c, out missing, out how);
+                            if (parts != null)
+                                split = parts.Select(part =>
+                                {
+                                    var pic = part as EmfLayers.Picture;
+                                    return pic != null ? AtPlace(ImageObject.FromEmf(pic.Emf, c.Cmx), pic.Mm) : (LabelObject)part;
+                                }).ToList();
+                        }
+                        catch (Exception) { split = null; missing = null; }   // the whole picture then
+                        if (split != null)
+                        {
+                            list.AddRange(split);
+                            if (missing.Count > 0)
+                                note = Lang.F("This text prints with a substitute font: {0} isn't installed on this PC.", string.Join(", ", missing));
+                            break;
+                        }
+                    }
+                    list.Add(AsCopied(ImageObject.FromEmf(c.Emf, c.Cmx), c.SizeMm));
                     if (c.AlsoText) note = Lang.T("Pasted as a picture. To edit the text: Edit > Paste as plain text (Ctrl+Shift+V).");
                     break;
                 case ClipKind.Picture: list.Add(AsCopied(ImageObject.FromBitmap(c.Picture), c.SizeMm)); break;
@@ -344,6 +397,14 @@ namespace QlLabels
             img.X = 0; img.Y = 0; img.W = Math.Round(mm.Value.Width * k, 1); img.H = Math.Round(mm.Value.Height * k, 1);
             if (img.W < 0.1) img.W = 0.1;
             if (img.H < 0.1) img.H = 0.1;
+            return img;
+        }
+
+        // A part of a pasted label at its place on the copied frame (mm).
+        static ImageObject AtPlace(ImageObject img, RectangleF mm)
+        {
+            img.X = Math.Round(mm.X, 2); img.Y = Math.Round(mm.Y, 2);
+            img.W = Math.Max(0.1, Math.Round(mm.Width, 2)); img.H = Math.Max(0.1, Math.Round(mm.Height, 2));
             return img;
         }
 

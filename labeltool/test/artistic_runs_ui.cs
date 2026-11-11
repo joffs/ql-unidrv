@@ -92,7 +92,7 @@ namespace QlLabels.Tests
         // The runs as "text:inv:spacing" (invert and letter spacing only).
         static string Shade(TextObject t)
         {
-            return string.Join("|", t.FullRuns().Select(r => r.Text + (r.Invert == true ? ":inv" : "") + (r.Spacing != 0 ? ":" + r.Spacing : "")));
+            return string.Join("|", t.FullRuns().Select(r => r.Text + (r.Invert == true ? ":inv" : "") + (r.Spacing != 100 ? ":" + r.Spacing : "")));
         }
 
         static TextObject AddText(string text, double x, double y, int rotation = 0)
@@ -148,8 +148,9 @@ namespace QlLabels.Tests
             // ---------- the panel's rows on a selection ----------
             canvas.EditChange(e => e.Select(0, 5));   // "Hallo"
             Pump(60);
-            var size = F<NumericUpDown>("sizeNum");
-            size.Value = 24;
+            var size = F<StepCombo>("sizeBox");
+            size.Text = "24";
+            typeof(StepCombo).GetMethod("OnKeyDown", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(size, new object[] { new KeyEventArgs(Keys.Enter) });
             Pump(60);
             Check(Fmt(t) == "Hallo:24| |Welt:b:i:u", "Size 24 on the selection: " + Fmt(t));
             Check(t.H > h0 * 1.6, "the box as high as the largest word (" + h0.ToString("0.0") + " → " + t.H.ToString("0.0") + " mm)");
@@ -172,9 +173,11 @@ namespace QlLabels.Tests
             Pump(60);
             Check(Shade(t) == "Hallo| |Welt:inv" && !t.Invert && invert.Checked, "Invert on the selection only: " + Shade(t));
             double w1 = t.W;
-            letters.Value = 3;
+            letters.Value = 200;
             Pump(60);
-            Check(Shade(t) == "Hallo| |Welt:inv:3" && t.W > w1 + 3 * 3 * 25.4 / 72 - 0.2, "letter spacing 3 pt on the selection only, the box follows: " + Shade(t) +
+            var welt = t.FullRuns().Last();   // 100 % more: a space's width in the word's own font
+            double space = EditorRender.SpacingToPoints(welt.Font, welt.Size.Value, (welt.Bold == true ? FontStyle.Bold : 0) | (welt.Italic == true ? FontStyle.Italic : 0), 200) * 25.4 / 72;
+            Check(Shade(t) == "Hallo| |Welt:inv:200" && t.W > w1 + 3 * space - 0.2, "letter spacing 200 % on the selection only, the box follows: " + Shade(t) +
                   " (" + w1.ToString("0.0") + " → " + t.W.ToString("0.0") + " mm)");
             Check(InkInBox(t, out where), "printed dots inside the box with an inverted, spaced word: " + where);
             canvas.EditChange(e => e.Select(0, e.Length));
@@ -187,9 +190,9 @@ namespace QlLabels.Tests
             invert.PerformClick();
             Pump(60);
             Check(!t.Invert && t.FullRuns().All(r => r.Invert == false), "the second click: invert off everywhere");
-            letters.Value = 0;
+            letters.Value = 100;
             Pump(60);
-            Check(t.FullRuns().All(r => r.Spacing == 0) && t.Spacing == 0, "letter spacing 0 for all of it");
+            Check(t.FullRuns().All(r => r.Spacing == 100) && t.Spacing == 100, "letter spacing 100 % for all of it");
 
             // ---------- a paste from Word keeps its formats; a line break becomes a space ----------
             canvas.EditChange(e => e.SetCaret(e.Length, false));
@@ -265,8 +268,9 @@ namespace QlLabels.Tests
             canvas.BeginEdit(r90);
             Pump(60);
             canvas.EditChange(e => e.Select(4, 7));
-            var sz = F<NumericUpDown>("sizeNum");
-            sz.Value = 20;
+            var sz = F<StepCombo>("sizeBox");
+            sz.Text = "20";
+            typeof(StepCombo).GetMethod("OnKeyDown", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(sz, new object[] { new KeyEventArgs(Keys.Enter) });
             Pump(60);
             Key(Keys.Control | Keys.B);
             Key(Keys.Escape);
@@ -280,9 +284,9 @@ namespace QlLabels.Tests
             Pump(60);
             var inv = F<ToolStripButton>("invertButton");
             inv.PerformClick();
-            F<NumericUpDown>("letterSpacingNum").Value = 2;
+            F<NumericUpDown>("letterSpacingNum").Value = 120;
             Pump(60);
-            Check(whole.Invert && whole.Spacing == 2 && whole.FormatRuns == null, "text only selected: invert and spacing on the whole text (no runs)");
+            Check(whole.Invert && whole.Spacing == 120 && whole.FormatRuns == null, "text only selected: invert and spacing on the whole text (no runs)");
         }
     }
 }

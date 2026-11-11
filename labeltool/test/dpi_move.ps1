@@ -29,7 +29,7 @@ Push-Location $Src
 try {
     & $csc /nologo /target:winexe /platform:anycpu /codepage:65001 "/out:$exe" /main:QlLabels.Tests.DpiMove /win32manifest:app.manifest `
         /r:System.Web.Extensions.dll /r:System.ServiceProcess.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll `
-        src\*.cs (Join-Path $PSScriptRoot "dpi_move.cs")
+        /recurse:src\*.cs (Join-Path $PSScriptRoot "dpi_move.cs")
     if ($LASTEXITCODE) { throw "dpi_move build failed" }
     Copy-Item app.config "$exe.config" -Force
 } finally { Pop-Location }

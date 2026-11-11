@@ -31,7 +31,10 @@ namespace QlLabels
             public Func<string, Switched> SwitchPrinter;   // the editor switches to it too; null: no change
             public string DocumentName;        // the spooler's job name
             public string Folder;              // where the file chooser starts
-            public string CsvPath;             // a CSV to open at once (tests), else null
+            public string CsvPath;             // a CSV to open at once (tests), else null; not remembered in the label
+            public PrintDataLink Link;         // the label's data file (loaded at once), or null
+            public string LabelPath;           // the label's file (the link's relative path), null: not saved yet
+            public Func<PrintDataLink, bool> LinkChanged;   // another file chosen, found elsewhere, or not remembered (null); true: in the label's file now
             public Func<IWin32Window, Task<bool>> ConfirmPrinterReady;   // the editor's roll and offline check
             public Func<string, object, object> Setting;                 // the editor's per-user settings (value null: read)
         }
@@ -51,6 +54,10 @@ namespace QlLabels
         CsvTable table;
         string csvPath;
         bool printing;
+        PrintDataLink link;     // the label's data file (Options.Link, then as changed here)
+        LinkState? linkState;   // null: still looking (a network folder may take a while); else how it went
+        string linkError;       // Unreadable: why
+        ContextMenuStrip changeMenu;
 
         readonly HeadTile printerTile = new HeadTile();
         readonly HeadTile templateTile = new HeadTile();
@@ -136,8 +143,19 @@ namespace QlLabels
             ShowPrinter(TileState.Unknown, null, "");   // the editor gives the printer's state (ShowPrinter)
             ShowTemplate(o.LabelText);
             tips.SetToolTip(templateTile, o.TemplateName + "\n" + Lang.T("The open label: its fields are filled from the data."));
+            link = o.Link;
             chooseButton.Text = Lang.T("Change...");
-            chooseButton.Click += delegate { ChooseCsv(); };
+            // with a remembered file "Change ▾": the arrow (or Alt+Down) opens the menu, the rest chooses another file
+            chooseButton.Click += delegate
+            {
+                if (link != null && chooseButton.PointToClient(Cursor.Position).X >= chooseButton.Width - LogicalToDeviceUnits(20) &&
+                    chooseButton.ClientRectangle.Contains(chooseButton.PointToClient(Cursor.Position))) ShowChangeMenu();
+                else ChooseCsv();
+            };
+            chooseButton.KeyDown += (s, e) =>
+            {
+                if (link != null && (e.KeyCode == Keys.Apps || (e.Alt && e.KeyCode == Keys.Down) || e.KeyCode == Keys.F4)) { ShowChangeMenu(); e.Handled = true; }
+            };
             chooseButton.AccessibleName = Lang.T("Choose data file...");
             tips.SetToolTip(chooseButton, Lang.T("Choose another data file"));
             dataTile.Side = chooseButton;
@@ -275,6 +293,7 @@ namespace QlLabels
             Location = Inside(at, Size, area);
             SizeTiles();
             if (o.CsvPath != null) Load(o.CsvPath);
+            else if (link != null) FindLinked();
             grid.Select();
         }
 
@@ -410,6 +429,68 @@ namespace QlLabels
 
         // ---------- the data file (CSV or JSON) ----------
 
+        // The menu of "Change ▾" (a remembered file): another file, retry (the file not there), don't remember it.
+        void ShowChangeMenu()
+        {
+            if (changeMenu != null) changeMenu.Dispose();
+            changeMenu = new ContextMenuStrip { Font = Font, ShowImageMargin = false };
+            var other = new ToolStripMenuItem(Lang.T("Other file..."), null, delegate { ChooseCsv(); });
+            other.Font = new Font(other.Font, FontStyle.Bold);
+            changeMenu.Items.Add(other);
+            if (linkState.HasValue && linkState.Value != LinkState.Found)
+                changeMenu.Items.Add(new ToolStripMenuItem(Lang.T("Retry"), null, delegate { FindLinked(); }));
+            changeMenu.Items.Add(new ToolStripSeparator());
+            changeMenu.Items.Add(new ToolStripMenuItem(Lang.T("Don't remember the file"), null, delegate { Forget(); }));
+            changeMenu.Show(chooseButton, new Point(0, chooseButton.Height));
+        }
+
+        // Looks for the remembered file off the window's thread (an offline share takes a while), then loads it; not
+        // there or unreadable: the tile and the card area say so (no message box, the rest stays usable).
+        internal async void FindLinked()
+        {
+            var l = link;
+            if (l == null) return;
+            linkState = null;
+            ShowData();
+            Filter(true);
+            LinkState state = LinkState.NotFound;
+            string found = null;
+            try { found = await Task.Run(() => l.Resolve(o.LabelPath, out state)); }
+            catch (Exception) { state = LinkState.NotFound; }
+            if (IsDisposed || link != l) return;
+            if (found == null) { linkState = state; ShowData(); Filter(true); return; }
+            linkState = LinkState.Found;
+            if (!LoadFile(found, false)) return;
+            if (!l.SameFile(found))
+            {
+                // moved together with the label: kept as saved (no asterisk), the next Save writes the new place
+                link = PrintDataLink.For(found, o.LabelPath, l.Saved);
+                if (o.LinkChanged != null) o.LinkChanged(link);
+                ShowData();
+            }
+        }
+
+        // "Don't remember the file": the label no longer names it (changed); what is loaded stays until the dialog closes.
+        void Forget()
+        {
+            link = null;
+            linkState = null;
+            if (o.LinkChanged != null) o.LinkChanged(null);
+            ShowData();
+            Filter(false);
+        }
+
+        // A file chosen here: loaded, and remembered in the label (changed until it is saved).
+        internal void UseFile(string path)
+        {
+            if (!LoadFile(path, true)) return;
+            if (link != null && link.SameFile(path) && linkState == LinkState.Found) return;
+            link = PrintDataLink.For(path, o.LabelPath);
+            linkState = LinkState.Found;
+            if (o.LinkChanged != null && o.LinkChanged(link)) link = link.SavedAt(o.LabelPath);   // written at once: "remembered"
+            ShowData();
+        }
+
         void ChooseCsv()
         {
             using (var d = new OpenFileDialog { Filter = Lang.T("Data files (*.csv;*.txt;*.json)|*.csv;*.txt;*.json|All files (*.*)|*.*"), Title = Lang.T("Choose data file") })
@@ -417,12 +498,15 @@ namespace QlLabels
                 string folder = csvPath != null ? Path.GetDirectoryName(csvPath) : o.Folder;
                 if (folder != null && Directory.Exists(folder)) d.InitialDirectory = folder;
                 if (d.ShowDialog(this) != DialogResult.OK) return;
-                Load(d.FileName);
+                UseFile(d.FileName);
             }
         }
 
-        // Reads the file; an unreadable one: the reason in a message, the dialog stays as it was.
-        new void Load(string path)
+        // Reads the file; an unreadable one: the reason in a message (ask), else in the tile and card area (the remembered
+        // file, opened by itself); the dialog stays as it was.
+        new void Load(string path) { LoadFile(path, true); }
+
+        bool LoadFile(string path, bool ask)
         {
             CsvTable t;
             try
@@ -433,9 +517,17 @@ namespace QlLabels
             catch (Exception ex)
             {
                 Cursor = Cursors.Default;
+                if (!ask)
+                {
+                    linkState = LinkState.Unreadable;
+                    linkError = ex.Message;
+                    ShowData();
+                    Filter(true);
+                    return false;
+                }
                 QlMessage.Ask(this, EditorForm.AppTitle, Lang.T("The data file can't be read."), Path.GetFileName(path) + "\n\n" + ex.Message,
                               MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1, null);
-                return;
+                return false;
             }
             Cursor = Cursors.Default;
             table = t;
@@ -445,11 +537,31 @@ namespace QlLabels
             ShowData();
             ShowMatch();
             Filter(true);
+            return true;
         }
 
         // The data tile: the file and its rows (CSV) or entries (JSON); without a file one large button.
         void ShowData()
         {
+            chooseButton.Text = link != null ? Lang.T("Change") + " \u25BE" : Lang.T("Change...");
+            chooseButton.AccessibleName = link != null ? Lang.T("Change data file") : Lang.T("Choose data file...");
+            // the remembered file: "Data · 🔗 remembered" (in the label's file) or "· 🔗 when saved" (chosen, not saved yet)
+            string caption = link == null ? Lang.T("Data") : link.Saved ? Lang.T("Data · 🔗 remembered") : Lang.T("Data · 🔗 when saved");
+            string remembered = link != null ? "\n" + Lang.T("Remembered with the label: Print with data loads it at once next time.") : "";
+            if (table == null && link != null && linkState != LinkState.Found)
+            {
+                dataTile.CallToAction = false;
+                dataTile.Clickable = false;
+                chooseButton.Visible = true;
+                string sub = !linkState.HasValue ? Lang.T("looking for it...")
+                           : linkState == LinkState.FolderOffline ? "\u26A0 " + Lang.T("folder offline")
+                           : linkState == LinkState.Unreadable ? "\u26A0 " + Lang.T("can't be read")
+                           : "\u26A0 " + Lang.T("not found");
+                dataTile.Show(caption, Path.GetFileName(link.Absolute), sub, linkState.HasValue ? TileState.Warn : TileState.Neutral, null);
+                tips.SetToolTip(dataTile, link.Absolute + remembered);
+                dataTile.PerformLayout();
+                return;
+            }
             if (table == null)
             {
                 dataTile.CallToAction = true;
@@ -465,9 +577,9 @@ namespace QlLabels
             chooseButton.Visible = true;
             int n = table.Rows.Count;
             string rows = table.Json ? (n == 1 ? Lang.T("1 entry") : Lang.F("{0} entries", n)) : (n == 1 ? Lang.T("1 row") : Lang.F("{0} rows", n));
-            dataTile.Show(Lang.T("Data"), Path.GetFileName(csvPath), (table.Json ? "JSON" : "CSV") + " · " + rows,
+            dataTile.Show(link != null && link.SameFile(csvPath) ? caption : Lang.T("Data"), Path.GetFileName(csvPath), (table.Json ? "JSON" : "CSV") + " · " + rows,
                           n == 0 || Blocked() != null ? TileState.Warn : TileState.Ok, null);
-            tips.SetToolTip(dataTile, csvPath);
+            tips.SetToolTip(dataTile, csvPath + (link != null && link.SameFile(csvPath) ? remembered : ""));
             dataTile.PerformLayout();
         }
 
@@ -518,13 +630,31 @@ namespace QlLabels
         {
             string q = search.Text.Trim();
             var rows = job.Records.Where(r => r.Matches(q));
-            string empty = table == null ? Lang.T("Choose a data file: CSV (the first row names the columns) or JSON (a list of objects). Each column fills the field of the same name on the label; a column labelname names the labels.")
+            string empty = table == null && link != null && linkState != LinkState.Found ? LinkProblem()
+                         : table == null ? Lang.T("Choose a data file: CSV (the first row names the columns) or JSON (a list of objects). Each column fills the field of the same name on the label; a column labelname names the labels.")
                          : job.Records.Count == 0 ? Lang.T("The data file has no data rows.")
                          : Lang.F("No label matches “{0}”.", q);
             grid.SetRows(rows, newData, empty);
             int all = job.Records.Count, shown = grid.Shown.Count;
             shownInfo.Text = table == null ? "" : q.Length > 0 ? Lang.F("{0} of {1} shown", shown, all) : all == 1 ? Lang.T("1 label") : Lang.F("{0} labels", all);
             UpdatePrint();
+        }
+
+        // The card area while the remembered file isn't loaded: looking, not found, folder offline, unreadable (with the path).
+        string LinkProblem()
+        {
+            if (!linkState.HasValue) return Lang.T("Looking for the remembered data file...") + "\n" + link.Absolute;
+            switch (linkState.Value)
+            {
+                case LinkState.FolderOffline:
+                    return Lang.T("The folder of the remembered data file isn't reachable right now:") + "\n" + Path.GetDirectoryName(link.Absolute) + "\n" +
+                           Lang.T("When it is back: Change > Retry. Or choose another file.");
+                case LinkState.Unreadable:
+                    return Lang.T("The remembered data file can't be read.") + "\n" + link.Absolute + "\n" + (linkError ?? "");
+                default:
+                    return Lang.T("The remembered data file wasn't found.") + "\n" + link.Absolute + "\n" +
+                           Lang.T("Choose it again with Change – or put it back there.");
+            }
         }
 
         // "Print (N labels)": the selected cards in view times their copies; disabled for none, a blocking field or while printing.

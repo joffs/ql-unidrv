@@ -58,7 +58,7 @@ def read_pgm(path):
 
 
 def contents(root):
-    pats = ["labeltool/help/**/*.qllabel", "labeltool/help/**/*.html", "labeltool/src/*.cs", "labeltool/test/*",
+    pats = ["labeltool/help/**/*.qllabel", "labeltool/help/**/*.html", "labeltool/src/**/*.cs", "labeltool/test/*",
             "labels/*.json", "docs/*.md", "tools/testkit/**/*"]
     seen = set()
     for p in pats:

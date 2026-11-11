@@ -56,8 +56,8 @@ namespace QlLabels
             file.DropDownItems.Add(new ToolStripMenuItem(Lang.T("E&xit"), null, delegate { Close(); }) { ShortcutKeyDisplayString = "Alt+F4" });
 
             var edit = new ToolStripMenuItem(Lang.T("&Edit"));
-            undoItem.Text = Lang.T("&Undo"); undoItem.ShortcutKeys = Keys.Control | Keys.Z; undoItem.Click += delegate { Undo(false); };
-            redoItem.Text = Lang.T("&Redo"); redoItem.ShortcutKeys = Keys.Control | Keys.Y; redoItem.Click += delegate { Undo(true); };
+            undoItem.Text = Lang.T("&Undo"); undoItem.ShortcutKeys = Keys.Control | Keys.Z; undoItem.ShortcutKeyDisplayString = KeyText(undoItem.ShortcutKeys); undoItem.Click += delegate { Undo(false); };
+            redoItem.Text = Lang.T("&Redo"); redoItem.ShortcutKeys = Keys.Control | Keys.Y; redoItem.ShortcutKeyDisplayString = KeyText(redoItem.ShortcutKeys); redoItem.Click += delegate { Undo(true); };
             edit.DropDownItems.Add(undoItem);
             edit.DropDownItems.Add(redoItem);
             edit.DropDownItems.Add(new ToolStripSeparator());
@@ -140,7 +140,7 @@ namespace QlLabels
         static ToolStripMenuItem Item(string text, Keys keys, EventHandler click)
         {
             var item = new ToolStripMenuItem(text, null, click);
-            if (keys != Keys.None) item.ShortcutKeys = keys;
+            if (keys != Keys.None) { item.ShortcutKeys = keys; item.ShortcutKeyDisplayString = KeyText(keys); }
             return item;
         }
     }
