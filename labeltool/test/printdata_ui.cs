@@ -190,6 +190,7 @@ namespace QlLabels.Tests
                 Check(pt.State == TileState.Ok && pt.Dot == Health.Ok && pt.Sub.StartsWith(Lang.T("Ready") + " · 62", StringComparison.Ordinal), "printer ready: " + pt.Sub);
                 Roll(Status("29"));
                 Check(pt.State == TileState.Warn && pt.Dot == Health.Warning && pt.Sub.StartsWith(Lang.T("Wrong roll") + " · 29", StringComparison.Ordinal), "the roll doesn't fit: " + pt.Sub);
+                Check(pt.Sub == Lang.T("Wrong roll") + " · 29 mm " + (Lang.Current == "de" ? "Endlosband" : "continuous"), "the wrong roll's line is short, without \"loaded\" (it was cut off): " + pt.Sub);
                 SaveShot(d, "wrong-roll");
                 Roll(Status(null));
                 Check(pt.State == TileState.Warn && pt.Dot == Health.Warning && pt.Sub == Lang.T("Not connected") && char.IsUpper(pt.Sub[0]), "not connected: " + pt.Sub);

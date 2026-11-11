@@ -110,8 +110,9 @@ namespace QlLabels
             string tip = (c.Detail ?? c.Line) + (c.Advice.Count > 0 ? "\n" + string.Join("\n", c.Advice) : "");
             bool? fits = c.Media != null && label != null ? c.Media.Fits(label.Media) : null;
             if (fits == false)
-                d.ShowPrinter(TileState.Warn, Health.Warning, Lang.T("Wrong roll") + (loaded != null ? " · " + Lang.F("{0} loaded", loaded) : ""),
-                              c.Short + " – " + Lang.T("doesn't fit this label"));
+                // the tile is narrow: "Wrong roll · 29 mm continuous" (without "loaded", it was cut off); the tip has it all
+                d.ShowPrinter(TileState.Warn, Health.Warning, Lang.T("Wrong roll") + (loaded != null ? " · " + loaded : ""),
+                              Lang.T("Wrong roll") + (loaded != null ? " · " + Lang.F("{0} loaded", loaded) : "") + " – " + Lang.T("doesn't fit this label"));
             else if (c.Health == Health.Error || c.Health == Health.Warning)
                 d.ShowPrinter(TileState.Warn, c.Health, Capital(c.Short), tip);
             else if (c.Health == Health.Ok)
